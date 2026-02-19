@@ -9,13 +9,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4000
-      # Variáveis que você vai configurar no Portainer
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET}
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
     networks:
-      - automacoes_default  # Rede do seu Nginx Proxy Manager
+      - automacoes_default
       - backend-network
     restart: unless-stopped
     labels:
@@ -29,14 +28,13 @@ services:
         - VITE_API_URL=${VITE_API_URL}
     container_name: truck-frontend
     networks:
-      - npm_default  # Rede do seu Nginx Proxy Manager
+      - automacoes_default
     restart: unless-stopped
     labels:
       - "com.docker.compose.project=truck-logbook"
 
 networks:
   automacoes_default:
-    external: true  # Usa sua rede existente do Nginx Proxy Manager
+    external: true
   backend-network:
     driver: bridge
-
