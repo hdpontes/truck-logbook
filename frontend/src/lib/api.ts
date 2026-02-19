@@ -1,98 +1,153 @@
-import axios from 'axios';
-
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
-export const api = axios.create({
-  baseURL: `${API_URL}/api`,
-  headers: {
+// Helper function to get auth token
+const getAuthToken = () => {
+  return localStorage.getItem('token');
+};
+
+// Helper function for API requests
+const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+  const token = getAuthToken();
+  
+  const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-  },
-});
-
-// Interceptor para adicionar token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  };
+  
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    defaultHeaders.Authorization = `Bearer ${token}`;
   }
-  return config;
-});
-
-// Interceptor para tratar erros
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
+  
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-);
-
-// Auth
-export const authAPI = {
-  login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
-  register: (data: any) => api.post('/auth/register', data),
-  me: () => api.get('/auth/me'),
+  
+  return response.json();
 };
 
-// Drivers
-export const driversAPI = {
-  getAll: () => api.get('/drivers'),
-  getById: (id: string) => api.get(`/drivers/${id}`),
-  create: (data: any) => api.post('/drivers', data),
-  update: (id: string, data: any) => api.put(`/drivers/${id}`, data),
-  delete: (id: string) => api.delete(`/drivers/${id}`),
+// Auth API
+export const auth = {
+  login: async (email: string, password: string) => {
+    return apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+  
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+  
+  getUser: () => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  },
 };
 
-// Trucks
-export const trucksAPI = {
-  getAll: () => api.get('/trucks'),
-  getById: (id: string) => api.get(`/trucks/${id}`),
-  create: (data: any) => api.post('/trucks', data),
-  update: (id: string, data: any) => api.put(`/trucks/${id}`, data),
-  delete: (id: string) => api.delete(`/trucks/${id}`),
-  getStats: (id: string) => api.get(`/trucks/${id}/stats`),
-};
-  start: (id: string) => api.post(`/trips/${id}/start`),
-  finish: (id: string) => api.post(`/trips/${id}/finish`),
-
-// Trips
-export const tripsAPI = {
-  getAll: (params?: any) => api.get('/trips', { params }),
-  getById: (id: string) => api.get(`/trips/${id}`),
-  create: (data: any) => api.post('/trips', data),
-  update: (id: string, data: any) => api.put(`/trips/${id}`, data),
-  delete: (id: string) => api.delete(`/trips/${id}`),
-  calculate: (id: string) => api.post(`/trips/${id}/calculate`),
+// Trucks API
+export const trucks = {
+  getAll: () => apiRequest('/trucks'),
+  getById: (id: string) => apiRequest(`/trucks/${id}`),
+  create: (data: any) => apiRequest('/trucks', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: string, data: any) => apiRequest(`/trucks/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: string) => apiRequest(`/trucks/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
-// Expenses
-export const expensesAPI = {
-  getAll: (params?: any) => api.get('/expenses', { params }),
-  getById: (id: string) => api.get(`/expenses/${id}`),
-  create: (data: any) => api.post('/expenses', data),
-  update: (id: string, data: any) => api.put(`/expenses/${id}`, data),
-  delete: (id: string) => api.delete(`/expenses/${id}`),
-  getSummary: (params?: any) => api.get('/expenses/summary/total', { params }),
+// Drivers API
+export const drivers = {
+  getAll: () => apiRequest('/drivers'),
+  getById: (id: string) => apiRequest(`/drivers/${id}`),
+  create: (data: any) => apiRequest('/drivers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: string, data: any) => apiRequest(`/drivers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: string) => apiRequest(`/drivers/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
-// Maintenance
-export const maintenanceAPI = {
-  getAll: (params?: any) => api.get('/maintenance', { params }),
-  getById: (id: string) => api.get(`/maintenance/${id}`),
-  create: (data: any) => api.post('/maintenance', data),
-  update: (id: string, data: any) => api.put(`/maintenance/${id}`, data),
-  delete: (id: string) => api.delete(`/maintenance/${id}`),
-  getUpcoming: () => api.get('/maintenance/upcoming/all'),
+// Trips API
+export const trips = {
+  getAll: () => apiRequest('/trips'),
+  getById: (id: string) => apiRequest(`/trips/${id}`),
+  create: (data: any) => apiRequest('/trips', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: string, data: any) => apiRequest(`/trips/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: string) => apiRequest(`/trips/${id}`, {
+    method: 'DELETE',
+  }),
+  start: (id: string) => apiRequest(`/trips/${id}/start`, {
+    method: 'POST',
+  }),
+  finish: (id: string, data: any) => apiRequest(`/trips/${id}/finish`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };
 
-// Dashboard
-export const dashboardAPI = {
-  getOverview: (params?: any) => api.get('/dashboard/overview', { params }),
-  getTruckPerformance: (params?: any) => api.get('/dashboard/trucks/performance', { params }),
-  getRecentActivities: () => api.get('/dashboard/activities/recent'),
-  getFinancialSummary: (params?: any) => api.get('/dashboard/financial/summary', { params }),
+// Expenses API
+export const expenses = {
+  getAll: () => apiRequest('/expenses'),
+  getByTrip: (tripId: string) => apiRequest(`/expenses/trip/${tripId}`),
+  create: (data: any) => apiRequest('/expenses', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: string, data: any) => apiRequest(`/expenses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: string) => apiRequest(`/expenses/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Dashboard API
+export const dashboard = {
+  getStats: () => apiRequest('/dashboard/stats'),
+  getRecentTrips: () => apiRequest('/dashboard/recent-trips'),
+  getActiveTrips: () => apiRequest('/dashboard/active-trips'),
+  getExpensesSummary: () => apiRequest('/dashboard/expenses-summary'),
+};
+
+// Maintenance API
+export const maintenance = {
+  getAll: () => apiRequest('/maintenance'),
+  getByTruck: (truckId: string) => apiRequest(`/maintenance/truck/${truckId}`),
+  create: (data: any) => apiRequest('/maintenance', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: string, data: any) => apiRequest(`/maintenance/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: string) => apiRequest(`/maintenance/${id}`, {
+    method: 'DELETE',
+  }),
 };
