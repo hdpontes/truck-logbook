@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: truck-postgres
-    environment:
-      POSTGRES_USER: truckuser
-      POSTGRES_PASSWORD: truckpass123
-      POSTGRES_DB: trucklogbook
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - backend-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U truckuser -d trucklogbook"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -28,12 +10,9 @@ services:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: postgresql://hdpontes:h1h2h3@postgres:5432/trucklogbook
-      JWT_SECRET: L5ZSoBvCXJ2TduEnssSciHY3u6lk2O0ZyWgi3ziEjQ5VQhl7crTRKpot5AiFu2K5
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production-min-32-chars-please
     ports:
       - "4000:4000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - backend-network
     restart: unless-stopped
@@ -56,7 +35,8 @@ services:
 
 networks:
   backend-network:
-    driver: bridge
+    external: true
+    name: automacoes_default
 
 volumes:
   postgres_data:
