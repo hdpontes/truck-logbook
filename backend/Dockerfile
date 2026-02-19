@@ -2,25 +2,29 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar dependências do sistema
+# Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
-# Copiar arquivos de dependências
+# Copy package files
 COPY package*.json ./
+
+# Copy prisma directory for generate step
 COPY prisma ./prisma/
 
-# Instalar dependências
-RUN npm ci
+# Install dependencies (use npm install for flexibility)
+RUN npm install --production
 
-# Copiar código fonte
-COPY . .
-
-# Gerar Prisma Client
+# Generate Prisma Client
 RUN npx prisma generate
 
-# Build
+# Copy source code
+COPY . .
+
+# Build application
 RUN npm run build
 
+# Expose port
 EXPOSE 4000
 
+# Start command
 CMD ["npm", "start"]
