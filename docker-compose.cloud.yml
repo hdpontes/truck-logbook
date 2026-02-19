@@ -1,40 +1,63 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: truck-postgres
+    environment:
+      POSTGRES_USER: truckuser
+      POSTGRES_PASSWORD: truckpass123
+      POSTGRES_DB: trucklogbook
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U truckuser -d trucklogbook"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: truck-backend
     environment:
-      - NODE_ENV=production
-      - PORT=4000
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://hdpontes:h1h2h3@postgres:5432/trucklogbook
+      JWT_SECRET: L5ZSoBvCXJ2TduEnssSciHY3u6lk2O0ZyWgi3ziEjQ5VQhl7crTRKpot5AiFu2K5
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      - automacoes_default
       - backend-network
     restart: unless-stopped
-    labels:
-      - "com.docker.compose.project=truck-logbook"
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL}
+        VITE_API_URL: http://localhost:4000
     container_name: truck-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
     networks:
-      - automacoes_default
+      - backend-network
     restart: unless-stopped
-    labels:
-      - "com.docker.compose.project=truck-logbook"
 
 networks:
-  automacoes_default:
-    external: true
   backend-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
