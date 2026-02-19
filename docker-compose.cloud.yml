@@ -15,7 +15,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
     networks:
-      - npm_default  # Rede do seu Nginx Proxy Manager
+      - automacoes_default  # Rede do seu Nginx Proxy Manager
       - backend-network
     restart: unless-stopped
     labels:
@@ -35,7 +35,8 @@ services:
       - "com.docker.compose.project=truck-logbook"
 
 networks:
-  npm_default:
+  automacoes_default:
     external: true  # Usa sua rede existente do Nginx Proxy Manager
   backend-network:
     driver: bridge
+
