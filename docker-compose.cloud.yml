@@ -10,7 +10,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: postgresql://hdpontes:h1h2h3@postgres:5432/trucklogbook
-      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production-min-32-chars-please
+      JWT_SECRET: L5ZSoBvCXJ2TduEnssSciHY3u6lk2O0ZyWgi3ziEjQ5VQhl7crTRKpot5AiFu2K5
     ports:
       - "4000:4000"
     networks:
@@ -41,3 +41,4 @@ networks:
 volumes:
   postgres_data:
     driver: local
+
