@@ -13,8 +13,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
     ports:
       - "${BACKEND_PORT:-4000}:4000"
-    extra_hosts:
-      - "postgres:host-gateway"
+    networks:
+      - automacoes_default
     restart: unless-stopped
     command: sh -c "npx prisma migrate deploy && node dist/server.js"
 
@@ -27,6 +27,12 @@ services:
     container_name: truck-frontend
     ports:
       - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - automacoes_default
     depends_on:
       - backend
     restart: unless-stopped
+
+networks:
+  automacoes_default:
+    external: true
