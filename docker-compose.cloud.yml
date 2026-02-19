@@ -13,6 +13,8 @@ services:
       - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET}
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+    ports:
+      - "${BACKEND_PORT:-8100}:4000"
     networks:
       - automacoes_default
       - backend-network
@@ -27,6 +29,8 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL}
     container_name: truck-frontend
+    ports:
+      - "${FRONTEND_PORT:-8200}:80"
     networks:
       - automacoes_default
     restart: unless-stopped
