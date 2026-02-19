@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { trucksAPI, tripsAPI, expensesAPI, driversAPI } from '@/lib/api';
+import { trucksAPI, tripsAPI, expensesAPI } from '@/lib/api';
 import {
   Truck,
   MapPin,
-  Calendar,
   DollarSign,
   PlusCircle,
   Edit,
   Trash2,
   ArrowLeft,
-  // Wrench, // Removido (não usado)
   TrendingUp,
-  BarChart3,
-  // Fuel, // Removido (não usado)
-  // Receipt, // Removido (não usado)
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
