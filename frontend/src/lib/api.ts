@@ -35,10 +35,11 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 // Auth API
 export const auth = {
   login: async (email: string, password: string) => {
-    return apiRequest('/auth/login', {
+    const response = await apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    return response;
   },
   
   logout: () => {
@@ -52,13 +53,14 @@ export const auth = {
   },
 };
 
-// Legacy aliases for backward compatibility
-export const authAPI = auth;
+// Dashboard API with all required methods
 export const dashboardAPI = {
   getStats: () => apiRequest('/dashboard/stats'),
   getRecentTrips: () => apiRequest('/dashboard/recent-trips'),
   getActiveTrips: () => apiRequest('/dashboard/active-trips'),
   getExpensesSummary: () => apiRequest('/dashboard/expenses-summary'),
+  getOverview: () => apiRequest('/dashboard/overview'),
+  getTruckPerformance: () => apiRequest('/dashboard/truck-performance'),
 };
 
 export const trucksAPI = {
@@ -80,6 +82,7 @@ export const trucksAPI = {
 export const tripsAPI = {
   getAll: () => apiRequest('/trips'),
   getById: (id: string) => apiRequest(`/trips/${id}`),
+  getByTruck: (truckId: string) => apiRequest(`/trips/truck/${truckId}`),
   create: (data: any) => apiRequest('/trips', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -103,6 +106,7 @@ export const tripsAPI = {
 export const expensesAPI = {
   getAll: () => apiRequest('/expenses'),
   getByTrip: (tripId: string) => apiRequest(`/expenses/trip/${tripId}`),
+  getByTruck: (truckId: string) => apiRequest(`/expenses/truck/${truckId}`),
   create: (data: any) => apiRequest('/expenses', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -132,7 +136,8 @@ export const driversAPI = {
   }),
 };
 
-// Main exports (new naming convention)
+// Legacy aliases for backward compatibility
+export const authAPI = auth;
 export const trucks = trucksAPI;
 export const trips = tripsAPI;
 export const expenses = expensesAPI;
