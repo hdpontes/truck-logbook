@@ -11,8 +11,8 @@ COPY package*.json ./
 # Copy prisma directory for generate step
 COPY prisma ./prisma/
 
-# Install dependencies (use npm install for flexibility)
-RUN npm install --production
+# Install ALL dependencies (including dev for build tools)
+RUN npm install
 
 # Generate Prisma Client
 RUN npx prisma generate
@@ -22,6 +22,9 @@ COPY . .
 
 # Build application
 RUN npm run build
+
+# Remove dev dependencies after build (optional optimization)
+RUN npm prune --production
 
 # Expose port
 EXPOSE 4000
