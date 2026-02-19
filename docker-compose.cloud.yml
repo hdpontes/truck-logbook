@@ -14,7 +14,7 @@ services:
     ports:
       - "4000:4000"
     networks:
-      - backend-network
+      - automacoes_default
     restart: unless-stopped
     command: sh -c "npx prisma migrate deploy && node dist/server.js"
 
@@ -30,15 +30,9 @@ services:
     depends_on:
       - backend
     networks:
-      - backend-network
+      - automacoes_default
     restart: unless-stopped
 
 networks:
-  backend-network:
+  automacoes_default:
     external: true
-    name: automacoes_default
-
-volumes:
-  postgres_data:
-    driver: local
-
