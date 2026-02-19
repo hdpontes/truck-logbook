@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:4000';
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -52,8 +52,16 @@ export const auth = {
   },
 };
 
-// Trucks API
-export const trucks = {
+// Legacy aliases for backward compatibility
+export const authAPI = auth;
+export const dashboardAPI = {
+  getStats: () => apiRequest('/dashboard/stats'),
+  getRecentTrips: () => apiRequest('/dashboard/recent-trips'),
+  getActiveTrips: () => apiRequest('/dashboard/active-trips'),
+  getExpensesSummary: () => apiRequest('/dashboard/expenses-summary'),
+};
+
+export const trucksAPI = {
   getAll: () => apiRequest('/trucks'),
   getById: (id: string) => apiRequest(`/trucks/${id}`),
   create: (data: any) => apiRequest('/trucks', {
@@ -69,25 +77,7 @@ export const trucks = {
   }),
 };
 
-// Drivers API
-export const drivers = {
-  getAll: () => apiRequest('/drivers'),
-  getById: (id: string) => apiRequest(`/drivers/${id}`),
-  create: (data: any) => apiRequest('/drivers', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  update: (id: string, data: any) => apiRequest(`/drivers/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
-  delete: (id: string) => apiRequest(`/drivers/${id}`, {
-    method: 'DELETE',
-  }),
-};
-
-// Trips API
-export const trips = {
+export const tripsAPI = {
   getAll: () => apiRequest('/trips'),
   getById: (id: string) => apiRequest(`/trips/${id}`),
   create: (data: any) => apiRequest('/trips', {
@@ -110,8 +100,7 @@ export const trips = {
   }),
 };
 
-// Expenses API
-export const expenses = {
+export const expensesAPI = {
   getAll: () => apiRequest('/expenses'),
   getByTrip: (tripId: string) => apiRequest(`/expenses/trip/${tripId}`),
   create: (data: any) => apiRequest('/expenses', {
@@ -127,13 +116,28 @@ export const expenses = {
   }),
 };
 
-// Dashboard API
-export const dashboard = {
-  getStats: () => apiRequest('/dashboard/stats'),
-  getRecentTrips: () => apiRequest('/dashboard/recent-trips'),
-  getActiveTrips: () => apiRequest('/dashboard/active-trips'),
-  getExpensesSummary: () => apiRequest('/dashboard/expenses-summary'),
+export const driversAPI = {
+  getAll: () => apiRequest('/drivers'),
+  getById: (id: string) => apiRequest(`/drivers/${id}`),
+  create: (data: any) => apiRequest('/drivers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  update: (id: string, data: any) => apiRequest(`/drivers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: (id: string) => apiRequest(`/drivers/${id}`, {
+    method: 'DELETE',
+  }),
 };
+
+// Main exports (new naming convention)
+export const trucks = trucksAPI;
+export const trips = tripsAPI;
+export const expenses = expensesAPI;
+export const drivers = driversAPI;
+export const dashboard = dashboardAPI;
 
 // Maintenance API
 export const maintenance = {
