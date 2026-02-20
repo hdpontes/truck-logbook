@@ -1,9 +1,10 @@
+// filepath: frontend/src/services/api.ts
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://truck-api.hpboost.com.br';
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api`,  // ✅ Adicionar /api aqui
+  baseURL: `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,6 +25,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
