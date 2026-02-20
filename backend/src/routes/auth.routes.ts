@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../lib/prisma';
+import { config } from '../config';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
@@ -107,8 +108,8 @@ router.post('/register', async (req: Request, res: Response) => {
         email: user.email,
         role: user.role
       },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -141,7 +142,7 @@ router.get('/me', async (req: Request, res: Response) => {
 
     const decoded = jwt.verify(
       token, 
-      process.env.JWT_SECRET || 'your-secret-key'
+      config.JWT_SECRET
     ) as any;
 
     const user = await prisma.user.findUnique({

@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import authRoutes from './routes/auth.routes';
+import trucksRoutes from './routes/trucks.routes';
+import tripsRoutes from './routes/trips.routes';
+import expensesRoutes from './routes/expenses.routes';
+import driversRoutes from './routes/drivers.routes';
+import maintenanceRoutes from './routes/maintenance.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;  // ✅ FIX: Convert to Number
@@ -37,9 +43,15 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-console.log('📦 Loading auth routes...');
+console.log('📦 Loading routes...');
 app.use('/api/auth', authRoutes);
-console.log('✅ Auth routes mounted at /api/auth');
+app.use('/api/trucks', trucksRoutes);
+app.use('/api/trips', tripsRoutes);
+app.use('/api/expenses', expensesRoutes);
+app.use('/api/drivers', driversRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+console.log('✅ All routes mounted successfully');
 
 // 404 Handler
 app.use((req, res) => {
@@ -63,9 +75,13 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('✅ ============================================');
   console.log('✅ Server running on port', PORT);
-  console.log('✅ Environment:', process.env.NODE_ENV || 'development');
-  console.log('✅ CORS Origin:', process.env.CORS_ORIGIN || '*');
-  console.log('✅ ============================================');
+  console.log('✅ EAuth:        /api/auth/*');
+  console.log('   Trucks:      /api/trucks/*');
+  console.log('   Trips:       /api/trips/*');
+  console.log('   Expenses:    /api/expenses/*');
+  console.log('   Drivers:     /api/drivers/*');
+  console.log('   Maintenance: /api/maintenance/*');
+  console.log('   Dashboard:   /api/dashboard/*==========================');
   console.log('');
   console.log('📋 Available Routes:');
   console.log('   GET  /health');
