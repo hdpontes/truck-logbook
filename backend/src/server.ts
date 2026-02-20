@@ -1,85 +1,93 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import jwt from '@fastify/jwt';
-import multipart from '@fastify/multipart';
-import fastifyStatic from '@fastify/static';
-import { config } from './config';
-import { prisma } from './lib/prisma';
-import { trucksRoutes } from './routes/trucks';
-import { tripsRoutes } from './routes/trips';
-import { expensesRoutes } from './routes/expenses';
-import { maintenanceRoutes } from './routes/maintenance';
-import { dashboardRoutes } from './routes/dashboard';
-import { authRoutes } from './routes/auth';
-import { driversRoutes } from './routes/drivers';
-import path from 'path';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import authRoutes from './routes/auth.routes';
 
-const app = Fastify({
-  logger: {
-    level: config.NODE_ENV === 'development' ? 'info' : 'error',
-  },
-});
+const app = express();
+const PORT = process.env.PORT || 4000;
 
-// Plugins
-app.register(cors, {
-  origin: true,
+console.log('');
+console.log('🚀 Starting Truck Logbook Backend...');
+console.log('📍 Port:', PORT);
+console.log('🌐 CORS Origin:', process.env.CORS_ORIGIN || '*');
+console.log('');
+
+// Middlewares
+app.use(helmet());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
   credentials: true,
-});
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.register(jwt, {
-  secret: config.JWT_SECRET,
-});
-
-app.register(multipart, {
-  limits: {
-    fileSize: config.MAX_FILE_SIZE,
-  },
-});
-
-app.register(fastifyStatic, {
-  root: path.join(__dirname, '../uploads'),
-  prefix: '/uploads/',
+// Request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
 });
 
 // Health check
-app.get('/health', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
+app.get('/health', (req, res) => {
+  console.log('✅ Health check');
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    routes: ['GET /health', 'POST /api/auth/login']
+  });
 });
 
-// Routes
-app.register(authRoutes, { prefix: '/api/auth' });
-app.register(driversRoutes, { prefix: '/api/drivers' });
-app.register(trucksRoutes, { prefix: '/api/trucks' });
-app.register(tripsRoutes, { prefix: '/api/trips' });
-app.register(expensesRoutes, { prefix: '/api/expenses' });
-app.register(maintenanceRoutes, { prefix: '/api/maintenance' });
-app.register(dashboardRoutes, { prefix: '/api/dashboard' });
+// API Routes
+console.log('📦 Loading auth routes...');
+app.use('/api/auth', authRoutes);
+console.log('✅ Auth routes mounted at /api/auth');
 
-// Error handler
-app.setErrorHandler((error, request, reply) => {
-  console.error(error);
-  reply.status(500).send({
-    error: 'Internal Server Error',
-    message: error.message,
+// 404 Handler
+app.use((req, res) => {
+  console.log('⚠️  404 Not Found:', req.method, req.path);
+  res.status(404).json({
+    message: `Route ${req.method}:${req.path} not found`,
+    error: 'Not Found',
+    statusCode: 404,
+    availableRoutes: [
+      'GET /health',
+      'POST /api/auth/login',
+      'POST /api/auth/register',
+      'GET /api/auth/me'
+    ]
+  });
+});
+
+// Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('💥 Server Error:', err);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Server error'
   });
 });
 
 // Start server
-const start = async () => {
-  try {
-    await app.listen({ port: config.PORT, host: '0.0.0.0' });
-    console.log(`🚀 Server running on http://localhost:${config.PORT}`);
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
-};
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  await app.close();
-  process.exit(0);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('');
+  console.log('✅ ============================================');
+  console.log('✅ Server is running!');
+  console.log('✅ Port:', PORT);
+  console.log('✅ Environment:', process.env.NODE_ENV || 'development');
+  console.log('✅ CORS Origin:', process.env.CORS_ORIGIN || '*');
+  console.log('✅ ============================================');
+  console.log('');
+  console.log('📋 Available Routes:');
+  console.log('   GET  /health');
+  console.log('   POST /api/auth/login');
+  console.log('   POST /api/auth/register');
+  console.log('   GET  /api/auth/me');
+  console.log('');
+  console.log('✅ Ready to accept connections!');
+  console.log('');
 });
 
-start();
+export default app;
