@@ -25,11 +25,15 @@ export interface AuthResponse {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>('/auth/login', credentials);  // ✅ Sem /api porque já está no baseURL
+    console.log('🔐 Attempting login:', credentials.email);
+    const { data } = await api.post<AuthResponse>('/auth/login', credentials);
+    console.log('✅ Login response:', data);
+    
     if (data.token) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
     }
+    
     return data;
   },
 
