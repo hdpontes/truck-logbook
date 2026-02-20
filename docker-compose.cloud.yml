@@ -31,7 +31,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
     container_name: truck-frontend
+    ports:
+      - "${FRONTEND_PORT:-8200}:80"
     networks:
       - automacoes_default
     restart: unless-stopped
@@ -47,6 +51,7 @@ networks:
     external: true
   backend-network:
     driver: bridge
+
 
 
 
