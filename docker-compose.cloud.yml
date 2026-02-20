@@ -12,9 +12,6 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: https://truck.hpboost.com.br
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - backend-network
     restart: unless-stopped
@@ -43,4 +40,5 @@ services:
 networks:
   backend-network:
     driver: bridge
+
 
