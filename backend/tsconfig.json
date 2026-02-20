@@ -14,5 +14,12 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.old"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.old",
+    "src/routes/dev",
+    "src/services/dev",
+    "src/middleware/dev"
+  ]
 }
