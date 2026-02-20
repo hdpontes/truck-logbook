@@ -97,7 +97,7 @@ router.post('/register', async (req: Request, res: Response) => {
         email,
         password: hashedPassword,
         name,
-        role: UserRole.USER  // ✅ FIX: Use UserRole enum
+        role: UserRole.DRIVER  // ✅ FIX: Use DRIVER instead of USER
       }
     });
 
