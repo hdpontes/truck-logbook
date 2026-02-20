@@ -5,14 +5,14 @@ WORKDIR /app
 # Copiar package files
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm ci
+# Usar npm install em vez de npm ci
+RUN npm install
 
 # Copiar código fonte
 COPY . .
 
 # Build arg para API URL
-ARG VITE_API_URL
+ARG VITE_API_URL=https://truck-api.hpboost.com.br
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Build da aplicação
@@ -24,7 +24,7 @@ FROM nginx:alpine
 # Copiar arquivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configurar Nginx
+# Configurar Nginx para SPA
 RUN echo 'server { \
     listen 80; \
     server_name _; \
@@ -32,9 +32,6 @@ RUN echo 'server { \
     index index.html; \
     location / { \
         try_files $uri $uri/ /index.html; \
-    } \
-    location /api { \
-        return 404; \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
