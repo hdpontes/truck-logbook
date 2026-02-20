@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -97,7 +97,7 @@ router.post('/register', async (req: Request, res: Response) => {
         email,
         password: hashedPassword,
         name,
-        role: 'USER'
+        role: UserRole.USER  // ✅ FIX: Use UserRole enum
       }
     });
 
