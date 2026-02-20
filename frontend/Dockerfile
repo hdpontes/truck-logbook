@@ -1,31 +1,30 @@
-# Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine as builder
 
 WORKDIR /app
 
-# Accept build args
+# Copiar package files
+COPY package*.json ./
+
+# Instalar dependências
+RUN npm ci
+
+# Copiar código fonte
+COPY . .
+
+# Build arg para API URL
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies (usar npm install se não tiver lock)
-RUN npm install
-
-# Copy source code
-COPY . .
-
-# Build the app
+# Build da aplicação
 RUN npm run build
 
-# Production stage
+# Stage de produção
 FROM nginx:alpine
 
-# Copy built files
+# Copiar arquivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Custom nginx config for SPA
+# Configurar Nginx
 RUN echo 'server { \
     listen 80; \
     server_name _; \
@@ -40,4 +39,5 @@ RUN echo 'server { \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
+
 CMD ["nginx", "-g", "daemon off;"]
