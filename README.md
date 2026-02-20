@@ -2,6 +2,27 @@
 
 Sistema completo de gestão de frotas de caminhões com **controle de acesso baseado em roles** (ADMIN/MANAGER e DRIVER).
 
+> ✅ **Projeto Revisado e Corrigido** - Todas as funcionalidades implementadas e testadas. Veja [CORRECOES.md](./CORRECOES.md) para detalhes.
+
+## 🚀 Quick Start
+
+### Opção 1: Setup Automatizado
+
+**Windows:**
+```bash
+setup.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+### Opção 2: Setup Manual
+
+Veja instruções detalhadas em [COMO-INICIAR.md](./COMO-INICIAR.md)
+
 ## 🎯 Funcionalidades Principais
 
 ### 🔐 Sistema de Roles
@@ -26,6 +47,7 @@ Sistema completo de gestão de frotas de caminhões com **controle de acesso bas
 
 ## 📚 Documentação
 
+- **[CORRECOES.md](./CORRECOES.md)** - ✅ Lista completa de correções implementadas
 - **[CONTROLE-ACESSO.md](./CONTROLE-ACESSO.md)** - Sistema de roles e permissões
 - **[FUNCIONALIDADES-IMPLEMENTADAS.md](./FUNCIONALIDADES-IMPLEMENTADAS.md)** - Detalhamento técnico completo
 - **[GUIA-TESTE.md](./GUIA-TESTE.md)** - Como testar todas as funcionalidades
