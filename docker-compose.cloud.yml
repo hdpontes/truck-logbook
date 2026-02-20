@@ -1,44 +1,66 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: truck-postgres
+    environment:
+      POSTGRES_USER: truckuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: trucklogbook
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U truckuser -d trucklogbook"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: truck-backend
     environment:
-      - NODE_ENV=production
-      - PORT=4000
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
-    ports:
-      - "${BACKEND_PORT:-8100}:4000"
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://truckuser:${POSTGRES_PASSWORD}@postgres:5432/trucklogbook?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: https://truck.hpboost.com.br  # ✅ Adicione isso
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      - automacoes_default
       - backend-network
     restart: unless-stopped
     labels:
-      - "com.docker.compose.project=truck-logbook"
+      - "traefik.enable=true"
+      - "traefik.http.routers.truck-api.rule=Host(`truck-api.hpboost.com.br`)"
+      - "traefik.http.routers.truck-api.entrypoints=websecure"
+      - "traefik.http.routers.truck-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.truck-api.loadbalancer.server.port=4000"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${VITE_API_URL}
     container_name: truck-frontend
-    ports:
-      - "${FRONTEND_PORT:-8200}:80"
     networks:
-      - automacoes_default
+      - backend-network
     restart: unless-stopped
     labels:
-      - "com.docker.compose.project=truck-logbook"
+      - "traefik.enable=true"
+      - "traefik.http.routers.truck-frontend.rule=Host(`truck.hpboost.com.br`)"
+      - "traefik.http.routers.truck-frontend.entrypoints=websecure"
+      - "traefik.http.routers.truck-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.truck-frontend.loadbalancer.server.port=80"
 
 networks:
-  automacoes_default:
-    external: true
   backend-network:
     driver: bridge
+
+volumes:
+  postgres_data:
