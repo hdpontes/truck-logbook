@@ -1,15 +1,9 @@
-FROM node:20-slim
-
-# Instalar OpenSSL
-RUN apt-get update -y && \
-    apt-get install -y openssl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine as builder
 
 WORKDIR /app
 
-# Copiar package files
+# Copiar package.json
 COPY package*.json ./
-COPY prisma ./prisma/
 
 # Instalar dependências
 RUN npm install
@@ -17,16 +11,41 @@ RUN npm install
 # Copiar código fonte
 COPY . .
 
-# Remover arquivos de desenvolvimento
-RUN rm -rf src/routes/dev src/services/dev src/middleware/dev
+# Build arg para API URL
+ARG VITE_API_URL=https://truck-api.hpboost.com.br
+ENV VITE_API_URL=${VITE_API_URL}
 
-# Gerar Prisma Client
-RUN npx prisma generate
-
-# Compilar TypeScript
+# Build da aplicação
 RUN npm run build
 
-EXPOSE 4000
+# Stage de produção
+FROM nginx:alpine
 
-# Executar migrations e iniciar servidor
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+# Copiar arquivos buildados
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Configurar Nginx para SPA
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    location /api { \
+        return 404; \
+    } \
+    \
+    # Gzip compression \
+    gzip on; \
+    gzip_vary on; \
+    gzip_min_length 10240; \
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json; \
+}' > /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
