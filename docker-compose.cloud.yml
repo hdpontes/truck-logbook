@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: truck-postgres
-    environment:
-      POSTGRES_USER: truckuser
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: trucklogbook
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - backend-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U truckuser -d trucklogbook"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -27,9 +9,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://truckuser:${POSTGRES_PASSWORD}@postgres:5432/trucklogbook?schema=public
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: https://truck.hpboost.com.br  # ✅ Adicione isso
+      CORS_ORIGIN: https://truck.hpboost.com.br
     depends_on:
       postgres:
         condition: service_healthy
