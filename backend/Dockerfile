@@ -12,6 +12,9 @@ RUN npm install
 # Copiar código fonte
 COPY . .
 
+# Remover arquivos de desenvolvimento
+RUN rm -rf src/routes/dev src/services/dev src/middleware/dev
+
 # Gerar Prisma Client
 RUN npx prisma generate
 
