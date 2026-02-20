@@ -9,26 +9,28 @@ interface User {
 }
 
 interface AuthState {
-  user: User | null;
   token: string | null;
+  user: User | null;
   isAuthenticated: boolean;
-  login: (token: string, user: User) => void;
+  setAuth: (token: string, user: User) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: null,
       token: null,
+      user: null,
       isAuthenticated: false,
-      login: (token, user) => {
-        localStorage.setItem('token', token);
-        set({ user, token, isAuthenticated: true });
+      setAuth: (token, user) => {
+        console.log('✅ Setting auth:', { token, user });
+        set({ token, user, isAuthenticated: true });
       },
       logout: () => {
+        console.log('🚪 Logging out');
         localStorage.removeItem('token');
-        set({ user: null, token: null, isAuthenticated: false });
+        localStorage.removeItem('user');
+        set({ token: null, user: null, isAuthenticated: false });
       },
     }),
     {
