@@ -17,7 +17,7 @@ export default function LoginPage() {
     onSuccess: (data) => {
       console.log('✅ Login successful:', data);
       setAuth(data.token, data.user);
-      navigate('/dashboard');
+      navigate('/');
     },
     onError: (error: any) => {
       console.error('❌ Login error:', error);
