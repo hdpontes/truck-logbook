@@ -1,35 +1,74 @@
-// filepath: frontend/src/services/api.ts
-import axios from 'axios';
+import api from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://truck-api.hpboost.com.br';
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
 
-export const api = axios.create({
-  baseURL: `${API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+export interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+}
 
-// Interceptor para adicionar token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
 
-// Interceptor para tratar erros
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export const authService = {
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    console.log('🔐 Attempting login:', credentials.email);
+    const { data } = await api.post<AuthResponse>('/auth/login', credentials);
+    console.log('✅ Login response:', data);
+    
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
     }
-    return Promise.reject(error);
-  }
-);
+    
+    return data;
+  },
 
-export default api;
+  async register(userData: RegisterData): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/register', userData);
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    return data;
+  },
+
+  async me(): Promise<{ user: User }> {
+    const { data } = await api.get<{ user: User }>('/auth/me');
+    return data;
+  },
+
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  },
+
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  },
+
+  getUser(): User | null {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  },
+
+  isAuthenticated(): boolean {
+    return !!this.getToken();
+  }
+};
+
+export default authService;
