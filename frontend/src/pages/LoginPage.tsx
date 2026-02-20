@@ -1,112 +1,98 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { authAPI } from '@/lib/api';
+import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
-import { Truck, Lock, Mail } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const setAuth = useAuthStore((state) => state.setAuth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const loginMutation = useMutation({
-    mutationFn: () => authAPI.login(email, password),
-    onSuccess: (response) => {
-      const { token, user } = response.data;
-      login(token, user);
-      navigate('/');
+    mutationFn: (credentials: { email: string; password: string }) =>
+      authService.login(credentials),
+    onSuccess: (data) => {
+      console.log('✅ Login successful:', data);
+      setAuth(data.token, data.user);
+      navigate('/dashboard');
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('❌ Login error:', error);
       alert('Erro ao fazer login. Verifique suas credenciais.');
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    loginMutation.mutate();
+    if (!email || !password) {
+      alert('Preencha todos os campos');
+      return;
+    }
+    loginMutation.mutate({ email, password });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Truck className="w-16 h-16 text-blue-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-800">Truck Logbook</h1>
-          <p className="text-gray-600 mt-2">Sistema de Gestão de Frotas</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-lg">
+        <div className="text-center">
+          <LogIn className="mx-auto h-12 w-12 text-blue-600" />
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            Truck Logbook
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Faça login para continuar
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email
+              </label>
               <input
+                id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="seu@email.com"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Senha
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Senha"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Senha
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <button
+              type="submit"
+              disabled={loginMutation.isPending}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loginMutation.isPending ? 'Entrando...' : 'Entrar'}
+            </button>
           </div>
-
-          <button
-            type="submit"
-            disabled={loginMutation.isPending}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loginMutation.isPending ? 'Entrando...' : 'Entrar'}
-          </button>
         </form>
-
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm font-semibold text-blue-900 mb-3">👤 Tipos de Usuário:</p>
-          <div className="space-y-2 text-xs text-blue-800">
-            <div>
-              <p className="font-semibold">🔐 Administrador</p>
-              <p className="text-blue-700">• Pode agendar e gerenciar corridas</p>
-              <p className="text-blue-700">• Define valores e lucros</p>
-              <p className="text-blue-700">• Adiciona todos os tipos de despesas</p>
-              <p className="text-blue-700">• Gerencia motoristas</p>
-            </div>
-            <div className="mt-3">
-              <p className="font-semibold">🚛 Motorista</p>
-              <p className="text-blue-700">• Inicia e finaliza corridas</p>
-              <p className="text-blue-700">• Registra abastecimento</p>
-              <p className="text-blue-700">• Visualiza informações das viagens</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 text-center text-sm text-gray-600 border-t pt-4">
-          <p className="font-semibold mb-2">Credenciais de Demonstração:</p>
-          <p>Admin: admin@example.com / admin123</p>
-          <p>Motorista: (criar na área administrativa)</p>
-        </div>
       </div>
     </div>
   );
