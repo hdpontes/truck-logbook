@@ -38,19 +38,19 @@ const TrucksPage: React.FC = () => {
       const data = await trucksAPI.getAll();
       setTrucks(data);
     } catch (error) {
-      console.error('Error fetching trucks:', error);
+      console.error('Erro ao carregar caminhões:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this truck?')) {
+    if (window.confirm('Tem certeza que deseja excluir este caminhão?')) {
       try {
         await trucksAPI.delete(id);
         setTrucks(trucks.filter(truck => truck.id !== id));
       } catch (error) {
-        console.error('Error deleting truck:', error);
+        console.error('Erro ao excluir caminhão:', error);
       }
     }
   };
@@ -66,10 +66,10 @@ const TrucksPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Fleet Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Gestão de Frota</h1>
         <Button onClick={() => navigate('/trucks/new')}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Truck
+          Adicionar Caminhão
         </Button>
       </div>
 
@@ -77,14 +77,14 @@ const TrucksPage: React.FC = () => {
         <Card>
           <CardContent className="text-center py-8">
             <Truck className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No trucks</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum caminhão cadastrado</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by adding your first truck to the fleet.
+              Comece adicionando seu primeiro caminhão à frota.
             </p>
             <div className="mt-6">
               <Button onClick={() => navigate('/trucks/new')}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Truck
+                Adicionar Caminhão
               </Button>
             </div>
           </CardContent>
@@ -125,7 +125,7 @@ const TrucksPage: React.FC = () => {
                   {truck._count && (
                     <div className="flex items-center text-sm text-gray-600">
                       <MapPin className="mr-1 h-4 w-4" />
-                      {truck._count.trips} trips | {truck._count.maintenances} maintenance
+                      {truck._count.trips} viagens | {truck._count.maintenances} manutenções
                     </div>
                   )}
                   
@@ -137,7 +137,7 @@ const TrucksPage: React.FC = () => {
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {truck.active ? 'Active' : 'Inactive'}
+                      {truck.active ? 'Ativo' : 'Inativo'}
                     </span>
                     <span className="text-sm text-gray-500">
                       {truck.capacity}t | {truck.avgConsumption}km/L
@@ -149,7 +149,7 @@ const TrucksPage: React.FC = () => {
                     className="w-full"
                     onClick={() => navigate(`/trucks/${truck.id}`)}
                   >
-                    View Details
+                    Ver Detalhes
                   </Button>
                 </div>
               </CardContent>
