@@ -5,22 +5,26 @@ import { Truck, Plus, Edit, Trash2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
-interface Truck {
+interface TruckData {
   id: string;
-  plateNumber: string;
+  plate: string;
   model: string;
+  brand: string;
   year: number;
+  color: string;
   capacity: number;
-  fuelType: string;
-  currentMileage: number;
-  status: string;
-  lastMaintenanceDate?: string;
-  nextMaintenanceDate?: string;
+  avgConsumption: number;
+  active: boolean;
+  _count?: {
+    trips: number;
+    expenses: number;
+    maintenances: number;
+  };
 }
 
 const TrucksPage: React.FC = () => {
   const navigate = useNavigate();
-  const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [trucks, setTrucks] = useState<TruckData[]>([]);
   const [loading, setLoading] = useState(true);
   // Removed showAddModal as it's not used
 
@@ -91,7 +95,7 @@ const TrucksPage: React.FC = () => {
             <Card key={truck.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>{truck.plateNumber}</span>
+                  <span>{truck.plate}</span>
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
@@ -114,29 +118,29 @@ const TrucksPage: React.FC = () => {
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-lg font-medium">{truck.model}</p>
-                    <p className="text-sm text-gray-500">Year: {truck.year}</p>
+                    <p className="text-lg font-medium">{truck.brand} {truck.model}</p>
+                    <p className="text-sm text-gray-500">Year: {truck.year} | {truck.color}</p>
                   </div>
                   
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="mr-1 h-4 w-4" />
-                    {truck.currentMileage.toLocaleString()} km
-                  </div>
+                  {truck._count && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <MapPin className="mr-1 h-4 w-4" />
+                      {truck._count.trips} trips | {truck._count.maintenances} maintenance
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center">
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        truck.status === 'active'
+                        truck.active
                           ? 'bg-green-100 text-green-800'
-                          : truck.status === 'maintenance'
-                          ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {truck.status}
+                      {truck.active ? 'Active' : 'Inactive'}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {truck.capacity}t capacity
+                      {truck.capacity}t | {truck.avgConsumption}km/L
                     </span>
                   </div>
                   
