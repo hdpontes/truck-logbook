@@ -47,8 +47,8 @@ router.post('/login', async (req: Request, res: Response) => {
         email: user.email,
         role: user.role
       },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN as string }
     );
 
     console.log('✅ Login successful:', email);
@@ -109,7 +109,7 @@ router.post('/register', async (req: Request, res: Response) => {
         role: user.role
       },
       config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN }
+      { expiresIn: config.JWT_EXPIRES_IN as string }
     );
 
     res.status(201).json({
