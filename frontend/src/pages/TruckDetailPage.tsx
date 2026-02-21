@@ -14,18 +14,23 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils';
 
-interface Truck {
+interface TruckData {
   id: string;
-  plateNumber: string;
+  plate: string;
   model: string;
+  brand: string;
   year: number;
+  color: string;
   capacity: number;
-  fuelType: string;
-  currentMileage: number;
-  status: string;
-  lastMaintenanceDate?: string;
-  nextMaintenanceDate?: string;
+  avgConsumption: number;
+  active: boolean;
+  _count?: {
+    trips: number;
+    expenses: number;
+    maintenances: number;
+  };
 }
 
 interface Trip {
@@ -38,7 +43,12 @@ interface Trip {
   startDate: string;
   endDate?: string;
   status: string;
-  revenue?: number;
+  revenue: number;
+  totalCost: number;
+  profit: number;
+  driver: {
+    name: string;
+  };
 }
 
 interface Expense {
@@ -55,7 +65,7 @@ interface Expense {
 const TruckDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [truck, setTruck] = useState<Truck | null>(null);
+  const [truck, setTruck] = useState<TruckData | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +89,7 @@ const TruckDetailPage: React.FC = () => {
       setTrips(tripsData);
       setExpenses(expensesData);
     } catch (error) {
-      console.error('Error fetching truck details:', error);
+      console.error('Erro ao carregar detalhes do caminhão:', error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +100,7 @@ const TruckDetailPage: React.FC = () => {
       await expensesAPI.delete(expenseId);
       setExpenses(expenses.filter(exp => exp.id !== expenseId));
     } catch (error) {
-      console.error('Error deleting expense:', error);
+      console.error('Erro ao excluir despesa:', error);
     }
   };
 
@@ -106,14 +116,14 @@ const TruckDetailPage: React.FC = () => {
     return (
       <div className="text-center py-8">
         <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Truck not found</h3>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">Caminhão não encontrado</h3>
         <p className="mt-1 text-sm text-gray-500">
-          The truck you're looking for doesn't exist.
+          O caminhão que você procura não existe.
         </p>
         <div className="mt-6">
           <Button onClick={() => navigate('/trucks')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Trucks
+            Voltar para Frota
           </Button>
         </div>
       </div>
@@ -122,6 +132,7 @@ const TruckDetailPage: React.FC = () => {
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalRevenue = trips.reduce((sum, trip) => sum + (trip.revenue || 0), 0);
+  const totalProfit = trips.reduce((sum, trip) => sum + (trip.profit || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -130,20 +141,20 @@ const TruckDetailPage: React.FC = () => {
         <div className="flex items-center space-x-4">
           <Button variant="outline" onClick={() => navigate('/trucks')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            Voltar
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {truck.plateNumber}
+              {truck.plate}
             </h1>
             <p className="text-gray-500">
-              {truck.model} ({truck.year})
+              {truck.brand} {truck.model} ({truck.year})
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate(`/trucks/${id}/edit`)}>
+        <Button onClick={() => alert('Edição em breve')}>
           <Edit className="mr-2 h-4 w-4" />
-          Edit Truck
+          Editar Caminhão
         </Button>
       </div>
 
@@ -155,7 +166,7 @@ const TruckDetailPage: React.FC = () => {
               <Truck className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Status</p>
-                <p className="text-2xl font-bold text-gray-900">{truck.status}</p>
+                <p className="text-2xl font-bold text-gray-900">{truck.active ? 'Ativo' : 'Inativo'}</p>
               </div>
             </div>
           </CardContent>
@@ -166,9 +177,9 @@ const TruckDetailPage: React.FC = () => {
             <div className="flex items-center">
               <MapPin className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Mileage</p>
+                <p className="text-sm font-medium text-gray-500">Viagens</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {truck.currentMileage.toLocaleString()} km
+                  {trips.length}
                 </p>
               </div>
             </div>
@@ -180,9 +191,9 @@ const TruckDetailPage: React.FC = () => {
             <div className="flex items-center">
               <TrendingUp className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Revenue</p>
+                <p className="text-sm font-medium text-gray-500">Receita</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  ${totalRevenue.toLocaleString()}
+                  {formatCurrency(totalRevenue)}
                 </p>
               </div>
             </div>
@@ -194,9 +205,9 @@ const TruckDetailPage: React.FC = () => {
             <div className="flex items-center">
               <DollarSign className="h-8 w-8 text-red-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Expenses</p>
+                <p className="text-sm font-medium text-gray-500">Despesas</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  ${totalExpenses.toLocaleString()}
+                  {formatCurrency(totalExpenses)}
                 </p>
               </div>
             </div>
@@ -207,17 +218,16 @@ const TruckDetailPage: React.FC = () => {
       {/* Recent Trips */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Recent Trips</span>
-            <Button onClick={() => navigate('/trips/new')}>
+          <CardTitViagens Recentes</span>
+            <Button onClick={() => alert('Nova viagem em breve')}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              New Trip
+              Nova Viagem
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {trips.length === 0 ? (
-            <p className="text-gray-500">No trips found for this truck.</p>
+            <p className="text-gray-500">Nenhuma viagem encontrada para este caminhão.</p>
           ) : (
             <div className="space-y-4">
               {trips.slice(0, 5).map((trip) => (
@@ -227,21 +237,21 @@ const TruckDetailPage: React.FC = () => {
                       {trip.origin} → {trip.destination}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {trip.distance} km • {new Date(trip.startDate).toLocaleDateString()}
+                      {trip.distance} km • {new Date(trip.startDate).toLocaleDateString('pt-BR')} • {trip.driver.name}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">${trip.revenue?.toLocaleString() || 0}</p>
+                    <p className="font-medium">{formatCurrency(trip.revenue || 0)}</p>
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        trip.status === 'completed'
+                        trip.status === 'COMPLETED'
                           ? 'bg-green-100 text-green-800'
-                          : trip.status === 'in_progress'
+                          : trip.status === 'IN_PROGRESS'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {trip.status.replace('_', ' ')}
+                      {trip.status === 'COMPLETED' ? 'Concluída' : trip.status === 'IN_PROGRESS' ? 'Em Andamento' : trip.status}
                     </span>
                   </div>
                 </div>
@@ -255,16 +265,16 @@ const TruckDetailPage: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Expenses</span>
-            <Button onClick={() => navigate('/expenses/new')}>
+            <span>Despesas</span>
+            <Button onClick={() => alert('Nova despesa em breve')}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Expense
+              Adicionar Despesa
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {expenses.length === 0 ? (
-            <p className="text-gray-500">No expenses found for this truck.</p>
+            <p className="text-gray-500">Nenhuma despesa encontrada para este caminhão.</p>
           ) : (
             <div className="space-y-4">
               {expenses.slice(0, 10).map((expense) => (
@@ -272,10 +282,11 @@ const TruckDetailPage: React.FC = () => {
                   <div>
                     <p className="font-medium">{expense.type}</p>
                     <p className="text-sm text-gray-500">
-                      {expense.description} • {new Date(expense.date).toLocaleDateString()}
+                      {expense.description} • {new Date(expense.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <span className="font-medium">{formatCurrency(expense.amount
                     <span className="font-medium">${expense.amount.toLocaleString()}</span>
                     <Button
                       variant="outline"
