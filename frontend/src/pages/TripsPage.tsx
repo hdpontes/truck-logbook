@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI } from '@/lib/api';
 import { Route, Plus, Eye, Trash2, MapPin, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';import { formatCurrency } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils';
 
 interface Trip {
   id: string;
