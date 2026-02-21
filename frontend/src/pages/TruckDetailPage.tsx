@@ -218,7 +218,8 @@ const TruckDetailPage: React.FC = () => {
       {/* Recent Trips */}
       <Card>
         <CardHeader>
-          <CardTitViagens Recentes</span>
+          <CardTitle className="flex items-center justify-between">
+            <span>Viagens Recentes</span>
             <Button onClick={() => alert('Nova viagem em breve')}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Viagem
@@ -286,8 +287,7 @@ const TruckDetailPage: React.FC = () => {
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium">{formatCurrency(expense.amount
-                    <span className="font-medium">${expense.amount.toLocaleString()}</span>
+                    <span className="font-medium">{formatCurrency(expense.amount)}</span>
                     <Button
                       variant="outline"
                       size="sm"
