@@ -132,7 +132,6 @@ const TruckDetailPage: React.FC = () => {
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalRevenue = trips.reduce((sum, trip) => sum + (trip.revenue || 0), 0);
-  const totalProfit = trips.reduce((sum, trip) => sum + (trip.profit || 0), 0);
 
   return (
     <div className="space-y-6">
