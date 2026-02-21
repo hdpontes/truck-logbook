@@ -48,7 +48,7 @@ router.post('/login', async (req: Request, res: Response) => {
         role: user.role
       },
       config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN as string }
+      { expiresIn: config.JWT_EXPIRES_IN as string | number }
     );
 
     console.log('✅ Login successful:', email);
@@ -109,7 +109,7 @@ router.post('/register', async (req: Request, res: Response) => {
         role: user.role
       },
       config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN as string }
+      { expiresIn: config.JWT_EXPIRES_IN as string | number }
     );
 
     res.status(201).json({
