@@ -56,6 +56,8 @@ export const tripsAPI = {
 export const expensesAPI = {
   getAll: () => api.get('/expenses').then(res => res.data),
   getById: (id: string) => api.get(`/expenses/${id}`).then(res => res.data),
+  getByTruck: (truckId: string) => api.get(`/expenses?truckId=${truckId}`).then(res => res.data),
+  getByTrip: (tripId: string) => api.get(`/expenses?tripId=${tripId}`).then(res => res.data),
   create: (data: any) => api.post('/expenses', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/expenses/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/expenses/${id}`).then(res => res.data),
@@ -74,6 +76,7 @@ export const driversAPI = {
 export const maintenanceAPI = {
   getAll: () => api.get('/maintenance').then(res => res.data),
   getById: (id: string) => api.get(`/maintenance/${id}`).then(res => res.data),
+  getByTruck: (truckId: string) => api.get(`/maintenance?truckId=${truckId}`).then(res => res.data),
   create: (data: any) => api.post('/maintenance', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/maintenance/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/maintenance/${id}`).then(res => res.data),
