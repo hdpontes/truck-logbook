@@ -37,7 +37,6 @@ export default function DashboardPage() {
   }
 
   const overview = data?.stats;
-  const trips = data?.recentTrips || [];
 
   const metrics = [
     {
