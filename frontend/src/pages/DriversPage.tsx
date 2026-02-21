@@ -22,7 +22,7 @@ export default function DriversPage() {
     queryKey: ['drivers'],
     queryFn: async () => {
       const response = await driversAPI.getAll();
-      return response.data.drivers;
+      return response;
     },
   });
 
