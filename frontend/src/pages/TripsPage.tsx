@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI } from '@/lib/api';import { Route, Plus, Eye, Trash2, MapPin } from 'lucide-react';
+import { tripsAPI } from '@/lib/api';
+import { Route, Plus, Eye, Trash2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -90,8 +91,8 @@ export default function TripsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xlnavigate('/trips/new</h1>
-        <Button onClick={() => alert('Adicionar viagem - em breve')}>
+        <h1 className="text-3xl font-bold tracking-tight">Viagens</h1>
+        <Button onClick={() => navigate('/trips/new')}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Viagem
         </Button>
