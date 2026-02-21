@@ -12,11 +12,11 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { data: overview, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['dashboard-overview'],
     queryFn: async () => {
       const response = await dashboardAPI.getOverview();
-      return response.data.overview;
+      return response;
     },
   });
 
@@ -24,7 +24,7 @@ export default function DashboardPage() {
     queryKey: ['truck-performance'],
     queryFn: async () => {
       const response = await dashboardAPI.getTruckPerformance();
-      return response.data.performance;
+      return response.performance;
     },
   });
 
@@ -36,28 +36,31 @@ export default function DashboardPage() {
     );
   }
 
+  const overview = data?.stats;
+  const trips = data?.recentTrips || [];
+
   const metrics = [
     {
       label: 'Caminhões Ativos',
-      value: `${overview?.trucks.active}/${overview?.trucks.total}`,
+      value: overview?.totalTrucks || 0,
       icon: Truck,
       color: 'blue',
     },
     {
       label: 'Viagens Ativas',
-      value: overview?.trips.active || 0,
+      value: overview?.activeTrips || 0,
       icon: Route,
       color: 'green',
     },
     {
-      label: 'Total de Despesas',
-      value: overview?.expenses.total || 0,
+      label: 'Viagens Completas',
+      value: overview?.completedTrips || 0,
       icon: Receipt,
-      color: 'red',
+      color: 'purple',
     },
     {
-      label: 'Manutenções Pendentes',
-      value: overview?.maintenances.pending || 0,
+      label: 'Motoristas Ativos',
+      value: overview?.totalDrivers || 0,
       icon: AlertTriangle,
       color: 'yellow',
     },
@@ -101,10 +104,10 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-800">Receita Total</h3>
           </div>
           <p className="text-3xl font-bold text-green-600">
-            {formatCurrency(overview?.trips.totalRevenue || 0)}
+            {formatCurrency(overview?.totalRevenue || 0)}
           </p>
           <p className="text-sm text-gray-600 mt-2">
-            {overview?.trips.total} viagens realizadas
+            {overview?.completedTrips || 0} viagens realizadas
           </p>
         </div>
 
@@ -114,10 +117,10 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-800">Lucro Total</h3>
           </div>
           <p className="text-3xl font-bold text-blue-600">
-            {formatCurrency(overview?.trips.totalProfit || 0)}
+            {formatCurrency(overview?.totalProfit || 0)}
           </p>
           <p className="text-sm text-gray-600 mt-2">
-            Margem média: {overview?.trips.avgProfitMargin?.toFixed(2)}%
+            Margem: {overview?.totalRevenue > 0 ? ((overview.totalProfit / overview.totalRevenue) * 100).toFixed(2) : 0}%
           </p>
         </div>
 
@@ -127,10 +130,10 @@ export default function DashboardPage() {
             <h3 className="text-lg font-semibold text-gray-800">Custo Total</h3>
           </div>
           <p className="text-3xl font-bold text-red-600">
-            {formatCurrency(overview?.trips.totalCost || 0)}
+            {formatCurrency(overview?.totalCost || 0)}
           </p>
           <p className="text-sm text-gray-600 mt-2">
-            Distância: {overview?.trips.totalDistance?.toFixed(0)} km
+            Viagens: {overview?.completedTrips || 0}
           </p>
         </div>
       </div>
