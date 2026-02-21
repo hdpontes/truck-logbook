@@ -41,14 +41,17 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
 
+    const jwtSecret: string = config.JWT_SECRET;
+    const jwtExpiry: string | number = config.JWT_EXPIRES_IN;
+    
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         role: user.role
       },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN as string | number }
+      jwtSecret,
+      { expiresIn: jwtExpiry }
     );
 
     console.log('✅ Login successful:', email);
@@ -102,14 +105,17 @@ router.post('/register', async (req: Request, res: Response) => {
       }
     });
 
+    const jwtSecret: string = config.JWT_SECRET;
+    const jwtExpiry: string | number = config.JWT_EXPIRES_IN;
+    
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         role: user.role
       },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN as string | number }
+      jwtSecret,
+      { expiresIn: jwtExpiry }
     );
 
     res.status(201).json({
