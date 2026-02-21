@@ -44,6 +44,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const jwtSecret: string = config.JWT_SECRET;
     const jwtExpiry: string | number = config.JWT_EXPIRES_IN;
     
+    // @ts-expect-error - JWT library type definitions issue with expiresIn
     const token = jwt.sign(
       {
         userId: user.id,
@@ -108,6 +109,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const jwtSecret: string = config.JWT_SECRET;
     const jwtExpiry: string | number = config.JWT_EXPIRES_IN;
     
+    // @ts-expect-error - JWT library type definitions issue with expiresIn
     const token = jwt.sign(
       {
         userId: user.id,
