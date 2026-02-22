@@ -97,4 +97,10 @@ export const dashboardAPI = {
   getTruckPerformance: () => api.get('/dashboard/truck-performance').then(res => res.data),
 };
 
+// Settings API
+export const settingsAPI = {
+  get: () => api.get('/settings').then(res => res.data),
+  update: (data: any) => api.put('/settings', data).then(res => res.data),
+};
+
 export default api;
