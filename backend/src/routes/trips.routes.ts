@@ -495,6 +495,73 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// POST /api/trips/:id/send-reminder - Enviar lembrete manual para o motorista
+router.post('/:id/send-reminder', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+
+    // Apenas ADMIN e MANAGER podem enviar lembretes
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({ 
+        message: 'Apenas administradores e gerentes podem enviar lembretes' 
+      });
+    }
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        driver: true,
+      },
+    });
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Enviar webhook de lembrete
+    await sendWebhook('trip.reminder', {
+      trip: {
+        id: trip.id,
+        origin: trip.origin,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        status: trip.status,
+        revenue: trip.revenue,
+      },
+      truck: {
+        id: trip.truck.id,
+        plate: trip.truck.plate,
+        model: trip.truck.model,
+        brand: trip.truck.brand,
+      },
+      driver: {
+        id: trip.driver.id,
+        name: trip.driver.name,
+        email: trip.driver.email,
+        phone: trip.driver.phone,
+      },
+      sentBy: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      },
+    });
+
+    res.json({ 
+      message: 'Lembrete enviado com sucesso',
+      trip: {
+        id: trip.id,
+        driver: trip.driver.name,
+      },
+    });
+  } catch (error) {
+    console.error('Error sending reminder:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // POST /api/trips/check-delayed - Verificar e atualizar viagens em atraso
 router.post('/check-delayed', async (req, res) => {
   try {
