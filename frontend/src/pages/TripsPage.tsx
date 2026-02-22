@@ -18,7 +18,7 @@ interface Trip {
   totalCost: number;
   profit: number;
   profitMargin: number;
-  status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED';
   truck: {
     id: string;
     plate: string;
@@ -87,6 +87,7 @@ export default function TripsPage() {
     IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
     COMPLETED: 'bg-green-100 text-green-800',
     CANCELLED: 'bg-red-100 text-red-800',
+    DELAYED: 'bg-red-200 text-red-900',
   };
 
   const statusLabels = {
@@ -94,6 +95,7 @@ export default function TripsPage() {
     IN_PROGRESS: 'Em Andamento',
     COMPLETED: 'Concluída',
     CANCELLED: 'Cancelada',
+    DELAYED: 'Em Atraso',
   };
 
   return (
@@ -143,7 +145,12 @@ export default function TripsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {filteredTrips.map((trip) => (
-            <Card key={trip.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={trip.id} 
+              className={`hover:shadow-lg transition-shadow ${
+                trip.status === 'DELAYED' ? 'border-red-300 bg-red-50' : ''
+              }`}
+            >
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
