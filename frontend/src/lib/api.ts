@@ -7,6 +7,7 @@ export {
   driversAPI,
   maintenanceAPI,
   dashboardAPI,
+  settingsAPI,
 } from '@/services/api';
 
 export { default } from '@/services/api';
