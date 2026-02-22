@@ -203,7 +203,7 @@ export default function TripsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => alert(`Ver detalhes da viagem ${trip.id}`)}
+                      onClick={() => navigate(`/trips/${trip.id}`)}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
