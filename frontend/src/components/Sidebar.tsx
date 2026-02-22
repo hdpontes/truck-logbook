@@ -21,6 +21,13 @@ const getMenuItems = (userRole: string) => {
     { icon: RouteIcon, label: 'Viagens', path: '/trips' },
   ];
 
+  // DRIVER vê apenas Viagens
+  if (userRole === 'DRIVER') {
+    return [
+      { icon: RouteIcon, label: 'Viagens', path: '/trips' },
+    ];
+  }
+
   // ADMIN vê tudo incluindo gestão
   if (userRole === 'ADMIN') {
     return [
@@ -46,7 +53,7 @@ const getMenuItems = (userRole: string) => {
     ];
   }
 
-  // DRIVER vê apenas o básico
+  // Default - não deveria chegar aqui
   return baseItems;
 };
 
