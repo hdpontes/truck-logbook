@@ -219,7 +219,7 @@ const TruckDetailPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Viagens Recentes</span>
-            <Button onClick={() => navigate('/trips/new')}>
+            <Button onClick={() => navigate(`/trips/new?truckId=${id}`)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Viagem
             </Button>
@@ -266,7 +266,7 @@ const TruckDetailPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Despesas</span>
-            <Button onClick={() => alert('Nova despesa em breve')}>
+            <Button onClick={() => navigate(`/expenses/new?truckId=${id}`)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Despesa
             </Button>
