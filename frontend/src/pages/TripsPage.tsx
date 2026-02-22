@@ -64,8 +64,15 @@ export default function TripsPage() {
       try {
         await tripsAPI.delete(id);
         setTrips(trips.filter(trip => trip.id !== id));
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao excluir viagem:', error);
+        if (error.response?.status === 400) {
+          alert(error.response.data.message || 'Não é possível excluir viagens que já foram iniciadas ou finalizadas.');
+        } else if (error.response?.status === 403) {
+          alert('Você não tem permissão para excluir viagens.');
+        } else {
+          alert('Erro ao excluir viagem.');
+        }
       }
     }
   };
@@ -188,22 +195,28 @@ export default function TripsPage() {
 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <div className="flex gap-6">
-                    <div>
-                      <p className="text-xs text-gray-600">Receita</p>
-                      <p className="text-sm font-semibold text-green-600">{formatCurrency(trip.revenue)}</p>
-                    </div>
+                    {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                      <div>
+                        <p className="text-xs text-gray-600">Receita</p>
+                        <p className="text-sm font-semibold text-green-600">{formatCurrency(trip.revenue)}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs text-gray-600">Custo</p>
                       <p className="text-sm font-semibold text-red-600">{formatCurrency(trip.totalCost)}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Lucro</p>
-                      <p className="text-sm font-semibold text-blue-600">{formatCurrency(trip.profit)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Margem</p>
-                      <p className="text-sm font-semibold">{trip.profitMargin.toFixed(2)}%</p>
-                    </div>
+                    {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                      <>
+                        <div>
+                          <p className="text-xs text-gray-600">Lucro</p>
+                          <p className="text-sm font-semibold text-blue-600">{formatCurrency(trip.profit)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Margem</p>
+                          <p className="text-sm font-semibold">{trip.profitMargin.toFixed(2)}%</p>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex space-x-2">
@@ -214,14 +227,16 @@ export default function TripsPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(trip.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(trip.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
