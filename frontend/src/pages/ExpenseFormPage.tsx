@@ -55,6 +55,19 @@ export default function ExpenseFormPage() {
       if (truckIdFromUrl) {
         setFormData(prev => ({ ...prev, truckId: truckIdFromUrl }));
       }
+      
+      // Pré-selecionar viagem se vier da URL
+      const tripIdFromUrl = searchParams.get('tripId');
+      if (tripIdFromUrl) {
+        const trip = tripsData.find((t: any) => t.id === tripIdFromUrl);
+        if (trip) {
+          setFormData(prev => ({ 
+            ...prev, 
+            tripId: tripIdFromUrl,
+            truckId: trip.truck?.id || trip.truckId || prev.truckId,
+          }));
+        }
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
