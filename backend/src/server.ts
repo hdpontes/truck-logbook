@@ -8,6 +8,8 @@ import expensesRoutes from './routes/expenses.routes';
 import driversRoutes from './routes/drivers.routes';
 import maintenanceRoutes from './routes/maintenance.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import clientsRoutes from './routes/clients.routes';
+import locationsRoutes from './routes/locations.routes';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;  // ✅ FIX: Convert to Number
@@ -50,8 +52,8 @@ app.use('/api/trips', tripsRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/drivers', driversRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-console.log('✅ All routes mounted successfully');
+app.use('/api/dashboard', dashboardRoutes);app.use('/api/clients', clientsRoutes);
+app.use('/api/locations', locationsRoutes);console.log('✅ All routes mounted successfully');
 
 // 404 Handler
 app.use((req, res) => {
