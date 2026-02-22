@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useSettingsStore } from '@/store/settings';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -65,8 +66,10 @@ const getMenuItems = (userRole: string) => {
 export default function Sidebar() {
   const location = useLocation();
   const { logout, user } = useAuthStore();
+  const { settings } = useSettingsStore();
   const menuItems = getMenuItems(user?.role || 'DRIVER');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -75,6 +78,11 @@ export default function Sidebar() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Resetar erro de logo quando as settings mudarem
+  useEffect(() => {
+    setLogoError(false);
+  }, [settings?.companyLogo]);
 
   const formatDateTime = () => {
     const brasilia = new Date(currentTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
@@ -97,8 +105,17 @@ export default function Sidebar() {
     <aside className="w-64 bg-white shadow-lg">
       <div className="p-6">
         <div className="flex items-center gap-2">
-          <Truck className="w-8 h-8 text-blue-600" />
-          <h1 className="text-xl font-bold text-gray-800">Truck Logbook</h1>
+          {settings?.companyLogo && !logoError ? (
+            <img 
+              src={settings.companyLogo} 
+              alt={settings.companyName || 'Logo'} 
+              className="h-8 w-auto max-w-[32px] object-contain"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <Truck className="w-8 h-8 text-blue-600" />
+          )}
+          <h1 className="text-xl font-bold text-gray-800">{settings?.companyName || 'Truck Logbook'}</h1>
         </div>
       </div>
       
