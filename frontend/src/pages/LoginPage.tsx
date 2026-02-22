@@ -15,8 +15,12 @@ export default function LoginPage() {
   const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    // Buscar settings apenas uma vez ao montar o componente
+    fetchSettings().catch(err => {
+      console.error('Failed to load settings:', err);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependencia vazia - executa apenas uma vez
 
   useEffect(() => {
     setLogoError(false);
