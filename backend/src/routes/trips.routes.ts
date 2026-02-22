@@ -119,8 +119,10 @@ router.post('/', async (req, res) => {
 
     // Validação 1: Não permitir data retroativa
     const tripStartDate = new Date(startDate);
-    const now = new Date();
-    if (tripStartDate < now) {
+    // Converter para horário de Brasília (UTC-3)
+    const nowUTC = new Date();
+    const nowBrasilia = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    if (tripStartDate < nowBrasilia) {
       return res.status(400).json({ 
         message: 'Não é permitido cadastrar viagens com data/hora retroativa' 
       });
