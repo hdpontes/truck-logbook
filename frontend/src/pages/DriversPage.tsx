@@ -126,7 +126,6 @@ export default function DriversPage() {
   };
 
   const handleDeactivate = (driver: any) => {
-    const action = driver.active ? 'desativar' : 'ativar';
     const message = driver.active 
       ? 'Tem certeza que deseja desativar este motorista? Ele não poderá mais fazer login na plataforma.' 
       : 'Tem certeza que deseja ativar este motorista?';
