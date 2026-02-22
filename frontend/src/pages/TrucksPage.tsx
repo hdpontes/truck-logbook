@@ -93,10 +93,26 @@ const TrucksPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {trucks.map((truck) => (
-            <Card key={truck.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+            <Card 
+              key={truck.id} 
+              className="hover:shadow-lg transition-shadow relative overflow-hidden"
+            >
+              {/* Barra lateral colorida com a cor do caminhão */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-2"
+                style={{ backgroundColor: truck.color || '#6B7280' }}
+              />
+              <CardHeader className="pl-6">
                 <CardTitle className="flex items-center justify-between">
-                  <span>{truck.plate}</span>
+                  <div className="flex items-center gap-2">
+                    <span>{truck.plate}</span>
+                    {/* Badge de cor */}
+                    <div 
+                      className="w-6 h-6 rounded-full border-2 border-gray-300"
+                      style={{ backgroundColor: truck.color || '#6B7280' }}
+                      title={truck.color}
+                    />
+                  </div>
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
