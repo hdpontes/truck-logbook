@@ -168,6 +168,7 @@ const TripDetailPage: React.FC = () => {
     IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
     COMPLETED: 'bg-green-100 text-green-800',
     CANCELLED: 'bg-red-100 text-red-800',
+    DELAYED: 'bg-red-200 text-red-900',
   };
 
   const statusLabels = {
@@ -175,6 +176,7 @@ const TripDetailPage: React.FC = () => {
     IN_PROGRESS: 'Em Andamento',
     COMPLETED: 'Concluída',
     CANCELLED: 'Cancelada',
+    DELAYED: 'Em Atraso',
   };
 
   const expenseTypeLabels: Record<string, string> = {
@@ -218,7 +220,7 @@ const TripDetailPage: React.FC = () => {
               <span className="text-sm font-semibold">{elapsedTime}</span>
             </div>
           )}
-          {trip.status === 'PLANNED' && user?.id === trip.driver.id && (
+          {(trip.status === 'PLANNED' || trip.status === 'DELAYED') && user?.id === trip.driver.id && (
             <Button onClick={handleStartTrip} className="bg-green-600 hover:bg-green-700">
               <Play className="mr-2 h-4 w-4" />
               Iniciar Viagem
