@@ -40,7 +40,7 @@ export default function LoginPage() {
         <div className="text-center">
           <LogIn className="mx-auto h-12 w-12 text-blue-600" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Truck Logbook
+            Debora Transportes
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Faça login para continuar
