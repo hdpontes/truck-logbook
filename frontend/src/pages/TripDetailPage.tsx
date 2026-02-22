@@ -28,6 +28,8 @@ interface TripData {
   startDate: string;
   endDate?: string;
   distance: number;
+  startMileage?: number;
+  endMileage?: number;
   revenue: number;
   fuelCost: number;
   tollCost: number;
@@ -129,9 +131,40 @@ const TripDetailPage: React.FC = () => {
 
   const handleFinishTrip = async () => {
     if (!id) return;
-    if (!confirm('Deseja finalizar esta viagem? Esta ação calculará os custos finais.')) return;
+    
+    // Pedir quilometragem final
+    const endMileageStr = prompt(
+      `Quilometragem inicial: ${trip?.startMileage || 0} km\n\nInforme a quilometragem final do caminhão:`,
+      trip?.startMileage ? (trip.startMileage + 100).toString() : '0'
+    );
+    
+    if (!endMileageStr) return; // Usuário cancelou
+    
+    const endMileage = parseFloat(endMileageStr);
+    
+    // Validar quilometragem
+    if (isNaN(endMileage) || endMileage < 0) {
+      alert('Quilometragem inválida. Por favor, informe um número válido.');
+      return;
+    }
+    
+    if (trip?.startMileage && endMileage < trip.startMileage) {
+      alert(`A quilometragem final (${endMileage} km) não pode ser menor que a inicial (${trip.startMileage} km).`);
+      return;
+    }
+    
+    const distance = trip?.startMileage ? endMileage - trip.startMileage : 0;
+    
+    if (!confirm(
+      `Confirmar finalização da viagem?\n\n` +
+      `Quilometragem inicial: ${trip?.startMileage || 0} km\n` +
+      `Quilometragem final: ${endMileage} km\n` +
+      `Distância percorrida: ${distance.toFixed(1)} km\n\n` +
+      `Esta ação calculará os custos finais.`
+    )) return;
+    
     try {
-      await tripsAPI.finish(id);
+      await tripsAPI.finish(id, { endMileage });
       fetchTripDetails(id);
     } catch (error) {
       console.error('Erro ao finalizar viagem:', error);
@@ -264,6 +297,11 @@ const TripDetailPage: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Distância</p>
                 <p className="text-2xl font-bold text-gray-900">{trip.distance} km</p>
+                {trip.startMileage !== undefined && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {trip.startMileage.toFixed(0)} km → {trip.endMileage ? trip.endMileage.toFixed(0) : '...'} km
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
