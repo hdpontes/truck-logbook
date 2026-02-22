@@ -53,6 +53,7 @@ export const tripsAPI = {
   finish: (id: string, data?: any) => api.post(`/trips/${id}/finish`, data).then(res => res.data),
   checkDelayed: () => api.post('/trips/check-delayed').then(res => res.data),
   checkUpcoming: () => api.post('/trips/check-upcoming').then(res => res.data),
+  sendReminder: (id: string) => api.post(`/trips/${id}/send-reminder`).then(res => res.data),
 };
 
 // Expenses API
