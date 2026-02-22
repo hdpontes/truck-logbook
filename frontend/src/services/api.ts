@@ -70,6 +70,7 @@ export const driversAPI = {
   create: (data: any) => api.post('/drivers', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/drivers/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/drivers/${id}`).then(res => res.data),
+  deactivate: (id: string) => api.patch(`/drivers/${id}/deactivate`).then(res => res.data),
 };
 
 // Maintenance API
