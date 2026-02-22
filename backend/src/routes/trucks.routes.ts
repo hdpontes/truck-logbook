@@ -166,6 +166,35 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/trucks/:id/status - Atualizar status do caminhão
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['GARAGE', 'IN_TRANSIT', 'MAINTENANCE'].includes(status)) {
+      return res.status(400).json({ 
+        message: 'Valid status is required (GARAGE, IN_TRANSIT, MAINTENANCE)' 
+      });
+    }
+
+    const truck = await prisma.truck.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.json(truck);
+  } catch (error: any) {
+    console.error('Error updating truck status:', error);
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Truck not found' });
+    }
+    
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // DELETE /api/trucks/:id - Deletar caminhão
 router.delete('/:id', async (req, res) => {
   try {
