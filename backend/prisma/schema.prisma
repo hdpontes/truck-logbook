@@ -283,3 +283,14 @@ enum LocationType {
   DESTINATION
   BOTH
 }
+
+model Settings {
+  id             String   @id @default(uuid())
+  companyName    String   @default("Truck Logbook")
+  companyLogo    String?  // URL do logo
+  dieselPrice    Float    @default(0) // Preço por litro do diesel
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("settings")
+}
