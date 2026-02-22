@@ -66,10 +66,8 @@ export default function TripsPage() {
         setTrips(trips.filter(trip => trip.id !== id));
       } catch (error: any) {
         console.error('Erro ao excluir viagem:', error);
-        if (error.response?.status === 400) {
-          alert(error.response.data.message || 'Não é possível excluir viagens que já foram iniciadas ou finalizadas.');
-        } else if (error.response?.status === 403) {
-          alert('Você não tem permissão para excluir viagens.');
+        if (error.response?.status === 403) {
+          alert('Apenas administradores podem excluir viagens.');
         } else {
           alert('Erro ao excluir viagem.');
         }
@@ -227,7 +225,7 @@ export default function TripsPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                    {user?.role === 'ADMIN' && (
                       <Button
                         variant="outline"
                         size="sm"
