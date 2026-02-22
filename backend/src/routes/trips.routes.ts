@@ -117,6 +117,15 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Validação 1: Não permitir data retroativa
+    const tripStartDate = new Date(startDate);
+    const now = new Date();
+    if (tripStartDate < now) {
+      return res.status(400).json({ 
+        message: 'Não é permitido cadastrar viagens com data/hora retroativa' 
+      });
+    }
+
     // Verificar se o caminhão existe
     const truck = await prisma.truck.findUnique({
       where: { id: truckId },
@@ -136,13 +145,73 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ message: 'Driver not found' });
     }
 
+    // Validação 2: Verificar conflito de caminhão (mesmo caminhão em horários coincidentes)
+    const conflictingTruckTrip = await prisma.trip.findFirst({
+      where: {
+        truckId,
+        status: {
+          in: ['PLANNED', 'IN_PROGRESS', 'DELAYED'],
+        },
+        OR: [
+          {
+            // Nova viagem começa durante viagem existente
+            AND: [
+              { startDate: { lte: tripStartDate } },
+              {
+                OR: [
+                  { endDate: { gte: tripStartDate } },
+                  { endDate: null },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    if (conflictingTruckTrip) {
+      return res.status(400).json({ 
+        message: 'Já existe uma viagem agendada para este caminhão nesta data/horário' 
+      });
+    }
+
+    // Validação 3: Verificar conflito de motorista (mesmo motorista em horários coincidentes)
+    const conflictingDriverTrip = await prisma.trip.findFirst({
+      where: {
+        driverId,
+        status: {
+          in: ['PLANNED', 'IN_PROGRESS', 'DELAYED'],
+        },
+        OR: [
+          {
+            // Nova viagem começa durante viagem existente
+            AND: [
+              { startDate: { lte: tripStartDate } },
+              {
+                OR: [
+                  { endDate: { gte: tripStartDate } },
+                  { endDate: null },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    if (conflictingDriverTrip) {
+      return res.status(400).json({ 
+        message: 'Já existe uma viagem agendada para este motorista nesta data/horário' 
+      });
+    }
+
     const trip = await prisma.trip.create({
       data: {
         truckId,
         driverId,
         origin,
         destination,
-        startDate: new Date(startDate),
+        startDate: tripStartDate,
         distance: distance ? parseFloat(distance) : 0,
         revenue: revenue ? parseFloat(revenue) : 0,
         notes,
@@ -199,25 +268,32 @@ router.post('/:id/start', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    if (trip.status !== 'PLANNED') {
+    if (trip.status !== 'PLANNED' && trip.status !== 'DELAYED') {
       return res.status(400).json({ 
-        message: 'Only planned trips can be started' 
+        message: 'Only planned or delayed trips can be started' 
       });
     }
 
-    const updatedTrip = await prisma.trip.update({
-      where: { id },
-      data: {
-        status: 'IN_PROGRESS',
-        startDate: new Date(),
-      },
-      include: {
-        truck: true,
-        driver: {
-          select: { id: true, name: true, email: true },
+    // Atualizar trip e status do caminhão
+    const [updatedTrip] = await prisma.$transaction([
+      prisma.trip.update({
+        where: { id },
+        data: {
+          status: 'IN_PROGRESS',
+          startDate: new Date(),
         },
-      },
-    });
+        include: {
+          truck: true,
+          driver: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      }),
+      prisma.truck.update({
+        where: { id: trip.truckId },
+        data: { status: 'IN_TRANSIT' },
+      }),
+    ]);
 
     res.json(updatedTrip);
   } catch (error) {
@@ -270,27 +346,34 @@ router.post('/:id/finish', async (req, res) => {
     const profit = trip.revenue - totalCost;
     const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
 
-    const updatedTrip = await prisma.trip.update({
-      where: { id },
-      data: {
-        status: 'COMPLETED',
-        endDate: endDate ? new Date(endDate) : new Date(),
-        distance: distance ? parseFloat(distance) : trip.distance,
-        fuelCost,
-        tollCost,
-        otherCosts,
-        totalCost,
-        profit,
-        profitMargin,
-      },
-      include: {
-        truck: true,
-        driver: {
-          select: { id: true, name: true, email: true },
+    // Atualizar trip e retornar caminhão para garagem
+    const [updatedTrip] = await prisma.$transaction([
+      prisma.trip.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          endDate: endDate ? new Date(endDate) : new Date(),
+          distance: distance ? parseFloat(distance) : trip.distance,
+          fuelCost,
+          tollCost,
+          otherCosts,
+          totalCost,
+          profit,
+          profitMargin,
         },
-        expenses: true,
-      },
-    });
+        include: {
+          truck: true,
+          driver: {
+            select: { id: true, name: true, email: true },
+          },
+          expenses: true,
+        },
+      }),
+      prisma.truck.update({
+        where: { id: trip.truckId },
+        data: { status: 'GARAGE' },
+      }),
+    ]);
 
     // Enviar webhook de corrida finalizada
     await sendWebhook('trip.completed', {
@@ -389,6 +472,126 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
     
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trips/check-delayed - Verificar e atualizar viagens em atraso
+router.post('/check-delayed', async (req, res) => {
+  try {
+    const now = new Date();
+    
+    // Buscar viagens planejadas que já passaram do horário
+    const delayedTrips = await prisma.trip.findMany({
+      where: {
+        status: 'PLANNED',
+        startDate: {
+          lt: now,
+        },
+      },
+    });
+
+    // Atualizar status para DELAYED
+    if (delayedTrips.length > 0) {
+      await prisma.trip.updateMany({
+        where: {
+          id: {
+            in: delayedTrips.map(t => t.id),
+          },
+        },
+        data: {
+          status: 'DELAYED',
+        },
+      });
+
+      // Enviar webhook para cada viagem atrasada
+      for (const trip of delayedTrips) {
+        const tripWithDetails = await prisma.trip.findUnique({
+          where: { id: trip.id },
+          include: {
+            truck: true,
+            driver: true,
+          },
+        });
+
+        if (tripWithDetails) {
+          await sendWebhook('trip.delayed', {
+            trip: {
+              id: tripWithDetails.id,
+              origin: tripWithDetails.origin,
+              destination: tripWithDetails.destination,
+              startDate: tripWithDetails.startDate,
+            },
+            truck: {
+              plate: tripWithDetails.truck.plate,
+            },
+            driver: {
+              name: tripWithDetails.driver.name,
+              phone: tripWithDetails.driver.phone,
+            },
+          });
+        }
+      }
+    }
+
+    res.json({ 
+      message: `${delayedTrips.length} trip(s) marked as delayed`,
+      count: delayedTrips.length,
+    });
+  } catch (error) {
+    console.error('Error checking delayed trips:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trips/check-upcoming - Verificar viagens próximas (1h antes)
+router.post('/check-upcoming', async (req, res) => {
+  try {
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    
+    // Buscar viagens planejadas que começam em 1h
+    const upcomingTrips = await prisma.trip.findMany({
+      where: {
+        status: 'PLANNED',
+        startDate: {
+          gte: now,
+          lte: oneHourFromNow,
+        },
+      },
+      include: {
+        truck: true,
+        driver: true,
+      },
+    });
+
+    // Enviar webhook para cada viagem próxima
+    for (const trip of upcomingTrips) {
+      await sendWebhook('trip.upcoming', {
+        trip: {
+          id: trip.id,
+          origin: trip.origin,
+          destination: trip.destination,
+          startDate: trip.startDate,
+        },
+        truck: {
+          plate: trip.truck.plate,
+          model: trip.truck.model,
+        },
+        driver: {
+          name: trip.driver.name,
+          phone: trip.driver.phone,
+          email: trip.driver.email,
+        },
+      });
+    }
+
+    res.json({ 
+      message: `${upcomingTrips.length} upcoming trip(s) found`,
+      count: upcomingTrips.length,
+    });
+  } catch (error) {
+    console.error('Error checking upcoming trips:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
