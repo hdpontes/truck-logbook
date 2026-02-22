@@ -7,6 +7,7 @@ import TruckDetailPage from './pages/TruckDetailPage';
 import TruckFormPage from './pages/TruckFormPage';
 import TripsPage from './pages/TripsPage';
 import TripFormPage from './pages/TripFormPage';
+import TripDetailPage from './pages/TripDetailPage';
 import ExpensesPage from './pages/ExpensesPage';
 import ExpenseFormPage from './pages/ExpenseFormPage';
 import MaintenancePage from './pages/MaintenancePage';
@@ -41,6 +42,7 @@ function App() {
           <Route path="trucks/:id/edit" element={<TruckFormPage />} />
           <Route path="trips" element={<TripsPage />} />
           <Route path="trips/new" element={<TripFormPage />} />
+          <Route path="trips/:id" element={<TripDetailPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="expenses/new" element={<ExpenseFormPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
