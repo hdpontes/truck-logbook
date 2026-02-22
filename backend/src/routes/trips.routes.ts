@@ -344,7 +344,29 @@ router.post('/:id/finish', async (req, res) => {
       .filter((e) => e.type !== 'FUEL' && e.type !== 'TOLL')
       .reduce((sum, e) => sum + e.amount, 0);
 
-    const totalCost = fuelCost + tollCost + otherCosts;
+    // Calcular consumo de combustível baseado na kilometragem e consumo do caminhão
+    let calculatedFuelCost = fuelCost;
+    const finalDistance = distance ? parseFloat(distance) : trip.distance;
+    
+    if (finalDistance > 0 && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
+      // Buscar preço do diesel nas configurações
+      const settings = await prisma.settings.findFirst();
+      const dieselPrice = settings?.dieselPrice || 0;
+      
+      if (dieselPrice > 0) {
+        // Calcular litros consumidos = distância / km por litro
+        const litersConsumed = finalDistance / trip.truck.avgConsumption;
+        // Calcular custo estimado
+        const estimatedFuelCost = litersConsumed * dieselPrice;
+        
+        // Se não há despesas de combustível registradas, usar o cálculo estimado
+        if (fuelCost === 0) {
+          calculatedFuelCost = estimatedFuelCost;
+        }
+      }
+    }
+
+    const totalCost = calculatedFuelCost + tollCost + otherCosts;
     const profit = trip.revenue - totalCost;
     const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
 
@@ -355,8 +377,14 @@ router.post('/:id/finish', async (req, res) => {
         data: {
           status: 'COMPLETED',
           endDate: endDate ? new Date(endDate) : new Date(),
-          distance: distance ? parseFloat(distance) : trip.distance,
-          fuelCost,
+          distance: finalDistance,
+          fuelCost: calculatedFuelCost,
+          tollCost,
+          otherCosts,
+          totalCost,
+          profit,
+          profitMargin,
+        },
           tollCost,
           otherCosts,
           totalCost,
