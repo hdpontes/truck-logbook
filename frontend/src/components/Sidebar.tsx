@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -9,7 +10,8 @@ import {
   UserCog,
   Building2,
   MapPin,
-  LogOut
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -61,6 +63,32 @@ export default function Sidebar() {
   const location = useLocation();
   const { logout, user } = useAuthStore();
   const menuItems = getMenuItems(user?.role || 'DRIVER');
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDateTime = () => {
+    const brasilia = new Date(currentTime.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const date = brasilia.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const time = brasilia.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    return { date, time };
+  };
+
+  const { date, time } = formatDateTime();
 
   return (
     <aside className="w-64 bg-white shadow-lg">
@@ -92,7 +120,17 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="absolute bottom-0 w-64 p-6">
+      <div className="absolute bottom-0 w-64 p-6 space-y-4">
+        <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+          <div className="flex items-center gap-2 text-blue-600 mb-1">
+            <Clock className="w-4 h-4" />
+            <span className="text-xs font-semibold">Horário de Brasília</span>
+          </div>
+          <div className="text-gray-800 font-mono">
+            <div className="text-sm font-medium">{date}</div>
+            <div className="text-lg font-bold">{time}</div>
+          </div>
+        </div>
         <button
           onClick={logout}
           className="flex items-center gap-3 w-full px-4 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
