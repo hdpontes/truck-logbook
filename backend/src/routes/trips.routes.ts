@@ -109,7 +109,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/trips - Criar nova viagem (agendar)
 router.post('/', async (req, res) => {
   try {
-    const { truckId, driverId, origin, destination, startDate, revenue, notes } = req.body;
+    const { truckId, driverId, origin, destination, startDate, distance, revenue, notes } = req.body;
 
     if (!truckId || !driverId || !origin || !destination || !startDate) {
       return res.status(400).json({ 
@@ -143,6 +143,7 @@ router.post('/', async (req, res) => {
         origin,
         destination,
         startDate: new Date(startDate),
+        distance: distance ? parseFloat(distance) : 0,
         revenue: revenue ? parseFloat(revenue) : 0,
         notes,
         status: 'PLANNED',
