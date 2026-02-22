@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI } from '@/lib/api';
-import { Route, Plus, Eye, Trash2, MapPin } from 'lucide-react';
+import { Route, Plus, Eye, Trash2, MapPin, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -71,6 +71,18 @@ export default function TripsPage() {
         } else {
           alert('Erro ao excluir viagem.');
         }
+      }
+    }
+  };
+
+  const handleSendReminder = async (id: string) => {
+    if (window.confirm('Deseja enviar notificação do lembrete da viagem para o motorista?')) {
+      try {
+        await tripsAPI.sendReminder(id);
+        alert('Lembrete enviado com sucesso para o motorista!');
+      } catch (error: any) {
+        console.error('Erro ao enviar lembrete:', error);
+        alert(error.response?.data?.message || 'Erro ao enviar lembrete');
       }
     }
   };
@@ -225,6 +237,16 @@ export default function TripsPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendReminder(trip.id)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    )}
                     {user?.role === 'ADMIN' && (
                       <Button
                         variant="outline"
