@@ -166,7 +166,8 @@ export default function TripsPage() {
               key={trip.id} 
               className={`hover:shadow-lg transition-shadow ${
                 trip.status === 'DELAYED' ? 'border-red-300 bg-red-50' : 
-                trip.status === 'IN_PROGRESS' ? 'border-green-300 bg-green-50' : ''
+                trip.status === 'IN_PROGRESS' ? 'border-green-300 bg-green-50' : 
+                trip.status === 'COMPLETED' ? 'border-blue-300 bg-blue-50' : ''
               }`}
             >
               <CardHeader>
