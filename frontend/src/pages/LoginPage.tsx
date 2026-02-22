@@ -1,15 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
-import { LogIn } from 'lucide-react';
+import { useSettingsStore } from '@/store/settings';
+import { LogIn, Truck } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { settings, fetchSettings } = useSettingsStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [settings?.companyLogo]);
 
   const loginMutation = useMutation({
     mutationFn: (credentials: { email: string; password: string }) =>
@@ -38,9 +49,18 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-lg">
         <div className="text-center">
-          <LogIn className="mx-auto h-12 w-12 text-blue-600" />
+          {settings?.companyLogo && !logoError ? (
+            <img 
+              src={settings.companyLogo} 
+              alt={settings.companyName || 'Logo'} 
+              className="mx-auto h-12 w-auto max-w-[120px] object-contain"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <LogIn className="mx-auto h-12 w-12 text-blue-600" />
+          )}
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Debora Transportes
+            {settings?.companyName || 'Truck Logbook'}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Faça login para continuar
