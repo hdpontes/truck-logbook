@@ -15,9 +15,10 @@ export default function TruckFormPage() {
     model: '',
     brand: '',
     year: new Date().getFullYear(),
-    color: '',
+    color: '#FFFFFF',
     capacity: '',
     avgConsumption: '',
+    currentMileage: '',
     active: true,
   });
 
@@ -36,9 +37,10 @@ export default function TruckFormPage() {
         model: truck.model,
         brand: truck.brand,
         year: truck.year,
-        color: truck.color,
+        color: truck.color || '#FFFFFF',
         capacity: truck.capacity.toString(),
         avgConsumption: truck.avgConsumption.toString(),
+        currentMileage: truck.currentMileage ? truck.currentMileage.toString() : '',
         active: truck.active,
       });
     } catch (error) {
@@ -63,6 +65,7 @@ export default function TruckFormPage() {
         color: formData.color,
         capacity: parseFloat(formData.capacity),
         avgConsumption: parseFloat(formData.avgConsumption),
+        currentMileage: formData.currentMileage ? parseFloat(formData.currentMileage) : 0,
         active: formData.active,
       };
 
@@ -181,13 +184,37 @@ export default function TruckFormPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cor *
                 </label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    required
+                    className="h-10 w-20 border border-gray-300 rounded-md cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    placeholder="#FFFFFF"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quilometragem Atual (km)
+                </label>
                 <input
-                  type="text"
-                  name="color"
-                  value={formData.color}
+                  type="number"
+                  name="currentMileage"
+                  value={formData.currentMileage}
                   onChange={handleChange}
-                  required
-                  placeholder="Ex: Branco"
+                  min="0"
+                  step="0.1"
+                  placeholder="Ex: 150000"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
