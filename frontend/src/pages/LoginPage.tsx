@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
 import { useSettingsStore } from '@/store/settings';
-import { LogIn, Truck } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
