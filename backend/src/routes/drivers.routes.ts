@@ -2,11 +2,32 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import bcrypt from 'bcrypt';
+import { config } from '../config';
+import axios from 'axios';
 
 const router = Router();
 
 // Todas as rotas requerem autenticação
 router.use(authenticate);
+
+// Função auxiliar para enviar webhook
+async function sendWebhook(eventType: string, data: any) {
+  if (!config.N8N_WEBHOOK_URL) {
+    console.log('⚠️  N8N_WEBHOOK_URL not configured, skipping webhook');
+    return;
+  }
+
+  try {
+    await axios.post(config.N8N_WEBHOOK_URL, {
+      event: eventType,
+      timestamp: new Date().toISOString(),
+      data,
+    });
+    console.log(`✅ Webhook sent: ${eventType}`);
+  } catch (error) {
+    console.error(`❌ Error sending webhook ${eventType}:`, error);
+  }
+}
 
 // GET /api/drivers - Listar todos os motoristas
 router.get('/', async (req, res) => {
@@ -133,6 +154,21 @@ router.post('/', async (req, res) => {
         role: true,
         active: true,
         createdAt: true,
+      },
+    });
+
+    // Enviar webhook de usuário criado
+    await sendWebhook('user.created', {
+      user: {
+        id: driver.id,
+        name: driver.name,
+        email: driver.email,
+        phone: driver.phone,
+        role: driver.role,
+      },
+      credentials: {
+        email: driver.email,
+        password: password, // Senha original para enviar ao motorista
       },
     });
 
