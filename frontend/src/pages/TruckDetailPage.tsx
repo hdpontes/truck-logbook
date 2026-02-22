@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { trucksAPI, tripsAPI, expensesAPI } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import {
   Truck,
   MapPin,
@@ -65,6 +66,7 @@ interface Expense {
 const TruckDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [truck, setTruck] = useState<TruckData | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -151,10 +153,12 @@ const TruckDetailPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate(`/trucks/${id}/edit`)}>
-          <Edit className="mr-2 h-4 w-4" />
-          Editar Caminhão
-        </Button>
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+          <Button onClick={() => navigate(`/trucks/${id}/edit`)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar Caminhão
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -219,7 +223,7 @@ const TruckDetailPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Viagens Recentes</span>
-            <Button onClick={() => navigate('/trips/new')}>
+            <Button onClick={() => navigate(`/trips/new?truckId=${id}`)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nova Viagem
             </Button>
@@ -266,7 +270,7 @@ const TruckDetailPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Despesas</span>
-            <Button onClick={() => alert('Nova despesa em breve')}>
+            <Button onClick={() => navigate(`/expenses/new?truckId=${id}`)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Despesa
             </Button>
