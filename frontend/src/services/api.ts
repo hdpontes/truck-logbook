@@ -37,6 +37,7 @@ export const trucksAPI = {
   getById: (id: string) => api.get(`/trucks/${id}`).then(res => res.data),
   create: (data: any) => api.post('/trucks', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/trucks/${id}`, data).then(res => res.data),
+  updateStatus: (id: string, status: string) => api.patch(`/trucks/${id}/status`, { status }).then(res => res.data),
   delete: (id: string) => api.delete(`/trucks/${id}`).then(res => res.data),
 };
 
@@ -50,6 +51,8 @@ export const tripsAPI = {
   delete: (id: string) => api.delete(`/trips/${id}`).then(res => res.data),
   start: (id: string) => api.post(`/trips/${id}/start`).then(res => res.data),
   finish: (id: string, data?: any) => api.post(`/trips/${id}/finish`, data).then(res => res.data),
+  checkDelayed: () => api.post('/trips/check-delayed').then(res => res.data),
+  checkUpcoming: () => api.post('/trips/check-upcoming').then(res => res.data),
 };
 
 // Expenses API
