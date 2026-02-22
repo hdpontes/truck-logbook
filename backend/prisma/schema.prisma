@@ -49,6 +49,7 @@ model Truck {
   chassisNum  String?     @unique
   capacity    Float?      // Capacidade em toneladas
   avgConsumption Float?   @default(0) // Consumo médio km/l
+  currentMileage Float?   @default(0) // Quilometragem atual do caminhão
   status      TruckStatus @default(GARAGE)
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
@@ -73,6 +74,8 @@ model Trip {
   startDate    DateTime
   endDate      DateTime?
   distance     Float     @default(0) // em KM
+  startMileage Float?    // Quilometragem inicial do caminhão
+  endMileage   Float?    // Quilometragem final do caminhão
   
   // Financeiro
   revenue      Float     @default(0)
