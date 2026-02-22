@@ -9,10 +9,8 @@ import {
   ArrowLeft,
   TrendingUp,
   AlertCircle,
-  Calendar,
   Truck,
   User,
-  Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
