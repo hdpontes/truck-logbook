@@ -4,10 +4,7 @@ import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-// Todas as rotas requerem autenticação
-router.use(authenticate);
-
-// GET /api/settings - Obter configurações (todos autenticados)
+// GET /api/settings - Obter configurações (público - sem autenticação)
 router.get('/', async (req, res) => {
   try {
     // Buscar primeira configuração ou criar se não existir
@@ -29,8 +26,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/settings - Atualizar configurações
-router.put('/', async (req, res) => {
+// PUT /api/settings - Atualizar configurações (requer autenticação)
+router.put('/', authenticate, async (req, res) => {
   try {
     const user = (req as any).user;
     const { companyName, companyLogo, dieselPrice } = req.body;
