@@ -461,10 +461,10 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const user = (req as any).user;
 
-    // Motorista não pode excluir viagens
-    if (user.role === 'DRIVER') {
+    // Apenas ADMIN pode excluir viagens
+    if (user.role !== 'ADMIN') {
       return res.status(403).json({ 
-        message: 'Motoristas não têm permissão para excluir viagens' 
+        message: 'Apenas administradores podem excluir viagens' 
       });
     }
 
@@ -475,13 +475,6 @@ router.delete('/:id', async (req, res) => {
 
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
-    }
-
-    // Não permitir exclusão de viagens iniciadas ou finalizadas
-    if (trip.status !== 'PLANNED' && trip.status !== 'DELAYED') {
-      return res.status(400).json({ 
-        message: 'Não é possível excluir viagens que já foram iniciadas ou finalizadas' 
-      });
     }
 
     await prisma.trip.delete({
