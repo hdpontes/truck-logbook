@@ -1,85 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI, expensesAPI } from '@/lib/api';
+import { trucksAPI, tripsAPI, expensesAPI } from '@/lib/api';
 import {
-  Route,
+  Truck,
   MapPin,
   DollarSign,
+  PlusCircle,
+  Edit,
+  Trash2,
   ArrowLeft,
   TrendingUp,
   AlertCircle,
-  Truck,
-  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 
-interface TripData {
+interface TruckData {
   id: string;
+  plate: string;
+  model: string;
+  brand: string;
+  year: number;
+  color: string;
+  capacity: number;
+  avgConsumption: number;
+  active: boolean;
+  _count?: {
+    trips: number;
+    expenses: number;
+    maintenances: number;
+  };
+}
+
+interface Trip {
+  id: string;
+  truckId: string;
+  driverId: string;
   origin: string;
   destination: string;
+  distance: number;
   startDate: string;
   endDate?: string;
-  distance: number;
+  status: string;
   revenue: number;
-  fuelCost: number;
-  tollCost: number;
-  otherCosts: number;
   totalCost: number;
   profit: number;
-  profitMargin: number;
-  status: string;
-  notes?: string;
-  truck: {
-    id: string;
-    plate: string;
-    model: string;
-    brand: string;
-  };
   driver: {
-    id: string;
     name: string;
-    email: string;
-    phone: string;
   };
 }
 
 interface Expense {
   id: string;
+  truckId: string;
+  tripId?: string;
   type: string;
   amount: number;
   description: string;
   date: string;
+  receipt?: string;
 }
 
-const TripDetailPage: React.FC = () => {
+const TruckDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [trip, setTrip] = useState<TripData | null>(null);
+  const [truck, setTruck] = useState<TruckData | null>(null);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) {
-      fetchTripDetails(id);
+      fetchTruckDetails(id);
     }
   }, [id]);
 
-  const fetchTripDetails = async (tripId: string) => {
+  const fetchTruckDetails = async (truckId: string) => {
     try {
       setLoading(true);
-      const [tripData, expensesData] = await Promise.all([
-        tripsAPI.getById(tripId),
-        expensesAPI.getByTrip(tripId),
+      const [truckData, tripsData, expensesData] = await Promise.all([
+        trucksAPI.getById(truckId),
+        tripsAPI.getByTruck(truckId),
+        expensesAPI.getByTruck(truckId),
       ]);
       
-      setTrip(tripData);
+      setTruck(truckData);
+      setTrips(tripsData);
       setExpenses(expensesData);
     } catch (error) {
-      console.error('Erro ao carregar detalhes da viagem:', error);
+      console.error('Erro ao carregar detalhes do caminhão:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      await expensesAPI.delete(expenseId);
+      setExpenses(expenses.filter(exp => exp.id !== expenseId));
+    } catch (error) {
+      console.error('Erro ao excluir despesa:', error);
     }
   };
 
@@ -91,74 +112,49 @@ const TripDetailPage: React.FC = () => {
     );
   }
 
-  if (!trip) {
+  if (!truck) {
     return (
       <div className="text-center py-8">
         <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Viagem não encontrada</h3>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">Caminhão não encontrado</h3>
         <p className="mt-1 text-sm text-gray-500">
-          A viagem que você procura não existe.
+          O caminhão que você procura não existe.
         </p>
         <div className="mt-6">
-          <Button onClick={() => navigate('/trips')}>
+          <Button onClick={() => navigate('/trucks')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Viagens
+            Voltar para Frota
           </Button>
         </div>
       </div>
     );
   }
 
-  const statusColors = {
-    PLANNED: 'bg-blue-100 text-blue-800',
-    IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    CANCELLED: 'bg-red-100 text-red-800',
-  };
-
-  const statusLabels = {
-    PLANNED: 'Planejada',
-    IN_PROGRESS: 'Em Andamento',
-    COMPLETED: 'Concluída',
-    CANCELLED: 'Cancelada',
-  };
-
-  const expenseTypeLabels: Record<string, string> = {
-    FUEL: 'Combustível',
-    TOLL: 'Pedágio',
-    MAINTENANCE: 'Manutenção',
-    FOOD: 'Alimentação',
-    ACCOMMODATION: 'Hospedagem',
-    REPAIR: 'Reparo',
-    TIRE: 'Pneu',
-    INSURANCE: 'Seguro',
-    TAX: 'Imposto',
-    OTHER: 'Outros',
-  };
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalRevenue = trips.reduce((sum, trip) => sum + (trip.revenue || 0), 0);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => navigate('/trips')}>
+          <Button variant="outline" onClick={() => navigate('/trucks')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Detalhes da Viagem
+              {truck.plate}
             </h1>
             <p className="text-gray-500">
-              {trip.origin} → {trip.destination}
+              {truck.brand} {truck.model} ({truck.year})
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[trip.status as keyof typeof statusColors]}`}>
-            {statusLabels[trip.status as keyof typeof statusLabels]}
-          </span>
-        </div>
+        <Button onClick={() => navigate(`/trucks/${id}/edit`)}>
+          <Edit className="mr-2 h-4 w-4" />
+          Editar Caminhão
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -166,10 +162,24 @@ const TripDetailPage: React.FC = () => {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <MapPin className="h-8 w-8 text-blue-600" />
+              <Truck className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Distância</p>
-                <p className="text-2xl font-bold text-gray-900">{trip.distance} km</p>
+                <p className="text-sm font-medium text-gray-500">Status</p>
+                <p className="text-2xl font-bold text-gray-900">{truck.active ? 'Ativo' : 'Inativo'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <MapPin className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Viagens</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {trips.length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -182,7 +192,7 @@ const TripDetailPage: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Receita</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(trip.revenue)}
+                  {formatCurrency(totalRevenue)}
                 </p>
               </div>
             </div>
@@ -194,23 +204,9 @@ const TripDetailPage: React.FC = () => {
             <div className="flex items-center">
               <DollarSign className="h-8 w-8 text-red-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Custo Total</p>
+                <p className="text-sm font-medium text-gray-500">Despesas</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(trip.totalCost)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Lucro</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(trip.profit)}
+                  {formatCurrency(totalExpenses)}
                 </p>
               </div>
             </div>
@@ -218,144 +214,88 @@ const TripDetailPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Trip Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Route className="h-5 w-5" />
-              Informações da Viagem
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Origem:</span>
-              <span className="font-medium">{trip.origin}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Destino:</span>
-              <span className="font-medium">{trip.destination}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Data Início:</span>
-              <span className="font-medium">{new Date(trip.startDate).toLocaleString('pt-BR')}</span>
-            </div>
-            {trip.endDate && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Data Fim:</span>
-                <span className="font-medium">{new Date(trip.endDate).toLocaleString('pt-BR')}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-gray-600">Margem de Lucro:</span>
-              <span className="font-medium">{trip.profitMargin.toFixed(2)}%</span>
-            </div>
-            {trip.notes && (
-              <div className="pt-3 border-t">
-                <p className="text-gray-600 text-sm mb-1">Observações:</p>
-                <p className="text-sm">{trip.notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Caminhão
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Placa:</span>
-                <span className="font-medium">{trip.truck.plate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Modelo:</span>
-                <span className="font-medium">{trip.truck.brand} {trip.truck.model}</span>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-2"
-                onClick={() => navigate(`/trucks/${trip.truck.id}`)}
-              >
-                Ver Detalhes do Caminhão
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Motorista
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Nome:</span>
-                <span className="font-medium">{trip.driver.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-sm">{trip.driver.email}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Telefone:</span>
-                <span className="font-medium">{trip.driver.phone}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Breakdown de Custos */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Breakdown de Custos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600">Combustível</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.fuelCost)}</p>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600">Pedágios</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.tollCost)}</p>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600">Outros Custos</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.otherCosts)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Despesas Relacionadas */}
+      {/* Recent Trips */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Despesas Relacionadas</span>
+            <span>Viagens Recentes</span>
+            <Button onClick={() => navigate('/trips/new')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nova Viagem
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {trips.length === 0 ? (
+            <p className="text-gray-500">Nenhuma viagem encontrada para este caminhão.</p>
+          ) : (
+            <div className="space-y-4">
+              {trips.slice(0, 5).map((trip) => (
+                <div key={trip.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <p className="font-medium">
+                      {trip.origin} → {trip.destination}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {trip.distance} km • {new Date(trip.startDate).toLocaleDateString('pt-BR')} • {trip.driver.name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatCurrency(trip.revenue || 0)}</p>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        trip.status === 'COMPLETED'
+                          ? 'bg-green-100 text-green-800'
+                          : trip.status === 'IN_PROGRESS'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {trip.status === 'COMPLETED' ? 'Concluída' : trip.status === 'IN_PROGRESS' ? 'Em Andamento' : trip.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Expenses */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Despesas</span>
+            <Button onClick={() => alert('Nova despesa em breve')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Adicionar Despesa
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {expenses.length === 0 ? (
-            <p className="text-gray-500">Nenhuma despesa registrada para esta viagem.</p>
+            <p className="text-gray-500">Nenhuma despesa encontrada para este caminhão.</p>
           ) : (
             <div className="space-y-4">
-              {expenses.map((expense) => (
+              {expenses.slice(0, 10).map((expense) => (
                 <div key={expense.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
-                    <p className="font-medium">{expenseTypeLabels[expense.type] || expense.type}</p>
+                    <p className="font-medium">{expense.type}</p>
                     <p className="text-sm text-gray-500">
                       {expense.description} • {new Date(expense.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <span className="font-medium">{formatCurrency(expense.amount)}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">{formatCurrency(expense.amount)}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteExpense(expense.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -366,4 +306,4 @@ const TripDetailPage: React.FC = () => {
   );
 };
 
-export default TripDetailPage;
+export default TruckDetailPage;
