@@ -6,6 +6,9 @@ import {
   Receipt, 
   Wrench,
   Users,
+  UserCog,
+  Building2,
+  MapPin,
   LogOut
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -18,13 +21,28 @@ const getMenuItems = (userRole: string) => {
     { icon: RouteIcon, label: 'Viagens', path: '/trips' },
   ];
 
-  // ADMIN e MANAGER veem tudo
-  if (userRole === 'ADMIN' || userRole === 'MANAGER') {
+  // ADMIN vê tudo incluindo gestão
+  if (userRole === 'ADMIN') {
     return [
       ...baseItems,
       { icon: Receipt, label: 'Despesas', path: '/expenses' },
       { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
       { icon: Users, label: 'Motoristas', path: '/drivers' },
+      { icon: UserCog, label: 'Usuários', path: '/users' },
+      { icon: Building2, label: 'Clientes', path: '/clients' },
+      { icon: MapPin, label: 'Localizações', path: '/locations' },
+    ];
+  }
+
+  // MANAGER vê operacional mas não gestão de usuários
+  if (userRole === 'MANAGER') {
+    return [
+      ...baseItems,
+      { icon: Receipt, label: 'Despesas', path: '/expenses' },
+      { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
+      { icon: Users, label: 'Motoristas', path: '/drivers' },
+      { icon: Building2, label: 'Clientes', path: '/clients' },
+      { icon: MapPin, label: 'Localizações', path: '/locations' },
     ];
   }
 
