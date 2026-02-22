@@ -90,10 +90,11 @@ export default function TripFormPage() {
     setLoading(true);
 
     try {
-      // Validar data não retroativa
+      // Validar data não retroativa (usar horário de Brasília)
       const selectedDate = new Date(formData.startDate);
-      const now = new Date();
-      if (selectedDate < now) {
+      const nowUTC = new Date();
+      const nowBrasilia = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      if (selectedDate < nowBrasilia) {
         alert('Não é permitido cadastrar viagens com data/horário retroativo.');
         setLoading(false);
         return;
