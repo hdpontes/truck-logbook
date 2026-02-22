@@ -147,64 +147,65 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ message: 'Driver not found' });
     }
 
-    // Validação 2: Verificar conflito de caminhão (mesmo caminhão em horários coincidentes)
-    const conflictingTruckTrip = await prisma.trip.findFirst({
+    // Validação 2: Verificar intervalo mínimo de 3h entre início de viagens (caminhão)
+    const MINIMUM_INTERVAL_HOURS = 3;
+    const MINIMUM_INTERVAL_MS = MINIMUM_INTERVAL_HOURS * 60 * 60 * 1000;
+
+    const truckTrips = await prisma.trip.findMany({
       where: {
         truckId,
         status: {
           in: ['PLANNED', 'IN_PROGRESS', 'DELAYED'],
         },
-        OR: [
-          {
-            // Nova viagem começa durante viagem existente
-            AND: [
-              { startDate: { lte: tripStartDate } },
-              {
-                OR: [
-                  { endDate: { gte: tripStartDate } },
-                  { endDate: null },
-                ],
-              },
-            ],
-          },
-        ],
+      },
+      orderBy: {
+        startDate: 'asc',
       },
     });
 
-    if (conflictingTruckTrip) {
-      return res.status(400).json({ 
-        message: 'Já existe uma viagem agendada para este caminhão nesta data/horário' 
-      });
+    for (const existingTrip of truckTrips) {
+      const existingStartTime = existingTrip.startDate.getTime();
+      const newStartTime = tripStartDate.getTime();
+
+      // Calcular intervalo entre o início da viagem existente e o início da nova
+      const intervalMs = Math.abs(newStartTime - existingStartTime);
+
+      // Se o intervalo for menor que 3 horas, bloquear
+      if (intervalMs < MINIMUM_INTERVAL_MS) {
+        const intervaloHoras = (intervalMs / (60 * 60 * 1000)).toFixed(1);
+        return res.status(400).json({ 
+          message: `Intervalo insuficiente: apenas ${intervaloHoras}h entre o início das viagens. É necessário um intervalo mínimo de ${MINIMUM_INTERVAL_HOURS}h entre o início de uma viagem e o início da próxima para o mesmo caminhão.` 
+        });
+      }
     }
 
-    // Validação 3: Verificar conflito de motorista (mesmo motorista em horários coincidentes)
-    const conflictingDriverTrip = await prisma.trip.findFirst({
+    // Validação 3: Verificar intervalo mínimo de 3h entre início de viagens (motorista)
+    const driverTrips = await prisma.trip.findMany({
       where: {
         driverId,
         status: {
           in: ['PLANNED', 'IN_PROGRESS', 'DELAYED'],
         },
-        OR: [
-          {
-            // Nova viagem começa durante viagem existente
-            AND: [
-              { startDate: { lte: tripStartDate } },
-              {
-                OR: [
-                  { endDate: { gte: tripStartDate } },
-                  { endDate: null },
-                ],
-              },
-            ],
-          },
-        ],
+      },
+      orderBy: {
+        startDate: 'asc',
       },
     });
 
-    if (conflictingDriverTrip) {
-      return res.status(400).json({ 
-        message: 'Já existe uma viagem agendada para este motorista nesta data/horário' 
-      });
+    for (const existingTrip of driverTrips) {
+      const existingStartTime = existingTrip.startDate.getTime();
+      const newStartTime = tripStartDate.getTime();
+
+      // Calcular intervalo entre o início da viagem existente e o início da nova
+      const intervalMs = Math.abs(newStartTime - existingStartTime);
+
+      // Se o intervalo for menor que 3 horas, bloquear
+      if (intervalMs < MINIMUM_INTERVAL_MS) {
+        const intervaloHoras = (intervalMs / (60 * 60 * 1000)).toFixed(1);
+        return res.status(400).json({ 
+          message: `Intervalo insuficiente: apenas ${intervaloHoras}h entre o início das viagens. É necessário um intervalo mínimo de ${MINIMUM_INTERVAL_HOURS}h entre o início de uma viagem e o início da próxima para o mesmo motorista.` 
+        });
+      }
     }
 
     const trip = await prisma.trip.create({
