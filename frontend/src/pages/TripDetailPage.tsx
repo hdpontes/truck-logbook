@@ -16,6 +16,7 @@ import {
   StopCircle,
   Clock,
   Plus,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -138,6 +139,18 @@ const TripDetailPage: React.FC = () => {
     }
   };
 
+  const handleSendReminder = async () => {
+    if (!id) return;
+    if (!confirm('Deseja enviar notificação do lembrete da viagem para o motorista?')) return;
+    try {
+      await tripsAPI.sendReminder(id);
+      alert('Lembrete enviado com sucesso para o motorista!');
+    } catch (error: any) {
+      console.error('Erro ao enviar lembrete:', error);
+      alert(error.response?.data?.message || 'Erro ao enviar lembrete');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -231,6 +244,12 @@ const TripDetailPage: React.FC = () => {
             <Button onClick={handleFinishTrip} className="bg-red-600 hover:bg-red-700">
               <StopCircle className="mr-2 h-4 w-4" />
               Finalizar Viagem
+            </Button>
+          )}
+          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+            <Button onClick={handleSendReminder} className="bg-green-600 hover:bg-green-700">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Enviar Lembrete
             </Button>
           )}
         </div>
