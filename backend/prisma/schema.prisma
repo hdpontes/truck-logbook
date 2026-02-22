@@ -33,19 +33,26 @@ enum UserRole {
   DRIVER
 }
 
+enum TruckStatus {
+  GARAGE      // Parado na garagem
+  IN_TRANSIT  // Em viagem
+  MAINTENANCE // Em manutenção
+}
+
 model Truck {
-  id          String   @id @default(uuid())
-  plate       String   @unique
+  id          String      @id @default(uuid())
+  plate       String      @unique
   model       String
   brand       String
   year        Int
   color       String?
-  chassisNum  String?  @unique
-  capacity    Float? // Capacidade em toneladas
-  avgConsumption Float? @default(0) // Consumo médio km/l
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  chassisNum  String?     @unique
+  capacity    Float?      // Capacidade em toneladas
+  avgConsumption Float?   @default(0) // Consumo médio km/l
+  status      TruckStatus @default(GARAGE)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   trips       Trip[]
   expenses    Expense[]
@@ -99,6 +106,7 @@ enum TripStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+  DELAYED // Em atraso
 }
 
 model Expense {
