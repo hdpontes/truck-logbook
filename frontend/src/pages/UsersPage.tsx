@@ -38,7 +38,7 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/drivers`, {
+      const response = await axios.get(`${API_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(response.data);
@@ -65,12 +65,12 @@ export default function UsersPage() {
       };
 
       if (editingUser) {
-        await axios.put(`${API_URL}/api/drivers/${editingUser.id}`, userData, {
+        await axios.put(`${API_URL}/api/users/${editingUser.id}`, userData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Usuário atualizado com sucesso!');
       } else {
-        await axios.post(`${API_URL}/api/drivers`, userData, {
+        await axios.post(`${API_URL}/api/users`, userData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         alert('Usuário criado com sucesso! Dados enviados por WhatsApp.');
@@ -105,7 +105,7 @@ export default function UsersPage() {
     if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`${API_URL}/api/drivers/${id}`, {
+        await axios.delete(`${API_URL}/api/users/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(users.filter(u => u.id !== id));
