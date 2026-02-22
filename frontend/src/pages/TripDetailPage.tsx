@@ -15,6 +15,7 @@ import {
   Play,
   StopCircle,
   Clock,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -249,19 +250,21 @@ const TripDetailPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Receita</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(trip.revenue)}
-                </p>
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500">Receita</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(trip.revenue)}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardContent className="p-6">
@@ -277,19 +280,21 @@ const TripDetailPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Lucro</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(trip.profit)}
-                </p>
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500">Lucro</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(trip.profit)}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Trip Information */}
@@ -320,10 +325,12 @@ const TripDetailPage: React.FC = () => {
                 <span className="font-medium">{new Date(trip.endDate).toLocaleString('pt-BR')}</span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-gray-600">Margem de Lucro:</span>
-              <span className="font-medium">{trip.profitMargin.toFixed(2)}%</span>
-            </div>
+            {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Margem de Lucro:</span>
+                <span className="font-medium">{trip.profitMargin.toFixed(2)}%</span>
+              </div>
+            )}
             {trip.notes && (
               <div className="pt-3 border-t">
                 <p className="text-gray-600 text-sm mb-1">Observações:</p>
@@ -414,6 +421,12 @@ const TripDetailPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Despesas Relacionadas</span>
+            {user?.role === 'DRIVER' && (trip.status === 'IN_PROGRESS' || trip.status === 'COMPLETED') && (
+              <Button onClick={() => navigate(`/expenses/new?tripId=${trip.id}`)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Despesa
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
