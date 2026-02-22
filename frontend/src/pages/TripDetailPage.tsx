@@ -130,17 +130,24 @@ const TripDetailPage: React.FC = () => {
   };
 
   const handleFinishTrip = async () => {
-    if (!id) return;
+    if (!id || !trip) return;
     
     // Pedir quilometragem final
+    const startMileage = trip.startMileage || 0;
+    const suggestedEndMileage = startMileage > 0 ? startMileage + 100 : 1000;
+    
     const endMileageStr = prompt(
-      `Quilometragem inicial: ${trip?.startMileage || 0} km\n\nInforme a quilometragem final do caminhão:`,
-      trip?.startMileage ? (trip.startMileage + 100).toString() : '0'
+      `Quilometragem inicial do caminhão: ${startMileage.toFixed(0)} km\n\n` +
+      `Informe a quilometragem final do caminhão:`,
+      suggestedEndMileage.toString()
     );
     
-    if (!endMileageStr) return; // Usuário cancelou
+    if (!endMileageStr) {
+      console.log('Usuário cancelou a entrada de quilometragem');
+      return; // Usuário cancelou
+    }
     
-    const endMileage = parseFloat(endMileageStr);
+    const endMileage = parseFloat(endMileageStr.replace(',', '.'));
     
     // Validar quilometragem
     if (isNaN(endMileage) || endMileage < 0) {
@@ -148,27 +155,36 @@ const TripDetailPage: React.FC = () => {
       return;
     }
     
-    if (trip?.startMileage && endMileage < trip.startMileage) {
-      alert(`A quilometragem final (${endMileage} km) não pode ser menor que a inicial (${trip.startMileage} km).`);
+    if (startMileage > 0 && endMileage < startMileage) {
+      alert(`A quilometragem final (${endMileage.toFixed(0)} km) não pode ser menor que a inicial (${startMileage.toFixed(0)} km).`);
       return;
     }
     
-    const distance = trip?.startMileage ? endMileage - trip.startMileage : 0;
+    const distance = startMileage > 0 ? endMileage - startMileage : endMileage;
     
-    if (!confirm(
-      `Confirmar finalização da viagem?\n\n` +
-      `Quilometragem inicial: ${trip?.startMileage || 0} km\n` +
-      `Quilometragem final: ${endMileage} km\n` +
-      `Distância percorrida: ${distance.toFixed(1)} km\n\n` +
-      `Esta ação calculará os custos finais.`
-    )) return;
+    const confirmMessage = startMileage > 0 
+      ? `Confirmar finalização da viagem?\n\n` +
+        `Quilometragem inicial: ${startMileage.toFixed(0)} km\n` +
+        `Quilometragem final: ${endMileage.toFixed(0)} km\n` +
+        `Distância percorrida: ${distance.toFixed(1)} km\n\n` +
+        `Esta ação calculará os custos finais.`
+      : `Confirmar finalização da viagem?\n\n` +
+        `Quilometragem registrada: ${endMileage.toFixed(0)} km\n\n` +
+        `Esta ação calculará os custos finais.`;
+    
+    if (!confirm(confirmMessage)) {
+      console.log('Usuário cancelou a confirmação');
+      return;
+    }
     
     try {
+      console.log('Finalizando viagem com quilometragem:', endMileage);
       await tripsAPI.finish(id, { endMileage });
+      alert('Viagem finalizada com sucesso!');
       fetchTripDetails(id);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao finalizar viagem:', error);
-      alert('Erro ao finalizar viagem');
+      alert(error.response?.data?.message || 'Erro ao finalizar viagem');
     }
   };
 
