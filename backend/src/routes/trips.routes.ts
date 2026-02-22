@@ -385,12 +385,6 @@ router.post('/:id/finish', async (req, res) => {
           profit,
           profitMargin,
         },
-          tollCost,
-          otherCosts,
-          totalCost,
-          profit,
-          profitMargin,
-        },
         include: {
           truck: true,
           driver: {
