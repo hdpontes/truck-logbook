@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { driversAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { Plus, User, Phone, FileText, Edit, Trash2 } from 'lucide-react';
+import { Plus, User, Phone, FileText, Edit, Trash2, Ban, CheckCircle } from 'lucide-react';
 
 export default function DriversPage() {
   const queryClient = useQueryClient();
@@ -46,6 +46,21 @@ export default function DriversPage() {
     mutationFn: (id: string) => driversAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drivers'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao excluir motorista';
+      alert(errorMessage);
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => driversAPI.deactivate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Erro ao desativar/ativar motorista';
+      alert(errorMessage);
     },
   });
 
@@ -110,6 +125,17 @@ export default function DriversPage() {
     }
   };
 
+  const handleDeactivate = (driver: any) => {
+    const action = driver.active ? 'desativar' : 'ativar';
+    const message = driver.active 
+      ? 'Tem certeza que deseja desativar este motorista? Ele não poderá mais fazer login na plataforma.' 
+      : 'Tem certeza que deseja ativar este motorista?';
+    
+    if (confirm(message)) {
+      deactivateMutation.mutate(driver.id);
+    }
+  };
+
   const formatCPF = (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -164,7 +190,18 @@ export default function DriversPage() {
                   <User className="w-8 h-8 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-800">{driver.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-gray-800">{driver.name}</h3>
+                    {driver.active ? (
+                      <span className="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
+                        Ativo
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">
+                        Desativado
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-600">{driver.email}</p>
                 </div>
               </div>
@@ -203,13 +240,36 @@ export default function DriversPage() {
                     <Edit className="w-4 h-4" />
                     Editar
                   </button>
-                  <button
-                    onClick={() => handleDelete(driver.id)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Excluir
-                  </button>
+                  {driver._count?.trips > 0 ? (
+                    <button
+                      onClick={() => handleDeactivate(driver)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 border rounded-lg transition-colors ${
+                        driver.active 
+                          ? 'border-orange-600 text-orange-600 hover:bg-orange-50' 
+                          : 'border-green-600 text-green-600 hover:bg-green-50'
+                      }`}
+                    >
+                      {driver.active ? (
+                        <>
+                          <Ban className="w-4 h-4" />
+                          Desativar
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          Ativar
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDelete(driver.id)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Excluir
+                    </button>
+                  )}
                 </div>
               )}
             </div>
