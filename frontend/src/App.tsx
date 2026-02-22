@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuthStore } from './store/auth';
+import { useSettingsStore } from './store/settings';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import TrucksPage from './pages/TrucksPage';
@@ -44,6 +46,13 @@ function RoleRoute({ children, allowedRoles }: { children: React.ReactNode; allo
 }
 
 function App() {
+  const { fetchSettings } = useSettingsStore();
+
+  useEffect(() => {
+    // Carregar configurações ao iniciar o app
+    fetchSettings();
+  }, [fetchSettings]);
+
   return (
     <BrowserRouter>
       <Routes>
