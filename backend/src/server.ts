@@ -11,7 +11,6 @@ import dashboardRoutes from './routes/dashboard.routes';
 import clientsRoutes from './routes/clients.routes';
 import locationsRoutes from './routes/locations.routes';
 import usersRoutes from './routes/users.routes';
-import usersRoutes from './routes/users.routes';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;  // ✅ FIX: Convert to Number
@@ -99,3 +98,4 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 export default app;
+
