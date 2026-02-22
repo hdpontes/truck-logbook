@@ -41,6 +41,14 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
 
+    // Verificar se o usuário está ativo
+    if (!user.active) {
+      console.log('❌ User deactivated:', email);
+      return res.status(403).json({ 
+        message: 'Usuário desativado. Contate o administrador.' 
+      });
+    }
+
     const jwtSecret: string = config.JWT_SECRET;
     const jwtExpiry: string | number = config.JWT_EXPIRES_IN;
     

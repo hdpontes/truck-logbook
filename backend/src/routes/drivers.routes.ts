@@ -227,4 +227,47 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/drivers/:id/deactivate - Toggle active status
+router.patch('/:id/deactivate', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar motorista atual
+    const driver = await prisma.user.findUnique({
+      where: { id },
+      select: { active: true },
+    });
+
+    if (!driver) {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+
+    // Toggle active status
+    const updatedDriver = await prisma.user.update({
+      where: { id },
+      data: { active: !driver.active },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        cpf: true,
+        phone: true,
+        role: true,
+        active: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(updatedDriver);
+  } catch (error: any) {
+    console.error('Error toggling driver status:', error);
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
+    
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
