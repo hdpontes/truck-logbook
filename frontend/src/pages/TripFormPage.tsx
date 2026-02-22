@@ -29,6 +29,20 @@ interface Location {
   type: 'ORIGIN' | 'DESTINATION' | 'BOTH';
 }
 
+// Função para obter data/hora atual de Brasília no formato datetime-local (YYYY-MM-DDTHH:mm)
+const getBrasiliaDateTimeLocal = () => {
+  const now = new Date();
+  const brasiliaDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  
+  const year = brasiliaDate.getFullYear();
+  const month = String(brasiliaDate.getMonth() + 1).padStart(2, '0');
+  const day = String(brasiliaDate.getDate()).padStart(2, '0');
+  const hours = String(brasiliaDate.getHours()).padStart(2, '0');
+  const minutes = String(brasiliaDate.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export default function TripFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -37,6 +51,7 @@ export default function TripFormPage() {
   const [origins, setOrigins] = useState<Location[]>([]);
   const [destinations, setDestinations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
+  const [minDateTime, setMinDateTime] = useState(getBrasiliaDateTimeLocal());
   const [formData, setFormData] = useState({
     truckId: '',
     driverId: '',
@@ -46,6 +61,15 @@ export default function TripFormPage() {
     distance: '',
     revenue: '',
   });
+
+  // Atualizar minDateTime a cada minuto
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMinDateTime(getBrasiliaDateTimeLocal());
+    }, 60000); // Atualiza a cada 1 minuto
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -90,11 +114,12 @@ export default function TripFormPage() {
     setLoading(true);
 
     try {
-      // Validar data não retroativa (usar horário de Brasília)
+      // Validar data não retroativa
       const selectedDate = new Date(formData.startDate);
-      const nowUTC = new Date();
-      const nowBrasilia = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-      if (selectedDate < nowBrasilia) {
+      const now = new Date();
+      
+      // Comparar timestamps diretos
+      if (selectedDate.getTime() < now.getTime()) {
         alert('Não é permitido cadastrar viagens com data/horário retroativo.');
         setLoading(false);
         return;
@@ -249,7 +274,7 @@ export default function TripFormPage() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={minDateTime}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
