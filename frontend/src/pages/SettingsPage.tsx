@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { settingsAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useSettingsStore } from '@/store/settings';
 import { Settings, Save, Building2, DollarSign, Image } from 'lucide-react';
 
 interface SettingsData {
@@ -14,6 +15,7 @@ interface SettingsData {
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
+  const { fetchSettings: fetchGlobalSettings } = useSettingsStore();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,7 +79,9 @@ export default function SettingsPage() {
 
       await settingsAPI.update(updateData);
       alert('Configurações atualizadas com sucesso!');
-      fetchSettings();
+      await fetchSettings();
+      // Atualizar configurações globais para refletir em todo o app
+      await fetchGlobalSettings();
     } catch (error: any) {
       console.error('Erro ao salvar configurações:', error);
       alert(error.response?.data?.message || 'Erro ao salvar configurações');
