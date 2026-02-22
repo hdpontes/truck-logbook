@@ -265,6 +265,9 @@ router.post('/:id/start', async (req, res) => {
 
     const trip = await prisma.trip.findUnique({
       where: { id },
+      include: {
+        truck: true,
+      },
     });
 
     if (!trip) {
@@ -277,6 +280,9 @@ router.post('/:id/start', async (req, res) => {
       });
     }
 
+    // Pegar quilometragem atual do caminhão
+    const startMileage = trip.truck.currentMileage || 0;
+
     // Atualizar trip e status do caminhão
     const [updatedTrip] = await prisma.$transaction([
       prisma.trip.update({
@@ -284,6 +290,7 @@ router.post('/:id/start', async (req, res) => {
         data: {
           status: 'IN_PROGRESS',
           startDate: new Date(),
+          startMileage,
         },
         include: {
           truck: true,
@@ -309,7 +316,7 @@ router.post('/:id/start', async (req, res) => {
 router.post('/:id/finish', async (req, res) => {
   try {
     const { id } = req.params;
-    const { endDate, distance } = req.body;
+    const { endDate, endMileage } = req.body;
 
     const trip = await prisma.trip.findUnique({
       where: { id },
@@ -332,6 +339,21 @@ router.post('/:id/finish', async (req, res) => {
       });
     }
 
+    // Calcular distância percorrida baseada na quilometragem
+    let finalDistance = trip.distance;
+    let finalEndMileage = endMileage ? parseFloat(endMileage) : null;
+    
+    if (finalEndMileage && trip.startMileage) {
+      finalDistance = finalEndMileage - trip.startMileage;
+      
+      // Validação: quilometragem final deve ser maior que inicial
+      if (finalDistance < 0) {
+        return res.status(400).json({ 
+          message: 'A quilometragem final deve ser maior que a quilometragem inicial' 
+        });
+      }
+    }
+
     // Calcular custos totais a partir das despesas
     const fuelCost = trip.expenses
       .filter((e) => e.type === 'FUEL')
@@ -347,7 +369,6 @@ router.post('/:id/finish', async (req, res) => {
 
     // Calcular consumo de combustível baseado na kilometragem e consumo do caminhão
     let calculatedFuelCost = fuelCost;
-    const finalDistance = distance ? parseFloat(distance) : trip.distance;
     
     if (finalDistance > 0 && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
       // Buscar preço do diesel nas configurações
@@ -371,7 +392,7 @@ router.post('/:id/finish', async (req, res) => {
     const profit = trip.revenue - totalCost;
     const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
 
-    // Atualizar trip e retornar caminhão para garagem
+    // Atualizar trip, retornar caminhão para garagem e atualizar quilometragem
     const [updatedTrip] = await prisma.$transaction([
       prisma.trip.update({
         where: { id },
@@ -379,6 +400,7 @@ router.post('/:id/finish', async (req, res) => {
           status: 'COMPLETED',
           endDate: endDate ? new Date(endDate) : new Date(),
           distance: finalDistance,
+          endMileage: finalEndMileage,
           fuelCost: calculatedFuelCost,
           tollCost,
           otherCosts,
@@ -396,7 +418,11 @@ router.post('/:id/finish', async (req, res) => {
       }),
       prisma.truck.update({
         where: { id: trip.truckId },
-        data: { status: 'GARAGE' },
+        data: { 
+          status: 'GARAGE',
+          // Atualizar quilometragem atual do caminhão se foi informada
+          ...(finalEndMileage && { currentMileage: finalEndMileage }),
+        },
       }),
     ]);
 
