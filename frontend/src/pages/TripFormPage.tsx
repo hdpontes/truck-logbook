@@ -4,6 +4,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { tripsAPI, trucksAPI, driversAPI } from '@/lib/api';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface Truck {
   id: string;
@@ -18,10 +21,20 @@ interface Driver {
   email: string;
 }
 
+interface Location {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  type: 'ORIGIN' | 'DESTINATION' | 'BOTH';
+}
+
 export default function TripFormPage() {
   const navigate = useNavigate();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [origins, setOrigins] = useState<Location[]>([]);
+  const [destinations, setDestinations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     truckId: '',
@@ -39,12 +52,27 @@ export default function TripFormPage() {
 
   const fetchData = async () => {
     try {
-      const [trucksData, driversData] = await Promise.all([
+      const token = localStorage.getItem('token');
+      const [trucksData, driversData, locationsData] = await Promise.all([
         trucksAPI.getAll(),
         driversAPI.getAll(),
+        axios.get(`${API_URL}/api/locations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => res.data),
       ]);
+      
       setTrucks(trucksData);
       setDrivers(driversData);
+      
+      // Filtrar origens (ORIGIN ou BOTH)
+      setOrigins(locationsData.filter((loc: Location) => 
+        loc.type === 'ORIGIN' || loc.type === 'BOTH'
+      ));
+      
+      // Filtrar destinos (DESTINATION ou BOTH)
+      setDestinations(locationsData.filter((loc: Location) => 
+        loc.type === 'DESTINATION' || loc.type === 'BOTH'
+      ));
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
@@ -146,30 +174,40 @@ export default function TripFormPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Origem *
                 </label>
-                <input
-                  type="text"
+                <select
                   name="origin"
                   value={formData.origin}
                   onChange={handleChange}
                   required
-                  placeholder="Ex: São Paulo - SP"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Selecione a origem</option>
+                  {origins.map((location) => (
+                    <option key={location.id} value={`${location.name} - ${location.city}/${location.state}`}>
+                      {location.name} - {location.city}/{location.state}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Destino *
                 </label>
-                <input
-                  type="text"
+                <select
                   name="destination"
                   value={formData.destination}
                   onChange={handleChange}
                   required
-                  placeholder="Ex: Rio de Janeiro - RJ"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Selecione o destino</option>
+                  {destinations.map((location) => (
+                    <option key={location.id} value={`${location.name} - ${location.city}/${location.state}`}>
+                      {location.name} - {location.city}/{location.state}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
