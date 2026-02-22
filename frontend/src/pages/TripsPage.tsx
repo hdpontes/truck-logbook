@@ -5,6 +5,7 @@ import { Route, Plus, Eye, Trash2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
 
 interface Trip {
   id: string;
@@ -31,6 +32,7 @@ interface Trip {
 
 export default function TripsPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'IN_PROGRESS' | 'COMPLETED'>('all');
@@ -43,7 +45,13 @@ export default function TripsPage() {
     try {
       setLoading(true);
       const data = await tripsAPI.getAll();
-      setTrips(data);
+      
+      // Se for motorista, filtrar apenas suas viagens
+      if (user?.role === 'DRIVER') {
+        setTrips(data.filter((trip: Trip) => trip.driver.id === user.id));
+      } else {
+        setTrips(data);
+      }
     } catch (error) {
       console.error('Erro ao carregar viagens:', error);
     } finally {
@@ -92,10 +100,12 @@ export default function TripsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Viagens</h1>
-        <Button onClick={() => navigate('/trips/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Viagem
-        </Button>
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+          <Button onClick={() => navigate('/trips/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Viagem
+          </Button>
+        )}
       </div>
 
       {/* Filtros */}

@@ -4,6 +4,7 @@ import { expensesAPI } from '@/lib/api';
 import { Receipt, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface Expense {
   id: string;
@@ -21,6 +22,7 @@ interface Expense {
 }
 
 export default function ExpensesPage() {
+  const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +65,7 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Despesas</h1>
-        <Button onClick={() => alert('Adicionar despesa - em breve')}>
+        <Button onClick={() => navigate('/expenses/new')}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Despesa
         </Button>
