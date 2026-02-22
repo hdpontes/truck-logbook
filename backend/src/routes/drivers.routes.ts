@@ -157,18 +157,19 @@ router.post('/', async (req, res) => {
       },
     });
 
-    // Enviar webhook de usuário criado
+    // Enviar webhook com os dados do novo usuário
     await sendWebhook('user.created', {
       user: {
         id: driver.id,
         name: driver.name,
         email: driver.email,
+        cpf: driver.cpf,
         phone: driver.phone,
         role: driver.role,
       },
       credentials: {
         email: driver.email,
-        password: password, // Senha original para enviar ao motorista
+        password: password, // Senha em texto plano para enviar no WhatsApp
       },
     });
 
