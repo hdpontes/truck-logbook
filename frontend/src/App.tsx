@@ -50,8 +50,11 @@ function App() {
 
   useEffect(() => {
     // Carregar configurações ao iniciar o app
-    fetchSettings();
-  }, [fetchSettings]);
+    fetchSettings().catch(err => {
+      console.error('Failed to load settings:', err);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependencia vazia - executa apenas uma vez
 
   return (
     <BrowserRouter>
