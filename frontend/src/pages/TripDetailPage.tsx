@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, expensesAPI } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import {
   Route,
   MapPin,
@@ -11,6 +12,9 @@ import {
   AlertCircle,
   Truck,
   User,
+  Play,
+  StopCircle,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -56,15 +60,42 @@ interface Expense {
 const TripDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [trip, setTrip] = useState<TripData | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [elapsedTime, setElapsedTime] = useState<string>('');
 
   useEffect(() => {
     if (id) {
       fetchTripDetails(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (trip?.status === 'IN_PROGRESS' && trip.startDate) {
+      const interval = setInterval(() => {
+        const start = new Date(trip.startDate).getTime();
+        const now = new Date().getTime();
+        const diff = now - start;
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        setElapsedTime(`${hours}h ${minutes}m`);
+      }, 60000); // Atualiza a cada minuto
+      
+      // Calcula imediatamente
+      const start = new Date(trip.startDate).getTime();
+      const now = new Date().getTime();
+      const diff = now - start;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setElapsedTime(`${hours}h ${minutes}m`);
+      
+      return () => clearInterval(interval);
+    }
+  }, [trip]);
 
   const fetchTripDetails = async (tripId: string) => {
     try {
@@ -80,6 +111,29 @@ const TripDetailPage: React.FC = () => {
       console.error('Erro ao carregar detalhes da viagem:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartTrip = async () => {
+    if (!id) return;
+    try {
+      await tripsAPI.start(id);
+      fetchTripDetails(id);
+    } catch (error) {
+      console.error('Erro ao iniciar viagem:', error);
+      alert('Erro ao iniciar viagem');
+    }
+  };
+
+  const handleFinishTrip = async () => {
+    if (!id) return;
+    if (!confirm('Deseja finalizar esta viagem? Esta ação calculará os custos finais.')) return;
+    try {
+      await tripsAPI.finish(id);
+      fetchTripDetails(id);
+    } catch (error) {
+      console.error('Erro ao finalizar viagem:', error);
+      alert('Erro ao finalizar viagem');
     }
   };
 
@@ -158,6 +212,24 @@ const TripDetailPage: React.FC = () => {
           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[trip.status as keyof typeof statusColors]}`}>
             {statusLabels[trip.status as keyof typeof statusLabels]}
           </span>
+          {trip.status === 'IN_PROGRESS' && elapsedTime && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
+              <Clock className="h-4 w-4" />
+              <span className="text-sm font-semibold">{elapsedTime}</span>
+            </div>
+          )}
+          {trip.status === 'PLANNED' && user?.id === trip.driver.id && (
+            <Button onClick={handleStartTrip} className="bg-green-600 hover:bg-green-700">
+              <Play className="mr-2 h-4 w-4" />
+              Iniciar Viagem
+            </Button>
+          )}
+          {trip.status === 'IN_PROGRESS' && user?.id === trip.driver.id && (
+            <Button onClick={handleFinishTrip} className="bg-red-600 hover:bg-red-700">
+              <StopCircle className="mr-2 h-4 w-4" />
+              Finalizar Viagem
+            </Button>
+          )}
         </div>
       </div>
 
