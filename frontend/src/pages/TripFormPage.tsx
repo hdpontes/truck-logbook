@@ -90,6 +90,15 @@ export default function TripFormPage() {
     setLoading(true);
 
     try {
+      // Validar data não retroativa
+      const selectedDate = new Date(formData.startDate);
+      const now = new Date();
+      if (selectedDate < now) {
+        alert('Não é permitido cadastrar viagens com data/horário retroativo.');
+        setLoading(false);
+        return;
+      }
+
       const tripData = {
         truckId: formData.truckId,
         driverId: formData.driverId,
@@ -98,16 +107,29 @@ export default function TripFormPage() {
         startDate: new Date(formData.startDate).toISOString(),
         distance: parseFloat(formData.distance),
         revenue: parseFloat(formData.revenue),
-        status: 'IN_PROGRESS',
+        status: 'PLANNED',
       };
 
       await tripsAPI.create(tripData);
       
       alert('Viagem criada com sucesso! Notificação enviada ao motorista.');
       navigate('/trips');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar viagem:', error);
-      alert('Erro ao criar viagem. Tente novamente.');
+      
+      // Tratar erros específicos de conflito
+      if (error.response?.status === 400) {
+        const message = error.response.data.message;
+        if (message.includes('caminhão')) {
+          alert('Já existe uma viagem agendada para este caminhão nesta data/horário.');
+        } else if (message.includes('motorista')) {
+          alert('Já existe uma viagem agendada para este motorista nesta data/horário.');
+        } else {
+          alert(message || 'Erro ao criar viagem. Verifique os dados e tente novamente.');
+        }
+      } else {
+        alert('Erro ao criar viagem. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -226,9 +248,11 @@ export default function TripFormPage() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
+                  min={new Date().toISOString().slice(0, 16)}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">Não é possível agendar viagens retroativas</p>
               </div>
 
               <div>
