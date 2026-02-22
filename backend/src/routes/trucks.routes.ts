@@ -92,7 +92,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/trucks - Criar novo caminhão
 router.post('/', async (req, res) => {
   try {
-    const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption } = req.body;
+    const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, currentMileage } = req.body;
 
     if (!plate || !model || !brand || !year) {
       return res.status(400).json({ 
@@ -110,6 +110,7 @@ router.post('/', async (req, res) => {
         chassisNum,
         capacity: capacity ? parseFloat(capacity) : null,
         avgConsumption: avgConsumption ? parseFloat(avgConsumption) : null,
+        currentMileage: currentMileage ? parseFloat(currentMileage) : 0,
       },
     });
 
@@ -131,7 +132,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, active } = req.body;
+    const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, currentMileage, active } = req.body;
 
     const truck = await prisma.truck.update({
       where: { id },
@@ -144,6 +145,7 @@ router.put('/:id', async (req, res) => {
         ...(chassisNum && { chassisNum }),
         ...(capacity && { capacity: parseFloat(capacity) }),
         ...(avgConsumption && { avgConsumption: parseFloat(avgConsumption) }),
+        ...(currentMileage !== undefined && { currentMileage: parseFloat(currentMileage) }),
         ...(active !== undefined && { active }),
       },
     });
