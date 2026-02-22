@@ -240,3 +240,38 @@ enum Severity {
   ERROR
   CRITICAL
 }
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String   @unique
+  address   String
+  city      String
+  state     String
+  phone     String?
+  email     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clients")
+}
+
+model Location {
+  id        String       @id @default(uuid())
+  name      String
+  city      String
+  state     String
+  type      LocationType @default(BOTH)
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("locations")
+}
+
+enum LocationType {
+  ORIGIN
+  DESTINATION
+  BOTH
+}
