@@ -151,7 +151,7 @@ const TruckDetailPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button onClick={() => alert('Edição em breve')}>
+        <Button onClick={() => navigate(`/trucks/${id}/edit`)}>
           <Edit className="mr-2 h-4 w-4" />
           Editar Caminhão
         </Button>
