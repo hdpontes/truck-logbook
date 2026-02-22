@@ -165,7 +165,8 @@ export default function TripsPage() {
             <Card 
               key={trip.id} 
               className={`hover:shadow-lg transition-shadow ${
-                trip.status === 'DELAYED' ? 'border-red-300 bg-red-50' : ''
+                trip.status === 'DELAYED' ? 'border-red-300 bg-red-50' : 
+                trip.status === 'IN_PROGRESS' ? 'border-green-300 bg-green-50' : ''
               }`}
             >
               <CardHeader>
