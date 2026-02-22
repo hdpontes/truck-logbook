@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -23,6 +23,7 @@ interface Trip {
 
 export default function ExpenseFormPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,12 @@ export default function ExpenseFormPage() {
       setTrucks(trucksData);
       // Filtrar apenas viagens em progresso ou concluídas recentemente
       setTrips(tripsData.filter((t: Trip) => t.origin)); // Filtra viagens válidas
+      
+      // Pré-selecionar caminhão se vier da URL
+      const truckIdFromUrl = searchParams.get('truckId');
+      if (truckIdFromUrl) {
+        setFormData(prev => ({ ...prev, truckId: truckIdFromUrl }));
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
