@@ -10,6 +10,8 @@ import maintenanceRoutes from './routes/maintenance.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import clientsRoutes from './routes/clients.routes';
 import locationsRoutes from './routes/locations.routes';
+import usersRoutes from './routes/users.routes';
+import usersRoutes from './routes/users.routes';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;  // ✅ FIX: Convert to Number
@@ -51,6 +53,7 @@ app.use('/api/trucks', trucksRoutes);
 app.use('/api/trips', tripsRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/drivers', driversRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/dashboard', dashboardRoutes);app.use('/api/clients', clientsRoutes);
 app.use('/api/locations', locationsRoutes);console.log('✅ All routes mounted successfully');
