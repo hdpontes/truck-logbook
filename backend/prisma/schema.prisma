@@ -186,6 +186,7 @@ model Maintenance {
   description String
   cost        Float           @default(0)
   mileage     Float? // KM rodados no momento da manutenção
+  scheduledMileage Float? // KM programada para manutenção preventiva
   
   scheduledDate DateTime?
   completedDate DateTime?
