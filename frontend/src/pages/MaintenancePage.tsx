@@ -301,7 +301,6 @@ export default function MaintenancePage() {
           })}
         </div>
       )}
-    </div>
 
     {/* Modal de Confirmação de Exclusão */}
     {showDeleteModal && (
