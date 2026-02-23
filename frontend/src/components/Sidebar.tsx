@@ -57,6 +57,7 @@ const getMenuItems = (userRole: string) => {
       { icon: Receipt, label: 'Despesas', path: '/expenses' },
       { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
       { icon: Users, label: 'Motoristas', path: '/drivers' },
+      { icon: UserCog, label: 'Usuários', path: '/users' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
