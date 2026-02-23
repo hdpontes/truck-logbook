@@ -119,6 +119,12 @@ export const reportsAPI = {
   getMonthly: (year: number, month: number) => api.get(`/reports/monthly/${year}/${month}`).then(res => res.data),
 };
 
+// Billing API
+export const billingAPI = {
+  get: (params?: any) => api.get('/billing', { params }).then(res => res.data),
+  sendWebhook: (data: any) => api.post('/billing/send-webhook', data).then(res => res.data),
+};
+
 // Clients API
 export const clientsAPI = {
   getAll: () => api.get('/clients').then(res => res.data),
