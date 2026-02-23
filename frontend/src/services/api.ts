@@ -41,6 +41,15 @@ export const trucksAPI = {
   delete: (id: string) => api.delete(`/trucks/${id}`).then(res => res.data),
 };
 
+// Trailers API
+export const trailersAPI = {
+  getAll: () => api.get('/trailers').then(res => res.data),
+  getById: (id: string) => api.get(`/trailers/${id}`).then(res => res.data),
+  create: (data: any) => api.post('/trailers', data).then(res => res.data),
+  update: (id: string, data: any) => api.put(`/trailers/${id}`, data).then(res => res.data),
+  delete: (id: string) => api.delete(`/trailers/${id}`).then(res => res.data),
+};
+
 // Trips API
 export const tripsAPI = {
   getAll: () => api.get('/trips').then(res => res.data),
