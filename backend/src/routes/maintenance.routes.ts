@@ -83,6 +83,7 @@ router.post('/', async (req, res) => {
       description,
       cost,
       mileage,
+      scheduledMileage,
       scheduledDate,
       status,
       priority,
@@ -92,17 +93,38 @@ router.post('/', async (req, res) => {
 
     if (!truckId || !type || !description) {
       return res.status(400).json({ 
-        message: 'TruckId, type and description are required' 
+        message: 'TruckId, tipo e descrição são obrigatórios' 
       });
     }
 
     const truck = await prisma.truck.findUnique({
       where: { id: truckId },
-      select: { id: true, plate: true, model: true },
+      select: { id: true, plate: true, model: true, currentMileage: true },
     });
 
     if (!truck) {
-      return res.status(404).json({ message: 'Truck not found' });
+      return res.status(404).json({ message: 'Caminhão não encontrado' });
+    }
+
+    // Verificar se a manutenção já está atrasada
+    let maintenanceStatus = status || 'SCHEDULED';
+    if (scheduledMileage && truck.currentMileage && truck.currentMileage >= scheduledMileage) {
+      maintenanceStatus = 'PENDING'; // Atrasada se a km atual já passou da programada
+      
+      // Enviar webhook de manutenção atrasada
+      await sendWebhook('maintenance.overdue', {
+        maintenance: {
+          type,
+          description,
+          scheduledMileage,
+          priority: priority || 'MEDIUM',
+        },
+        truck: {
+          plate: truck.plate,
+          model: truck.model,
+          currentMileage: truck.currentMileage,
+        },
+      });
     }
 
     const maintenance = await prisma.maintenance.create({
@@ -112,32 +134,35 @@ router.post('/', async (req, res) => {
         description,
         cost: cost ? parseFloat(cost) : 0,
         mileage: mileage ? parseFloat(mileage) : null,
+        scheduledMileage: scheduledMileage ? parseFloat(scheduledMileage) : null,
         scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-        status: status || 'PENDING',
+        status: maintenanceStatus,
         priority: priority || 'MEDIUM',
         supplier,
         notes,
       },
       include: {
         truck: {
-          select: { id: true, plate: true, model: true },
+          select: { id: true, plate: true, model: true, currentMileage: true },
         },
       },
     });
 
     // Enviar webhook de manutenção programada
-    if (scheduledDate) {
+    if (scheduledDate || scheduledMileage) {
       await sendWebhook('maintenance.scheduled', {
         maintenance: {
           id: maintenance.id,
           type: maintenance.type,
           description: maintenance.description,
           scheduledDate: maintenance.scheduledDate,
+          scheduledMileage: maintenance.scheduledMileage,
           priority: maintenance.priority,
         },
         truck: {
           plate: truck.plate,
           model: truck.model,
+          currentMileage: truck.currentMileage,
         },
       });
     }
@@ -158,6 +183,7 @@ router.put('/:id', async (req, res) => {
       description,
       cost,
       mileage,
+      scheduledMileage,
       scheduledDate,
       completedDate,
       status,
@@ -175,6 +201,7 @@ router.put('/:id', async (req, res) => {
         ...(description && { description }),
         ...(cost !== undefined && { cost: parseFloat(cost) }),
         ...(mileage !== undefined && { mileage: mileage ? parseFloat(mileage) : null }),
+        ...(scheduledMileage !== undefined && { scheduledMileage: scheduledMileage ? parseFloat(scheduledMileage) : null }),
         ...(scheduledDate && { scheduledDate: new Date(scheduledDate) }),
         ...(completedDate && { completedDate: new Date(completedDate) }),
         ...(status && { status }),
@@ -186,17 +213,34 @@ router.put('/:id', async (req, res) => {
       },
       include: {
         truck: {
-          select: { id: true, plate: true, model: true },
+          select: { id: true, plate: true, model: true, currentMileage: true },
         },
       },
     });
+
+    // Se foi marcada como concluída, enviar webhook
+    if (status === 'COMPLETED' && completedDate) {
+      await sendWebhook('maintenance.completed', {
+        maintenance: {
+          id: maintenance.id,
+          type: maintenance.type,
+          description: maintenance.description,
+          cost: maintenance.cost,
+          completedDate: maintenance.completedDate,
+        },
+        truck: {
+          plate: maintenance.truck.plate,
+          model: maintenance.truck.model,
+        },
+      });
+    }
 
     res.json(maintenance);
   } catch (error: any) {
     console.error('Error updating maintenance:', error);
     
     if (error.code === 'P2025') {
-      return res.status(404).json({ message: 'Maintenance not found' });
+      return res.status(404).json({ message: 'Manutenção não encontrada' });
     }
     
     res.status(500).json({ message: 'Internal server error' });
@@ -217,9 +261,71 @@ router.delete('/:id', async (req, res) => {
     console.error('Error deleting maintenance:', error);
     
     if (error.code === 'P2025') {
-      return res.status(404).json({ message: 'Maintenance not found' });
+      return res.status(404).json({ message: 'Manutenção não encontrada' });
     }
     
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/maintenance/check-overdue - Verificar manutenções atrasadas
+router.get('/check-overdue', async (req, res) => {
+  try {
+    // Buscar manutenções programadas
+    const scheduledMaintenances = await prisma.maintenance.findMany({
+      where: {
+        status: { in: ['SCHEDULED', 'PENDING'] },
+        scheduledMileage: { not: null },
+      },
+      include: {
+        truck: {
+          select: { id: true, plate: true, model: true, currentMileage: true },
+        },
+      },
+    });
+
+    const overdueMaintenances = [];
+
+    for (const maintenance of scheduledMaintenances) {
+      const truck = maintenance.truck;
+      
+      if (truck.currentMileage && maintenance.scheduledMileage && 
+          truck.currentMileage >= maintenance.scheduledMileage &&
+          maintenance.status !== 'PENDING') {
+        
+        // Atualizar status para PENDING (atrasada)
+        await prisma.maintenance.update({
+          where: { id: maintenance.id },
+          data: { status: 'PENDING' },
+        });
+
+        overdueMaintenances.push(maintenance);
+
+        // Enviar webhook
+        await sendWebhook('maintenance.overdue', {
+          maintenance: {
+            id: maintenance.id,
+            type: maintenance.type,
+            description: maintenance.description,
+            scheduledMileage: maintenance.scheduledMileage,
+            priority: maintenance.priority,
+          },
+          truck: {
+            plate: truck.plate,
+            model: truck.model,
+            currentMileage: truck.currentMileage,
+          },
+        });
+      }
+    }
+
+    res.json({
+      checked: scheduledMaintenances.length,
+      overdue: overdueMaintenances.length,
+      maintenances: overdueMaintenances,
+    });
+  } catch (error) {
+    console.error('Error checking overdue maintenances:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
