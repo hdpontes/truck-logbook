@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { trucksAPI, tripsAPI, expensesAPI } from '@/lib/api';
+import { trucksAPI, tripsAPI, expensesAPI, maintenanceAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import {
   Truck,
@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   TrendingUp,
   AlertCircle,
+  Wrench,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -26,7 +28,11 @@ interface TruckData {
   color: string;
   capacity: number;
   avgConsumption: number;
+  currentMileage: number;
   active: boolean;
+  hasOverdueMaintenance?: boolean;
+  pendingMaintenancesCount?: number;
+  overdueMaintenancesCount?: number;
   _count?: {
     trips: number;
     expenses: number;
@@ -63,6 +69,16 @@ interface Expense {
   receipt?: string;
 }
 
+interface Maintenance {
+  id: string;
+  type: string;
+  description: string;
+  scheduledMileage?: number;
+  scheduledDate?: string;
+  status: string;
+  priority: string;
+}
+
 const TruckDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -70,6 +86,7 @@ const TruckDetailPage: React.FC = () => {
   const [truck, setTruck] = useState<TruckData | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,15 +98,17 @@ const TruckDetailPage: React.FC = () => {
   const fetchTruckDetails = async (truckId: string) => {
     try {
       setLoading(true);
-      const [truckData, tripsData, expensesData] = await Promise.all([
+      const [truckData, tripsData, expensesData, maintenancesData] = await Promise.all([
         trucksAPI.getById(truckId),
         tripsAPI.getByTruck(truckId),
         expensesAPI.getByTruck(truckId),
+        maintenanceAPI.getByTruck(truckId),
       ]);
       
       setTruck(truckData);
       setTrips(tripsData);
       setExpenses(expensesData);
+      setMaintenances(maintenancesData.filter((m: Maintenance) => m.status === 'PENDING' || m.status === 'SCHEDULED'));
     } catch (error) {
       console.error('Erro ao carregar detalhes do caminhão:', error);
     } finally {
@@ -217,6 +236,89 @@ const TruckDetailPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Maintenance Alerts */}
+      {maintenances.length > 0 && (
+        <Card className={truck.hasOverdueMaintenance ? 'border-2 border-red-300 bg-red-50' : 'border-2 border-yellow-300 bg-yellow-50'}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {truck.hasOverdueMaintenance ? (
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                ) : (
+                  <Wrench className="h-5 w-5 text-yellow-600" />
+                )}
+                <span className={truck.hasOverdueMaintenance ? 'text-red-800' : 'text-yellow-800'}>
+                  {truck.hasOverdueMaintenance ? 'Manutenções Atrasadas' : 'Manutenções Programadas'}
+                </span>
+              </div>
+              <Button 
+                onClick={() => navigate('/maintenance')}
+                variant="outline"
+                size="sm"
+              >
+                Ver Todas
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {maintenances.slice(0, 5).map((maintenance) => {
+                const isOverdue = maintenance.scheduledMileage && truck.currentMileage >= maintenance.scheduledMileage;
+                
+                return (
+                  <div 
+                    key={maintenance.id} 
+                    className={`p-4 rounded-lg border-2 ${
+                      isOverdue ? 'bg-red-100 border-red-300' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="font-medium text-gray-900">{maintenance.description}</p>
+                          {isOverdue && (
+                            <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
+                              ATRASADA
+                            </span>
+                          )}
+                        </div>
+                        {maintenance.scheduledMileage && (
+                          <p className={`text-sm ${isOverdue ? 'text-red-700 font-semibold' : 'text-gray-600'}`}>
+                            Programada: {maintenance.scheduledMileage.toLocaleString('pt-BR')} km
+                            {' • '}
+                            Atual: {truck.currentMileage.toLocaleString('pt-BR')} km
+                            {isOverdue && (
+                              <>
+                                {' • '}
+                                <span className="text-red-700 font-bold">
+                                  Ultrapassou em {(truck.currentMileage - maintenance.scheduledMileage).toLocaleString('pt-BR')} km
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        )}
+                        {maintenance.scheduledDate && (
+                          <p className="text-sm text-gray-600">
+                            Data: {new Date(maintenance.scheduledDate).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/maintenance/edit/${maintenance.id}`)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Trips */}
       <Card>
