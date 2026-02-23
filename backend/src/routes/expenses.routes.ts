@@ -95,15 +95,15 @@ router.post('/', async (req, res) => {
       date,
     } = req.body;
 
-    if (!truckId || !type || !amount) {
+    if (!type || !amount) {
       return res.status(400).json({ 
-        message: 'TruckId, type and amount are required' 
+        message: 'Type and amount are required' 
       });
     }
 
     const expense = await prisma.expense.create({
       data: {
-        truckId,
+        truckId: truckId || null,
         tripId: tripId || null,
         type,
         category,
@@ -116,12 +116,12 @@ router.post('/', async (req, res) => {
         date: date ? new Date(date) : new Date(),
       },
       include: {
-        truck: {
+        truck: truckId ? {
           select: { id: true, plate: true, model: true },
-        },
-        trip: {
+        } : false,
+        trip: tripId ? {
           select: { id: true, origin: true, destination: true },
-        },
+        } : false,
       },
     });
 
@@ -133,9 +133,9 @@ router.post('/', async (req, res) => {
         amount: expense.amount,
         description: expense.description,
       },
-      truck: {
+      truck: expense.truck ? {
         plate: expense.truck.plate,
-      },
+      } : null,
     });
 
     // Verificar se é uma despesa alta
