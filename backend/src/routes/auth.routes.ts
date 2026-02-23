@@ -10,40 +10,40 @@ const router = Router();
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { login, password } = req.body;
 
-    console.log('🔐 Login attempt:', email);
+    console.log('🔐 Login attempt:', login);
 
-    if (!email || !password) {
+    if (!login || !password) {
       console.log('❌ Missing credentials');
       return res.status(400).json({ 
-        message: 'Email and password are required' 
+        message: 'Login e senha são obrigatórios' 
       });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { login }
     });
 
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('❌ User not found:', login);
       return res.status(401).json({ 
-        message: 'Invalid credentials' 
+        message: 'Credenciais inválidas' 
       });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      console.log('❌ Invalid password for:', email);
+      console.log('❌ Invalid password for:', login);
       return res.status(401).json({ 
-        message: 'Invalid credentials' 
+        message: 'Credenciais inválidas' 
       });
     }
 
     // Verificar se o usuário está ativo
     if (!user.active) {
-      console.log('❌ User deactivated:', email);
+      console.log('❌ User deactivated:', login);
       return res.status(403).json({ 
         message: 'Usuário desativado. Contate o administrador.' 
       });
@@ -56,6 +56,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = jwt.sign(
       {
         userId: user.id,
+        login: user.login,
         email: user.email,
         role: user.role
       },
@@ -63,12 +64,13 @@ router.post('/login', async (req: Request, res: Response) => {
       { expiresIn: jwtExpiry }
     );
 
-    console.log('✅ Login successful:', email);
+    console.log('✅ Login successful:', login);
 
     res.json({
       token,
       user: {
         id: user.id,
+        login: user.login,
         email: user.email,
         name: user.name,
         role: user.role
