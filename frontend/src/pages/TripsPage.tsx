@@ -326,7 +326,6 @@ export default function TripsPage() {
           ))}
         </div>
       )}
-    </div>
 
     {/* Modal de Confirmação de Exclusão */}
     {showDeleteModal && (
