@@ -13,6 +13,7 @@ async function main() {
     where: { email: 'admin@truck.com' },
     update: {},
     create: {
+      login: 'admin',
       email: 'admin@truck.com',
       password: hashedPassword,
       name: 'Administrador',
@@ -24,6 +25,7 @@ async function main() {
     where: { email: 'joao@truck.com' },
     update: {},
     create: {
+      login: 'joao',
       email: 'joao@truck.com',
       password: hashedPassword,
       name: 'João Silva',
@@ -35,6 +37,7 @@ async function main() {
     where: { email: 'maria@truck.com' },
     update: {},
     create: {
+      login: 'maria',
       email: 'maria@truck.com',
       password: hashedPassword,
       name: 'Maria Santos',
