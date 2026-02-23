@@ -22,6 +22,7 @@ const getMenuItems = (userRole: string) => {
   const baseItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Truck, label: 'Caminhões', path: '/trucks' },
+    { icon: Truck, label: 'Carretas', path: '/trailers' },
     { icon: RouteIcon, label: 'Viagens', path: '/trips' },
   ];
 
