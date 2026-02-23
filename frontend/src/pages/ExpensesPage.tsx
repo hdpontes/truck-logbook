@@ -147,7 +147,6 @@ export default function ExpensesPage() {
           ))}
         </div>
       )}
-    </div>
 
     {/* Modal de Confirmação de Exclusão */}
     {showDeleteModal && (
@@ -183,5 +182,6 @@ export default function ExpensesPage() {
         </Card>
       </div>
     )}
+    </div>
   );
 }
