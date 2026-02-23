@@ -47,7 +47,7 @@ export default function TripsPage() {
   const toast = useToast();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'IN_PROGRESS' | 'COMPLETED'>('all');
+  const [filter, setFilter] = useState<'all' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED'>('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -212,6 +212,14 @@ export default function TripsPage() {
           className="whitespace-nowrap"
         >
           Todas ({trips.length})
+        </Button>
+        <Button
+          variant={filter === 'PLANNED' ? 'default' : 'outline'}
+          onClick={() => setFilter('PLANNED')}
+          size="sm"
+          className="whitespace-nowrap"
+        >
+          Planejadas ({trips.filter(t => t.status === 'PLANNED').length})
         </Button>
         <Button
           variant={filter === 'IN_PROGRESS' ? 'default' : 'outline'}
