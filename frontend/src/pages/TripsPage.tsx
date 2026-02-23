@@ -130,10 +130,11 @@ export default function TripsPage() {
     try {
       await tripsAPI.delete(tripToDelete);
       setTrips(trips.filter(trip => trip.id !== tripToDelete));
+      toast.success('Viagem excluída com sucesso!');
     } catch (error: any) {
       console.error('Erro ao excluir viagem:', error);
       if (error.response?.status === 403) {
-        toast.error('Apenas administradores podem excluir viagens.');
+        toast.error(error.response?.data?.message || 'Você não tem permissão para excluir esta viagem.');
       } else {
         toast.error('Erro ao excluir viagem.');
       }
@@ -452,7 +453,7 @@ export default function TripsPage() {
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                     )}
-                    {user?.role === 'ADMIN' && (
+                    {(user?.role === 'ADMIN' || (user?.role === 'MANAGER' && trip.status === 'PLANNED')) && (
                       <Button
                         variant="outline"
                         size="sm"
