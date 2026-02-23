@@ -330,19 +330,19 @@ export default function TripsPage() {
 
     {/* Modal de Confirmação de Exclusão */}
     {showDeleteModal && (
-      <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50\">
-        <Card className=\"w-full max-w-md\">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className=\"text-red-600\">Confirmar Exclusão</CardTitle>
+            <CardTitle className="text-red-600">Confirmar Exclusão</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className=\"text-gray-700 mb-6\">
+            <p className="text-gray-700 mb-6">
               Tem certeza que deseja excluir esta viagem? Esta ação não pode ser desfeita.
             </p>
-            <div className=\"flex justify-end gap-4\">
+            <div className="flex justify-end gap-4">
               <Button
-                type=\"button\"
-                variant=\"outline\"
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setShowDeleteModal(false);
                   setTripToDelete(null);
@@ -351,9 +351,9 @@ export default function TripsPage() {
                 Cancelar
               </Button>
               <Button
-                type=\"button\"
+                type="button"
                 onClick={confirmDelete}
-                className=\"bg-red-600 hover:bg-red-700 text-white\"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Excluir
               </Button>
@@ -365,19 +365,19 @@ export default function TripsPage() {
 
     {/* Modal de Confirmação de Envio de Lembrete */}
     {showReminderModal && (
-      <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50\">
-        <Card className=\"w-full max-w-md\">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className=\"text-blue-600\">Enviar Lembrete</CardTitle>
+            <CardTitle className="text-blue-600">Enviar Lembrete</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className=\"text-gray-700 mb-6\">
+            <p className="text-gray-700 mb-6">
               Deseja enviar notificação do lembrete da viagem para o motorista?
             </p>
-            <div className=\"flex justify-end gap-4\">
+            <div className="flex justify-end gap-4">
               <Button
-                type=\"button\"
-                variant=\"outline\"
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setShowReminderModal(false);
                   setTripToRemind(null);
@@ -386,9 +386,9 @@ export default function TripsPage() {
                 Cancelar
               </Button>
               <Button
-                type=\"button\"
+                type="button"
                 onClick={confirmSendReminder}
-                className=\"bg-blue-600 hover:bg-blue-700 text-white\"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Enviar Lembrete
               </Button>
