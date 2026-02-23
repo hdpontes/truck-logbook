@@ -38,6 +38,10 @@ interface ReportItem {
     id: string;
     name: string;
   };
+  client?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface ReportData {
@@ -651,6 +655,9 @@ const ReportsPage: React.FC = () => {
                             <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                               Motorista
                             </th>
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                              Cliente
+                            </th>
                             <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                               Caminhão
                             </th>
@@ -708,6 +715,9 @@ const ReportsPage: React.FC = () => {
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden md:table-cell">
                                 {item.driver?.name || '-'}
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden md:table-cell">
+                                {item.client?.name || '-'}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden sm:table-cell">
                                 {item.truck?.plate || '-'}
