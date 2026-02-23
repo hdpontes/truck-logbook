@@ -31,13 +31,14 @@ async function sendWebhook(eventType: string, data: any) {
 // GET /api/trips - Listar todas as viagens
 router.get('/', async (req, res) => {
   try {
-    const { status, truckId, driverId } = req.query;
+    const { status, truckId, driverId, clientId } = req.query;
 
     const trips = await prisma.trip.findMany({
       where: {
         ...(status && { status: status as any }),
         ...(truckId && { truckId: truckId as string }),
         ...(driverId && { driverId: driverId as string }),
+        ...(clientId && { clientId: clientId as string }),
       },
       include: {
         truck: {
@@ -48,6 +49,9 @@ router.get('/', async (req, res) => {
         },
         driver: {
           select: { id: true, name: true, email: true, phone: true },
+        },
+        client: {
+          select: { id: true, name: true, cnpj: true, city: true, state: true },
         },
       },
       orderBy: { startDate: 'desc' },
@@ -98,6 +102,9 @@ router.get('/:id', async (req, res) => {
         driver: {
           select: { id: true, name: true, email: true, phone: true },
         },
+        client: {
+          select: { id: true, name: true, cnpj: true, phone: true, email: true, city: true, state: true },
+        },
         expenses: true,
       },
     });
@@ -116,7 +123,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/trips - Criar nova viagem (agendar)
 router.post('/', async (req, res) => {
   try {
-    const { truckId, trailerId, driverId, tripCode, origin, destination, startDate, distance, revenue, notes } = req.body;
+    const { truckId, trailerId, driverId, clientId, tripCode, origin, destination, startDate, distance, revenue, notes } = req.body;
 
     if (!truckId || !driverId || !origin || !destination || !startDate) {
       return res.status(400).json({ 
@@ -232,6 +239,7 @@ router.post('/', async (req, res) => {
         truckId,
         trailerId: trailerId || null,
         driverId,
+        clientId: clientId || null,
         tripCode: tripCode || null,
         origin,
         destination,
@@ -246,6 +254,9 @@ router.post('/', async (req, res) => {
         trailer: true,
         driver: {
           select: { id: true, name: true, email: true, phone: true },
+        },
+        client: {
+          select: { id: true, name: true, cnpj: true },
         },
       },
     });
