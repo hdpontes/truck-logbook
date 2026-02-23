@@ -16,10 +16,17 @@ interface ReportItem {
   tripCode?: string;
   category: string;
   amount: number;
+  revenue?: number; // Para viagens
+  cost?: number; // Para viagens
+  profit?: number; // Para viagens
+  isTrip: boolean; // Indica se é uma viagem completa ou apenas despesa
+  expenseType?: string; // Tipo da despesa (FUEL, TOLL, etc)
   truck?: {
+    id: string;
     plate: string;
   };
   driver?: {
+    id: string;
     name: string;
   };
 }
@@ -32,6 +39,8 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       endDate,
       type, // 'INCOME', 'EXPENSE', ou vazio para todos
       tripCode,
+      truckId,
+      driverId,
     } = req.query;
 
     // Validar permissões (apenas ADMIN e MANAGER)
@@ -69,14 +78,22 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
         };
       }
 
+      if (truckId) {
+        tripsFilter.truckId = truckId as string;
+      }
+
+      if (driverId) {
+        tripsFilter.driverId = driverId as string;
+      }
+
       const trips = await prisma.trip.findMany({
         where: tripsFilter,
         include: {
           truck: {
-            select: { plate: true },
+            select: { id: true, plate: true },
           },
           driver: {
-            select: { name: true },
+            select: { id: true, name: true },
           },
         },
         orderBy: { endDate: 'desc' },
@@ -91,6 +108,10 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           tripCode: trip.tripCode || undefined,
           category: 'Receita de Viagem',
           amount: trip.revenue,
+          revenue: trip.revenue,
+          cost: trip.totalCost,
+          profit: trip.profit,
+          isTrip: true,
           truck: trip.truck,
           driver: trip.driver,
         });
@@ -105,7 +126,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
         expensesFilter.date = dateFilter;
       }
 
-      // Se filtrado por tripCode, buscar apenas despesas desta viagem
+      // Filtros adicionais para despesas
       if (tripCode) {
         const tripsWithCode = await prisma.trip.findMany({
           where: {
@@ -122,16 +143,54 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
         };
       }
 
+      // Filtrar por caminhão via trip
+      if (truckId) {
+        const tripsWithTruck = await prisma.trip.findMany({
+          where: { truckId: truckId as string },
+          select: { id: true },
+        });
+        
+        if (expensesFilter.tripId) {
+          // Intersecção com filtro de tripCode se existir
+          const existingIds = expensesFilter.tripId.in;
+          const truckIds = tripsWithTruck.map((t) => t.id);
+          expensesFilter.tripId.in = existingIds.filter((id: string) => truckIds.includes(id));
+        } else {
+          expensesFilter.tripId = {
+            in: tripsWithTruck.map((t) => t.id),
+          };
+        }
+      }
+
+      // Filtrar por motorista via trip
+      if (driverId) {
+        const tripsWithDriver = await prisma.trip.findMany({
+          where: { driverId: driverId as string },
+          select: { id: true },
+        });
+        
+        if (expensesFilter.tripId) {
+          // Intersecção com filtros anteriores
+          const existingIds = expensesFilter.tripId.in;
+          const driverIds = tripsWithDriver.map((t) => t.id);
+          expensesFilter.tripId.in = existingIds.filter((id: string) => driverIds.includes(id));
+        } else {
+          expensesFilter.tripId = {
+            in: tripsWithDriver.map((t) => t.id),
+          };
+        }
+      }
+
       const expenses = await prisma.expense.findMany({
         where: expensesFilter,
         include: {
           trip: {
             include: {
               truck: {
-                select: { plate: true },
+                select: { id: true, plate: true },
               },
               driver: {
-                select: { name: true },
+                select: { id: true, name: true },
               },
             },
           },
@@ -161,6 +220,8 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           tripCode: expense.trip?.tripCode || undefined,
           category: expenseLabels[expense.type] || expense.type,
           amount: expense.amount,
+          isTrip: false,
+          expenseType: expense.type,
           truck: expense.trip?.truck,
           driver: expense.trip?.driver,
         });
