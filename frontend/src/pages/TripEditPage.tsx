@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { tripsAPI, trucksAPI, trailersAPI, driversAPI, clientsAPI } from '@/services/api';
+import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
