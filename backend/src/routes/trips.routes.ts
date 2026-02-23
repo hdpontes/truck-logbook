@@ -43,6 +43,9 @@ router.get('/', async (req, res) => {
         truck: {
           select: { id: true, plate: true, model: true, brand: true },
         },
+        trailer: {
+          select: { id: true, plate: true, model: true, brand: true },
+        },
         driver: {
           select: { id: true, name: true, email: true, phone: true },
         },
@@ -65,6 +68,9 @@ router.get('/truck/:truckId', async (req, res) => {
     const trips = await prisma.trip.findMany({
       where: { truckId },
       include: {
+        trailer: {
+          select: { id: true, plate: true, model: true, brand: true },
+        },
         driver: {
           select: { id: true, name: true, email: true },
         },
@@ -88,6 +94,7 @@ router.get('/:id', async (req, res) => {
       where: { id },
       include: {
         truck: true,
+        trailer: true,
         driver: {
           select: { id: true, name: true, email: true, phone: true },
         },
@@ -109,7 +116,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/trips - Criar nova viagem (agendar)
 router.post('/', async (req, res) => {
   try {
-    const { truckId, driverId, origin, destination, startDate, distance, revenue, notes } = req.body;
+    const { truckId, trailerId, driverId, tripCode, origin, destination, startDate, distance, revenue, notes } = req.body;
 
     if (!truckId || !driverId || !origin || !destination || !startDate) {
       return res.status(400).json({ 
@@ -145,6 +152,18 @@ router.post('/', async (req, res) => {
 
     if (!driver) {
       return res.status(404).json({ message: 'Driver not found' });
+    }
+
+    // Verificar se a carreta existe (se fornecida)
+    let trailer = null;
+    if (trailerId) {
+      trailer = await prisma.trailer.findUnique({
+        where: { id: trailerId },
+      });
+
+      if (!trailer) {
+        return res.status(404).json({ message: 'Trailer not found' });
+      }
     }
 
     // Validação 2: Verificar intervalo mínimo de 3h entre início de viagens (caminhão)
@@ -211,7 +230,9 @@ router.post('/', async (req, res) => {
     const trip = await prisma.trip.create({
       data: {
         truckId,
+        trailerId: trailerId || null,
         driverId,
+        tripCode: tripCode || null,
         origin,
         destination,
         startDate: tripStartDate,
@@ -222,6 +243,7 @@ router.post('/', async (req, res) => {
       },
       include: {
         truck: true,
+        trailer: true,
         driver: {
           select: { id: true, name: true, email: true, phone: true },
         },
@@ -232,6 +254,7 @@ router.post('/', async (req, res) => {
     await sendWebhook('trip.scheduled', {
       trip: {
         id: trip.id,
+        tripCode: trip.tripCode,
         origin: trip.origin,
         destination: trip.destination,
         startDate: trip.startDate,
@@ -243,6 +266,12 @@ router.post('/', async (req, res) => {
         model: truck.model,
         brand: truck.brand,
       },
+      trailer: trailer ? {
+        id: trailer.id,
+        plate: trailer.plate,
+        model: trailer.model,
+        brand: trailer.brand,
+      } : null,
       driver: {
         id: driver.id,
         name: driver.name,
@@ -472,25 +501,131 @@ router.post('/:id/finish', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { origin, destination, startDate, endDate, revenue, distance, notes, status } = req.body;
+    const user = (req as any).user;
+    const { tripCode, truckId, trailerId, driverId, origin, destination, startDate, endDate, revenue, distance, notes, status } = req.body;
+
+    // Apenas ADMIN e MANAGER podem editar viagens
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({ 
+        message: 'Apenas administradores e gerentes podem editar viagens' 
+      });
+    }
+
+    // Buscar viagem atual
+    const currentTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        driver: true,
+      },
+    });
+
+    if (!currentTrip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Permitir edição apenas de viagens PLANNED
+    if (currentTrip.status !== 'PLANNED' && currentTrip.status !== 'DELAYED') {
+      return res.status(400).json({ 
+        message: 'Apenas viagens planejadas ou atrasadas podem ser editadas' 
+      });
+    }
+
+    // Se alterar caminhão ou motorista, buscar os novos dados
+    let truck = currentTrip.truck;
+    let driver = currentTrip.driver;
+    let trailer = null;
+
+    if (truckId && truckId !== currentTrip.truckId) {
+      const newTruck = await prisma.truck.findUnique({
+        where: { id: truckId },
+      });
+      if (!newTruck) {
+        return res.status(404).json({ message: 'Truck not found' });
+      }
+      truck = newTruck;
+    }
+
+    if (driverId && driverId !== currentTrip.driverId) {
+      const newDriver = await prisma.user.findUnique({
+        where: { id: driverId },
+      });
+      if (!newDriver) {
+        return res.status(404).json({ message: 'Driver not found' });
+      }
+      driver = newDriver;
+    }
+
+    if (trailerId !== undefined) {
+      if (trailerId) {
+        const newTrailer = await prisma.trailer.findUnique({
+          where: { id: trailerId },
+        });
+        if (!newTrailer) {
+          return res.status(404).json({ message: 'Trailer not found' });
+        }
+        trailer = newTrailer;
+      }
+    }
 
     const trip = await prisma.trip.update({
       where: { id },
       data: {
+        ...(tripCode !== undefined && { tripCode }),
+        ...(truckId && { truckId }),
+        ...(trailerId !== undefined && { trailerId: trailerId || null }),
+        ...(driverId && { driverId }),
         ...(origin && { origin }),
         ...(destination && { destination }),
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),
-        ...(revenue && { revenue: parseFloat(revenue) }),
-        ...(distance && { distance: parseFloat(distance) }),
+        ...(revenue !== undefined && { revenue: parseFloat(revenue) }),
+        ...(distance !== undefined && { distance: parseFloat(distance) }),
         ...(notes !== undefined && { notes }),
         ...(status && { status }),
       },
       include: {
         truck: true,
+        trailer: true,
         driver: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
+      },
+    });
+
+    // Enviar webhook de viagem atualizada (como se fosse nova viagem agendada)
+    await sendWebhook('trip.scheduled', {
+      trip: {
+        id: trip.id,
+        tripCode: trip.tripCode,
+        origin: trip.origin,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        revenue: trip.revenue,
+        updated: true, // Flag indicando que é uma atualização
+      },
+      truck: {
+        id: truck.id,
+        plate: truck.plate,
+        model: truck.model,
+        brand: truck.brand,
+      },
+      trailer: trailer ? {
+        id: trailer.id,
+        plate: trailer.plate,
+        model: trailer.model,
+        brand: trailer.brand,
+      } : null,
+      driver: {
+        id: driver.id,
+        name: driver.name,
+        email: driver.email,
+        phone: driver.phone,
+      },
+      updatedBy: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
       },
     });
 

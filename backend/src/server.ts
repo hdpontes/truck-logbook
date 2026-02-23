@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import authRoutes from './routes/auth.routes';
 import trucksRoutes from './routes/trucks.routes';
+import trailersRoutes from './routes/trailers.routes';
 import tripsRoutes from './routes/trips.routes';
 import expensesRoutes from './routes/expenses.routes';
 import driversRoutes from './routes/drivers.routes';
@@ -50,6 +51,7 @@ app.get('/health', (req, res) => {
 console.log('📦 Loading routes...');
 app.use('/api/auth', authRoutes);
 app.use('/api/trucks', trucksRoutes);
+app.use('/api/trailers', trailersRoutes);
 app.use('/api/trips', tripsRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/drivers', driversRoutes);
