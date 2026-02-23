@@ -431,11 +431,11 @@ const BillingPage: React.FC = () => {
       {/* Tabela de cobranças */}
       <Card ref={reportRef}>
         <CardHeader>
-          <CardTitle>Relatório de Cobranças - {startDate ? new Date(startDate).toLocaleDateString('pt-BR') : ''} até {endDate ? new Date(endDate).toLocaleDateString('pt-BR') : ''}</CardTitle>
+          <CardTitle className="mb-6">Relatório de Cobranças - {startDate ? new Date(startDate).toLocaleDateString('pt-BR') : ''} até {endDate ? new Date(endDate).toLocaleDateString('pt-BR') : ''}</CardTitle>
           
           {/* Informações do cliente (se filtrado) */}
           {clientFilter && clients.length > 0 && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="mt-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
               {(() => {
                 const selectedClient = clients.find(c => c.id === clientFilter);
                 if (selectedClient) {
