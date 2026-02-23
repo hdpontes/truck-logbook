@@ -147,9 +147,9 @@ router.post('/', async (req, res) => {
           amount: expense.amount,
           description: expense.description,
         },
-        truck: {
+        truck: expense.truck ? {
           plate: expense.truck.plate,
-        },
+        } : null,
         threshold: config.EXPENSE_HIGH_THRESHOLD,
       });
     }
