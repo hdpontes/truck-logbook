@@ -3,7 +3,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { reportsAPI } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth';
 import {
   TrendingUp,
   TrendingDown,
@@ -11,7 +10,6 @@ import {
   Filter,
   Download,
   Send,
-  Calendar,
   Search,
   ArrowUpCircle,
   ArrowDownCircle,
@@ -44,7 +42,6 @@ interface ReportData {
 }
 
 const ReportsPage: React.FC = () => {
-  const { user } = useAuthStore();
   const reportRef = useRef<HTMLDivElement>(null);
   
   const [loading, setLoading] = useState(false);
