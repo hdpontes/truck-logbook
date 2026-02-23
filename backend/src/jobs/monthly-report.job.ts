@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import axios from 'axios';
-import config from '../config';
+import { config } from '../config';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -96,8 +96,8 @@ export function startMonthlyCronJob() {
       };
 
       // Enviar para webhook do N8N
-      if (config.webhookUrl) {
-        await axios.post(config.webhookUrl, webhookData, {
+      if (config.N8N_WEBHOOK_URL) {
+        await axios.post(config.N8N_WEBHOOK_URL, webhookData, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -185,8 +185,8 @@ export async function sendMonthlyReportManually(year: number, month: number) {
       timestamp: new Date().toISOString(),
     };
 
-    if (config.webhookUrl) {
-      await axios.post(config.webhookUrl, webhookData, {
+    if (config.N8N_WEBHOOK_URL) {
+      await axios.post(config.N8N_WEBHOOK_URL, webhookData, {
         headers: {
           'Content-Type': 'application/json',
         },
