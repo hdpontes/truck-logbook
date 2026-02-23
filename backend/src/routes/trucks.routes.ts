@@ -239,6 +239,7 @@ router.put('/:id', async (req, res) => {
 
       for (const maintenance of scheduledMaintenances) {
         if (maintenance.scheduledMileage && 
+            truck.currentMileage !== null &&
             truck.currentMileage >= maintenance.scheduledMileage &&
             maintenance.status !== 'PENDING') {
           
