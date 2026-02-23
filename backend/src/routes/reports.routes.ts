@@ -30,6 +30,10 @@ interface ReportItem {
     id: string;
     name: string;
   };
+  client?: {
+    id: string;
+    name: string;
+  };
 }
 
 // GET /api/reports/financial - Obter dados financeiros com filtros
