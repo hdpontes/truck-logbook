@@ -26,8 +26,10 @@ export default function LocationsPage() {
     name: '',
     city: '',
     state: '',
+    zipCode: '',
     type: 'BOTH' as 'ORIGIN' | 'DESTINATION' | 'BOTH',
   });
+  const [loadingCep, setLoadingCep] = useState(false);
 
   useEffect(() => {
     fetchLocations();
@@ -45,6 +47,42 @@ export default function LocationsPage() {
       console.error('Erro ao carregar localizações:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCepBlur = async () => {
+    const cleanCep = formData.zipCode.replace(/\D/g, '');
+    
+    if (cleanCep.length !== 8) {
+      return;
+    }
+
+    setLoadingCep(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/external/cep/${cleanCep}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = response.data;
+      
+      // Preencher automaticamente cidade e estado
+      setFormData(prev => ({
+        ...prev,
+        city: data.city || prev.city,
+        state: data.state || prev.state,
+      }));
+
+      toast.success('CEP consultado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao consultar CEP:', error);
+      if (error.response?.status === 404) {
+        toast.error('CEP não encontrado.');
+      } else {
+        toast.error('Erro ao consultar CEP. Verifique o número digitado.');
+      }
+    } finally {
+      setLoadingCep(false);
     }
   };
 
@@ -111,6 +149,7 @@ export default function LocationsPage() {
       name: '',
       city: '',
       state: '',
+      zipCode: '',
       type: 'BOTH',
     });
   };
@@ -202,6 +241,23 @@ export default function LocationsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    CEP (Opcional) {loadingCep && <span className="text-blue-600">(Consultando...)</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    onBlur={handleCepBlur}
+                    placeholder="00000-000"
+                    disabled={loadingCep}
+                    className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Digite o CEP e saia do campo para buscar cidade/estado automaticamente
+                  </p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Nome do Local *</label>
                   <input
