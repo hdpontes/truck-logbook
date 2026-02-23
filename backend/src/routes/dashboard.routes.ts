@@ -75,9 +75,9 @@ router.get('/overview', async (req, res) => {
     const [stats, recentTrips, activeTrips, upcomingMaintenance, recentExpenses] = await Promise.all([
       // Stats
       (async () => {
-        const [totalTrucks, totalDrivers, activeTrips, completedTrips] = await Promise.all([
+        const [totalTrucks, trucksInMaintenance, activeTrips, completedTrips] = await Promise.all([
           prisma.truck.count({ where: { active: true } }),
-          prisma.user.count({ where: { role: 'DRIVER', active: true } }),
+          prisma.truck.count({ where: { status: 'MAINTENANCE' } }),
           prisma.trip.count({ where: { status: 'IN_PROGRESS' } }),
           prisma.trip.count({ where: { status: 'COMPLETED' } }),
         ]);
@@ -89,7 +89,7 @@ router.get('/overview', async (req, res) => {
 
         return {
           totalTrucks,
-          totalDrivers,
+          trucksInMaintenance,
           activeTrips,
           completedTrips,
           totalRevenue: financialMetrics._sum.revenue || 0,
