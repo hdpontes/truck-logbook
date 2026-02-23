@@ -14,7 +14,8 @@ import {
   LogOut,
   Clock,
   Settings,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ const getMenuItems = (userRole: string) => {
       { icon: UserCog, label: 'Usuários', path: '/users' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
+      { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: Settings, label: 'Configurações', path: '/settings' },
     ];
   }
@@ -57,6 +59,7 @@ const getMenuItems = (userRole: string) => {
       { icon: Users, label: 'Motoristas', path: '/drivers' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
+      { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: Settings, label: 'Configurações', path: '/settings' },
     ];
   }
