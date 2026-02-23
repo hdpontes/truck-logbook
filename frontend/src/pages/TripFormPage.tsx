@@ -35,6 +35,7 @@ interface Client {
   cnpj: string;
   city: string;
   state: string;
+  active?: boolean;
 }
 
 interface Location {
