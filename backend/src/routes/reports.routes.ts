@@ -1,8 +1,8 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, AuthRequest } from '../middleware/auth';
 import axios from 'axios';
-import config from '../config';
+import { config } from '../config';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -25,7 +25,7 @@ interface ReportItem {
 }
 
 // GET /api/reports/financial - Obter dados financeiros com filtros
-router.get('/financial', authenticate, async (req, res) => {
+router.get('/financial', authenticate, async (req: AuthRequest, res) => {
   try {
     const {
       startDate,
@@ -35,7 +35,7 @@ router.get('/financial', authenticate, async (req, res) => {
     } = req.query;
 
     // Validar permissões (apenas ADMIN e MANAGER)
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'MANAGER') {
+    if (req.user?.role !== 'ADMIN' && req.user?.role !== 'MANAGER') {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -197,12 +197,12 @@ router.get('/financial', authenticate, async (req, res) => {
 });
 
 // POST /api/reports/send-webhook - Enviar screenshot do relatório via webhook
-router.post('/send-webhook', authenticate, async (req, res) => {
+router.post('/send-webhook', authenticate, async (req: AuthRequest, res) => {
   try {
     const { imageData, filters } = req.body;
 
     // Validar permissões
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'MANAGER') {
+    if (req.user?.role !== 'ADMIN' && req.user?.role !== 'MANAGER') {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -214,9 +214,8 @@ router.post('/send-webhook', authenticate, async (req, res) => {
     const webhookData = {
       type: 'financial_report',
       sentBy: {
-        id: req.user.id,
-        name: req.user.name,
-        email: req.user.email,
+        id: req.user?.userId,
+        email: req.user?.email,
       },
       filters: filters || {},
       timestamp: new Date().toISOString(),
@@ -224,9 +223,9 @@ router.post('/send-webhook', authenticate, async (req, res) => {
     };
 
     // Enviar para webhook do N8N
-    if (config.webhookUrl) {
+    if (config.N8N_WEBHOOK_URL) {
       try {
-        await axios.post(config.webhookUrl, webhookData, {
+        await axios.post(config.N8N_WEBHOOK_URL, webhookData, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -249,12 +248,12 @@ router.post('/send-webhook', authenticate, async (req, res) => {
 });
 
 // GET /api/reports/monthly/:year/:month - Obter relatório mensal específico
-router.get('/monthly/:year/:month', authenticate, async (req, res) => {
+router.get('/monthly/:year/:month', authenticate, async (req: AuthRequest, res) => {
   try {
     const { year, month } = req.params;
 
     // Validar permissões
-    if (req.user.role !== 'ADMIN' && req.user.role !== 'MANAGER') {
+    if (req.user?.role !== 'ADMIN' && req.user?.role !== 'MANAGER') {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
