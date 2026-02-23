@@ -243,7 +243,6 @@ const TrucksPage: React.FC = () => {
         </Card>
       </div>
     )}
-    </div>
   );
 };
 
