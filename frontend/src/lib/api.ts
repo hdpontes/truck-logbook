@@ -9,6 +9,7 @@ export {
   maintenanceAPI,
   dashboardAPI,
   settingsAPI,
+  reportsAPI,
 } from '@/services/api';
 
 export { default } from '@/services/api';
