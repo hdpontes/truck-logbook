@@ -2,6 +2,7 @@
 export {
   api,
   trucksAPI,
+  trailersAPI,
   tripsAPI,
   expensesAPI,
   driversAPI,
