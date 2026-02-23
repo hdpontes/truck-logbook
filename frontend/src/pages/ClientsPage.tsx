@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Plus, Edit, Trash2 } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -19,6 +20,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const toast = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -63,12 +65,12 @@ export default function ClientsPage() {
         await axios.put(`${API_URL}/api/clients/${editingClient.id}`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert('Cliente atualizado com sucesso!');
+        toast.success('Cliente atualizado com sucesso!');
       } else {
         await axios.post(`${API_URL}/api/clients`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert('Cliente cadastrado com sucesso!');
+        toast.success('Cliente cadastrado com sucesso!');
       }
 
       setShowModal(false);
@@ -77,7 +79,7 @@ export default function ClientsPage() {
       fetchClients();
     } catch (error) {
       console.error('Erro ao salvar cliente:', error);
-      alert('Erro ao salvar cliente. Tente novamente.');
+      toast.error('Erro ao salvar cliente. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -105,10 +107,10 @@ export default function ClientsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setClients(clients.filter(c => c.id !== id));
-        alert('Cliente excluído com sucesso!');
+        toast.success('Cliente excluído com sucesso!');
       } catch (error) {
         console.error('Erro ao excluir cliente:', error);
-        alert('Erro ao excluir cliente.');
+        toast.error('Erro ao excluir cliente.');
       }
     }
   };

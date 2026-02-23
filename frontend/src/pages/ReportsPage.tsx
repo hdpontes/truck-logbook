@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { reportsAPI, trucksAPI, driversAPI, tripsAPI } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { useToast } from '@/contexts/ToastContext';
 import {
   TrendingUp,
   DollarSign,
@@ -50,6 +51,7 @@ interface ReportData {
 
 const ReportsPage: React.FC = () => {
   const reportRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
   
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -137,7 +139,7 @@ const ReportsPage: React.FC = () => {
       setReportData({ ...data, items: sortedItems });
     } catch (error) {
       console.error('Erro ao carregar relatório:', error);
-      alert('Erro ao carregar relatório');
+      toast.error('Erro ao carregar relatório');
     } finally {
       setLoading(false);
     }
@@ -173,7 +175,7 @@ const ReportsPage: React.FC = () => {
       setSelectedTrip(trip);
     } catch (error) {
       console.error('Erro ao carregar detalhes da viagem:', error);
-      alert('Erro ao carregar detalhes da viagem');
+      toast.error('Erro ao carregar detalhes da viagem');
       setShowTripModal(false);
     } finally {
       setLoadingTrip(false);
@@ -213,10 +215,10 @@ const ReportsPage: React.FC = () => {
         },
       });
 
-      alert('Relatório enviado com sucesso!');
+      toast.success('Relatório enviado com sucesso via WhatsApp!');
     } catch (error: any) {
       console.error('Erro ao enviar relatório:', error);
-      alert(error.response?.data?.message || 'Erro ao enviar relatório');
+      toast.error(error.response?.data?.message || 'Erro ao enviar relatório');
     } finally {
       setSending(false);
     }
@@ -238,9 +240,10 @@ const ReportsPage: React.FC = () => {
       link.download = `relatorio-${new Date().toISOString().split('T')[0]}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.9);
       link.click();
+      toast.success('Relatório baixado com sucesso!');
     } catch (error) {
       console.error('Erro ao baixar relatório:', error);
-      alert('Erro ao baixar relatório');
+      toast.error('Erro ao baixar relatório');
     }
   };
 

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Trip {
   id: string;
@@ -39,6 +40,7 @@ interface Trip {
 export default function TripsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const toast = useToast();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'IN_PROGRESS' | 'COMPLETED'>('all');
@@ -73,9 +75,9 @@ export default function TripsPage() {
       } catch (error: any) {
         console.error('Erro ao excluir viagem:', error);
         if (error.response?.status === 403) {
-          alert('Apenas administradores podem excluir viagens.');
+          toast.error('Apenas administradores podem excluir viagens.');
         } else {
-          alert('Erro ao excluir viagem.');
+          toast.error('Erro ao excluir viagem.');
         }
       }
     }
@@ -85,10 +87,10 @@ export default function TripsPage() {
     if (window.confirm('Deseja enviar notificação do lembrete da viagem para o motorista?')) {
       try {
         await tripsAPI.sendReminder(id);
-        alert('Lembrete enviado com sucesso para o motorista!');
+        toast.success('Lembrete enviado com sucesso para o motorista!');
       } catch (error: any) {
         console.error('Erro ao enviar lembrete:', error);
-        alert(error.response?.data?.message || 'Erro ao enviar lembrete');
+        toast.error(error.response?.data?.message || 'Erro ao enviar lembrete');
       }
     }
   };

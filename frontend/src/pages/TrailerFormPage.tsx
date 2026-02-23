@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 import { trailersAPI } from '@/services/api';
 
 export default function TrailerFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
   const isEdit = !!id;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -39,7 +41,7 @@ export default function TrailerFormPage() {
       });
     } catch (error) {
       console.error('Erro ao carregar carreta:', error);
-      alert('Erro ao carregar dados da carreta');
+      toast.error('Erro ao carregar dados da carreta');
       navigate('/trailers');
     } finally {
       setLoading(false);
@@ -62,16 +64,16 @@ export default function TrailerFormPage() {
 
       if (isEdit && id) {
         await trailersAPI.update(id, trailerData);
-        alert('Carreta atualizada com sucesso!');
+        toast.success('Carreta atualizada com sucesso!');
       } else {
         await trailersAPI.create(trailerData);
-        alert('Carreta cadastrada com sucesso!');
+        toast.success('Carreta cadastrada com sucesso!');
       }
       
       navigate('/trailers');
     } catch (error) {
       console.error('Erro ao salvar carreta:', error);
-      alert('Erro ao salvar carreta. Tente novamente.');
+      toast.error('Erro ao salvar carreta. Tente novamente.');
     } finally {
       setLoading(false);
     }

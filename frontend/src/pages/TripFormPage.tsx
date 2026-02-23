@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -53,6 +54,7 @@ const getBrasiliaDateTimeLocal = () => {
 export default function TripFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const toast = useToast();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -132,7 +134,7 @@ export default function TripFormPage() {
       
       // Comparar timestamps diretos
       if (selectedDate.getTime() < now.getTime()) {
-        alert('Não é permitido cadastrar viagens com data/horário retroativo.');
+        toast.error('Não é permitido cadastrar viagens com data/horário retroativo.');
         setLoading(false);
         return;
       }
@@ -152,7 +154,7 @@ export default function TripFormPage() {
 
       await tripsAPI.create(tripData);
       
-      alert('Viagem criada com sucesso! Notificação enviada ao motorista.');
+      toast.success('Viagem criada com sucesso! Notificação enviada ao motorista.');
       navigate('/trips');
     } catch (error: any) {
       console.error('Erro ao criar viagem:', error);
@@ -161,14 +163,14 @@ export default function TripFormPage() {
       if (error.response?.status === 400) {
         const message = error.response.data.message;
         if (message.includes('caminhão')) {
-          alert('Já existe uma viagem agendada para este caminhão nesta data/horário.');
+          toast.error('Já existe uma viagem agendada para este caminhão nesta data/horário.');
         } else if (message.includes('motorista')) {
-          alert('Já existe uma viagem agendada para este motorista nesta data/horário.');
+          toast.error('Já existe uma viagem agendada para este motorista nesta data/horário.');
         } else {
-          alert(message || 'Erro ao criar viagem. Verifique os dados e tente novamente.');
+          toast.error(message || 'Erro ao criar viagem. Verifique os dados e tente novamente.');
         }
       } else {
-        alert('Erro ao criar viagem. Tente novamente.');
+        toast.error('Erro ao criar viagem. Tente novamente.');
       }
     } finally {
       setLoading(false);

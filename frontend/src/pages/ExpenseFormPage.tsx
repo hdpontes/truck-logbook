@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { expensesAPI, trucksAPI, tripsAPI } from '@/lib/api';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Truck {
   id: string;
@@ -24,6 +25,7 @@ interface Trip {
 export default function ExpenseFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const toast = useToast();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,11 +91,11 @@ export default function ExpenseFormPage() {
 
       await expensesAPI.create(expenseData);
       
-      alert('Despesa registrada com sucesso!');
+      toast.success('Despesa registrada com sucesso!');
       navigate('/expenses');
     } catch (error) {
       console.error('Erro ao criar despesa:', error);
-      alert('Erro ao registrar despesa. Tente novamente.');
+      toast.error('Erro ao registrar despesa. Tente novamente.');
     } finally {
       setLoading(false);
     }

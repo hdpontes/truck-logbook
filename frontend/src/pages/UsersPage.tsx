@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -17,6 +18,7 @@ interface User {
 }
 
 export default function UsersPage() {
+  const toast = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -68,12 +70,12 @@ export default function UsersPage() {
         await axios.put(`${API_URL}/api/users/${editingUser.id}`, userData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert('Usuário atualizado com sucesso!');
+        toast.success('Usuário atualizado com sucesso!');
       } else {
         await axios.post(`${API_URL}/api/users`, userData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert('Usuário criado com sucesso! Dados enviados por WhatsApp.');
+        toast.success('Usuário criado com sucesso! Dados enviados por WhatsApp.');
       }
 
       setShowModal(false);
@@ -82,7 +84,7 @@ export default function UsersPage() {
       fetchUsers();
     } catch (error) {
       console.error('Erro ao salvar usuário:', error);
-      alert('Erro ao salvar usuário. Tente novamente.');
+      toast.error('Erro ao salvar usuário. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -109,10 +111,10 @@ export default function UsersPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(users.filter(u => u.id !== id));
-        alert('Usuário excluído com sucesso!');
+        toast.success('Usuário excluído com sucesso!');
       } catch (error) {
         console.error('Erro ao excluir usuário:', error);
-        alert('Erro ao excluir usuário.');
+        toast.error('Erro ao excluir usuário.');
       }
     }
   };

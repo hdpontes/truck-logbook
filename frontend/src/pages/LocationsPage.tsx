@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Plus, Edit, Trash2 } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -16,6 +17,7 @@ interface Location {
 }
 
 export default function LocationsPage() {
+  const toast = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -57,12 +59,12 @@ export default function LocationsPage() {
         await axios.put(`${API_URL}/api/locations/${editingLocation.id}`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert('Localização atualizada com sucesso!');
+        toast.success('Localização atualizada com sucesso!');
       } else {
         await axios.post(`${API_URL}/api/locations`, formData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        alert('Localização cadastrada com sucesso!');
+        toast.success('Localização cadastrada com sucesso!');
       }
 
       setShowModal(false);
@@ -71,7 +73,7 @@ export default function LocationsPage() {
       fetchLocations();
     } catch (error) {
       console.error('Erro ao salvar localização:', error);
-      alert('Erro ao salvar localização. Tente novamente.');
+      toast.error('Erro ao salvar localização. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -96,10 +98,10 @@ export default function LocationsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setLocations(locations.filter(l => l.id !== id));
-        alert('Localização excluída com sucesso!');
+        toast.success('Localização excluída com sucesso!');
       } catch (error) {
         console.error('Erro ao excluir localização:', error);
-        alert('Erro ao excluir localização.');
+        toast.error('Erro ao excluir localização.');
       }
     }
   };

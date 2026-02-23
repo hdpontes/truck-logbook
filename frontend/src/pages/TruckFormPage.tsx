@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
 import { trucksAPI } from '@/lib/api';
 
 export default function TruckFormPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
   const isEdit = !!id;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -45,7 +47,7 @@ export default function TruckFormPage() {
       });
     } catch (error) {
       console.error('Erro ao carregar caminhão:', error);
-      alert('Erro ao carregar dados do caminhão');
+      toast.error('Erro ao carregar dados do caminhão');
       navigate('/trucks');
     } finally {
       setLoading(false);
@@ -71,16 +73,16 @@ export default function TruckFormPage() {
 
       if (isEdit && id) {
         await trucksAPI.update(id, truckData);
-        alert('Caminhão atualizado com sucesso!');
+        toast.success('Caminhão atualizado com sucesso!');
       } else {
         await trucksAPI.create(truckData);
-        alert('Caminhão cadastrado com sucesso!');
+        toast.success('Caminhão cadastrado com sucesso!');
       }
       
       navigate('/trucks');
     } catch (error) {
       console.error('Erro ao salvar caminhão:', error);
-      alert('Erro ao salvar caminhão. Tente novamente.');
+      toast.error('Erro ao salvar caminhão. Tente novamente.');
     } finally {
       setLoading(false);
     }

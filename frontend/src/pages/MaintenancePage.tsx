@@ -4,6 +4,7 @@ import { maintenanceAPI } from '@/lib/api';
 import { Wrench, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Maintenance {
   id: string;
@@ -20,6 +21,7 @@ interface Maintenance {
 }
 
 export default function MaintenancePage() {
+  const toast = useToast();
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'PENDING' | 'COMPLETED'>('all');
@@ -81,7 +83,7 @@ export default function MaintenancePage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Manutenções</h1>
-        <Button onClick={() => alert('Adicionar manutenção - em breve')}>
+        <Button onClick={() => toast.info('Adicionar manutenção - em breve')}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Manutenção
         </Button>

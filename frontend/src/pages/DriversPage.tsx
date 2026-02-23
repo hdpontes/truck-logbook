@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { driversAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/contexts/ToastContext';
 import { Plus, User, Phone, FileText, Edit, Trash2, Ban, CheckCircle } from 'lucide-react';
 
 export default function DriversPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const toast = useToast();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
   const [showModal, setShowModal] = useState(false);
   const [editingDriver, setEditingDriver] = useState<any>(null);
@@ -49,7 +51,7 @@ export default function DriversPage() {
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.message || 'Erro ao excluir motorista';
-      alert(errorMessage);
+      toast.error(errorMessage);
     },
   });
 
@@ -60,7 +62,7 @@ export default function DriversPage() {
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.message || 'Erro ao desativar/ativar motorista';
-      alert(errorMessage);
+      toast.error(errorMessage);
     },
   });
 

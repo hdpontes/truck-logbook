@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, expensesAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/contexts/ToastContext';
 import {
   Route,
   MapPin,
@@ -73,6 +74,7 @@ const TripDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const toast = useToast();
   const [trip, setTrip] = useState<TripData | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +135,7 @@ const TripDetailPage: React.FC = () => {
       fetchTripDetails(id);
     } catch (error) {
       console.error('Erro ao iniciar viagem:', error);
-      alert('Erro ao iniciar viagem');
+      toast.error('Erro ao iniciar viagem');
     }
   };
 
@@ -159,12 +161,12 @@ const TripDetailPage: React.FC = () => {
     
     // Validar quilometragem
     if (isNaN(endMileage) || endMileage < 0) {
-      alert('Quilometragem inválida. Por favor, informe um número válido.');
+      toast.error('Quilometragem inválida. Por favor, informe um número válido.');
       return;
     }
     
     if (startMileage > 0 && endMileage < startMileage) {
-      alert(`A quilometragem final (${endMileage.toFixed(0)} km) não pode ser menor que a inicial (${startMileage.toFixed(0)} km).`);
+      toast.error(`A quilometragem final (${endMileage.toFixed(0)} km) não pode ser menor que a inicial (${startMileage.toFixed(0)} km).`);
       return;
     }
     
@@ -188,11 +190,11 @@ const TripDetailPage: React.FC = () => {
     try {
       console.log('Finalizando viagem com quilometragem:', endMileage);
       await tripsAPI.finish(id, { endMileage });
-      alert('Viagem finalizada com sucesso!');
+      toast.success('Viagem finalizada com sucesso!');
       fetchTripDetails(id);
     } catch (error: any) {
       console.error('Erro ao finalizar viagem:', error);
-      alert(error.response?.data?.message || 'Erro ao finalizar viagem');
+      toast.error(error.response?.data?.message || 'Erro ao finalizar viagem');
     }
   };
 
@@ -201,10 +203,10 @@ const TripDetailPage: React.FC = () => {
     if (!confirm('Deseja enviar notificação do lembrete da viagem para o motorista?')) return;
     try {
       await tripsAPI.sendReminder(id);
-      alert('Lembrete enviado com sucesso para o motorista!');
+      toast.success('Lembrete enviado com sucesso para o motorista!');
     } catch (error: any) {
       console.error('Erro ao enviar lembrete:', error);
-      alert(error.response?.data?.message || 'Erro ao enviar lembrete');
+      toast.error(error.response?.data?.message || 'Erro ao enviar lembrete');
     }
   };
 

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -41,6 +42,7 @@ export default function TripEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const toast = useToast();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -64,7 +66,7 @@ export default function TripEditPage() {
   useEffect(() => {
     // Verificar permissões
     if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
-      alert('Você não tem permissão para editar viagens.');
+      toast.error('Você não tem permissão para editar viagens.');
       navigate('/trips');
       return;
     }
@@ -91,7 +93,7 @@ export default function TripEditPage() {
 
       // Verificar se pode editar
       if (tripData.status !== 'PLANNED' && tripData.status !== 'DELAYED') {
-        alert('Apenas viagens planejadas ou atrasadas podem ser editadas.');
+        toast.warning('Apenas viagens planejadas ou atrasadas podem ser editadas.');
         navigate(`/trips/${id}`);
         return;
       }
@@ -129,7 +131,7 @@ export default function TripEditPage() {
       });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      alert('Erro ao carregar dados da viagem.');
+      toast.error('Erro ao carregar dados da viagem.');
       navigate('/trips');
     } finally {
       setLoading(false);
@@ -156,18 +158,18 @@ export default function TripEditPage() {
 
       await tripsAPI.update(id!, tripData);
       
-      alert('Viagem atualizada com sucesso!');
+      toast.success('Viagem atualizada com sucesso!');
       navigate(`/trips/${id}`);
     } catch (error: any) {
       console.error('Erro ao atualizar viagem:', error);
       
       if (error.response?.status === 400) {
         const message = error.response.data.message;
-        alert(message || 'Erro ao atualizar viagem.');
+        toast.error(message || 'Erro ao atualizar viagem.');
       } else if (error.response?.status === 403) {
-        alert('Você não tem permissão para editar esta viagem.');
+        toast.error('Você não tem permissão para editar esta viagem.');
       } else {
-        alert('Erro ao atualizar viagem. Tente novamente.');
+        toast.error('Erro ao atualizar viagem. Tente novamente.');
       }
     } finally {
       setSubmitting(false);

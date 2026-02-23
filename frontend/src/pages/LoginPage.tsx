@@ -4,12 +4,14 @@ import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
 import { useSettingsStore } from '@/store/settings';
+import { useToast } from '@/contexts/ToastContext';
 import { LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
   const { settings, fetchSettings } = useSettingsStore();
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [logoError, setLogoError] = useState(false);
@@ -36,14 +38,14 @@ export default function LoginPage() {
     },
     onError: (error: any) => {
       console.error('❌ Login error:', error);
-      alert('Erro ao fazer login. Verifique suas credenciais.');
+      toast.error('Erro ao fazer login. Verifique suas credenciais.');
     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      alert('Preencha todos os campos');
+      toast.warning('Preencha todos os campos');
       return;
     }
     loginMutation.mutate({ email, password });
