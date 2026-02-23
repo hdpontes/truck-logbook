@@ -29,7 +29,7 @@ export default function LoginPage() {
   }, [settings?.companyLogo]);
 
   const loginMutation = useMutation({
-    mutationFn: (credentials: { email: string; password: string }) =>
+    mutationFn: (credentials: { login: string; password: string }) =>
       authService.login(credentials),
     onSuccess: (data) => {
       console.log('✅ Login successful:', data);
