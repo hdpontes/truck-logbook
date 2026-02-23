@@ -31,7 +31,7 @@ async function sendWebhook(eventType: string, data: any) {
 // GET /api/trips - Listar todas as viagens
 router.get('/', async (req, res) => {
   try {
-    const { status, truckId, driverId, clientId } = req.query;
+    const { status, truckId, driverId, clientId, startDate, endDate } = req.query;
 
     const trips = await prisma.trip.findMany({
       where: {
@@ -39,6 +39,16 @@ router.get('/', async (req, res) => {
         ...(truckId && { truckId: truckId as string }),
         ...(driverId && { driverId: driverId as string }),
         ...(clientId && { clientId: clientId as string }),
+        ...(startDate && {
+          startDate: {
+            gte: new Date(startDate as string),
+          },
+        }),
+        ...(endDate && {
+          startDate: {
+            lte: new Date(endDate as string),
+          },
+        }),
       },
       include: {
         truck: {
