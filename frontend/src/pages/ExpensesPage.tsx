@@ -25,6 +25,8 @@ export default function ExpensesPage() {
   const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchExpenses();
@@ -43,13 +45,21 @@ export default function ExpensesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta despesa?')) {
-      try {
-        await expensesAPI.delete(id);
-        setExpenses(expenses.filter(exp => exp.id !== id));
-      } catch (error) {
-        console.error('Erro ao excluir despesa:', error);
-      }
+    setExpenseToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!expenseToDelete) return;
+
+    try {
+      await expensesAPI.delete(expenseToDelete);
+      setExpenses(expenses.filter(exp => exp.id !== expenseToDelete));
+    } catch (error) {
+      console.error('Erro ao excluir despesa:', error);
+    } finally {
+      setShowDeleteModal(false);
+      setExpenseToDelete(null);
     }
   };
 
@@ -137,6 +147,42 @@ export default function ExpensesPage() {
           ))}
         </div>
       )}
+    </div>
+
+    {/* Modal de Confirmação de Exclusão */}
+    {showDeleteModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Confirmar Exclusão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setExpenseToDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Excluir
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
     </div>
   );
 }
