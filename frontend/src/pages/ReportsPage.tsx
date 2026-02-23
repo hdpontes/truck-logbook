@@ -568,7 +568,7 @@ const ReportsPage: React.FC = () => {
                 <div className="flex items-center">
                   <ArrowUpCircle className="h-6 w-6 md:h-8 md:w-8 text-green-600 flex-shrink-0" />
                   <div className="ml-3 md:ml-4">
-                    <p className="text-xs md:text-sm font-medium text-gray-600">Total Entradas</p>
+                    <p className="text-xs md:text-sm font-medium text-gray-600">Faturamento</p>
                     <p className="text-lg md:text-2xl font-bold text-green-700">
                       {formatCurrency(reportData.summary.totalIncome)}
                     </p>
@@ -582,7 +582,7 @@ const ReportsPage: React.FC = () => {
                 <div className="flex items-center">
                   <ArrowDownCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
                   <div className="ml-3 md:ml-4">
-                    <p className="text-xs md:text-sm font-medium text-gray-600">Total Saídas</p>
+                    <p className="text-xs md:text-sm font-medium text-gray-600">Custos</p>
                     <p className="text-lg md:text-2xl font-bold text-red-700">
                       {formatCurrency(reportData.summary.totalExpense)}
                     </p>
