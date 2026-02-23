@@ -100,7 +100,7 @@ export default function ExpensesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Caminhão</p>
-                    <p className="font-medium">{expense.truck.plate}</p>
+                    <p className="font-medium">{expense.truck?.plate || 'Despesa Geral'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Data</p>
