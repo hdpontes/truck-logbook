@@ -708,13 +708,6 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const user = (req as any).user;
 
-    // Apenas ADMIN pode excluir viagens
-    if (user.role !== 'ADMIN') {
-      return res.status(403).json({ 
-        message: 'Apenas administradores podem excluir viagens' 
-      });
-    }
-
     // Buscar a viagem
     const trip = await prisma.trip.findUnique({
       where: { id },
@@ -722,6 +715,22 @@ router.delete('/:id', async (req, res) => {
 
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // ADMIN pode excluir qualquer viagem
+    // MANAGER pode excluir apenas viagens PLANNED
+    if (user.role !== 'ADMIN') {
+      if (user.role !== 'MANAGER') {
+        return res.status(403).json({ 
+          message: 'Você não tem permissão para excluir viagens' 
+        });
+      }
+      
+      if (trip.status !== 'PLANNED') {
+        return res.status(403).json({ 
+          message: 'Gerentes podem excluir apenas viagens planejadas' 
+        });
+      }
     }
 
     await prisma.trip.delete({
