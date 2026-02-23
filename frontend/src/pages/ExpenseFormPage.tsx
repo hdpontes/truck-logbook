@@ -79,7 +79,7 @@ export default function ExpenseFormPage() {
 
     try {
       const expenseData = {
-        truckId: formData.truckId,
+        truckId: formData.truckId || undefined,
         tripId: formData.tripId || undefined,
         type: formData.type,
         amount: parseFloat(formData.amount),
@@ -138,22 +138,24 @@ export default function ExpenseFormPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Caminhão *
+                  Caminhão (Opcional)
                 </label>
                 <select
                   name="truckId"
                   value={formData.truckId}
                   onChange={handleChange}
-                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Selecione um caminhão</option>
+                  <option value="">Despesa geral (sem caminhão específico)</option>
                   {trucks.map((truck) => (
                     <option key={truck.id} value={truck.id}>
                       {truck.plate} - {truck.brand} {truck.model}
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Deixe em branco para despesas como impostos, taxas administrativas, etc.
+                </p>
               </div>
 
               <div>
