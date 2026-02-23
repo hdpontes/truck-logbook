@@ -10,6 +10,7 @@ export {
   dashboardAPI,
   settingsAPI,
   reportsAPI,
+  billingAPI,
   clientsAPI,
   locationsAPI,
 } from '@/services/api';
