@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/services/api';
+import { tripsAPI, trucksAPI, trailersAPI, driversAPI, clientsAPI } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
@@ -30,6 +30,15 @@ interface Driver {
   email: string;
 }
 
+interface Client {
+  id: string;
+  name: string;
+  cnpj: string;
+  city: string;
+  state: string;
+  active?: boolean;
+}
+
 interface Location {
   id: string;
   name: string;
@@ -46,6 +55,7 @@ export default function TripEditPage() {
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [origins, setOrigins] = useState<Location[]>([]);
   const [destinations, setDestinations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +65,7 @@ export default function TripEditPage() {
     truckId: '',
     trailerId: '',
     driverId: '',
+    clientId: '',
     origin: '',
     destination: '',
     startDate: '',
@@ -81,11 +92,14 @@ export default function TripEditPage() {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const [tripData, trucksData, trailersData, driversData, locationsData] = await Promise.all([
+      const [tripData, trucksData, trailersData, driversData, clientsData, locationsData] = await Promise.all([
         tripsAPI.getById(id!),
         trucksAPI.getAll(),
         trailersAPI.getAll(),
         driversAPI.getAll(),
+        axios.get(`${API_URL}/api/clients`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => res.data),
         axios.get(`${API_URL}/api/locations`, {
           headers: { Authorization: `Bearer ${token}` },
         }).then(res => res.data),
@@ -101,6 +115,7 @@ export default function TripEditPage() {
       setTrucks(trucksData);
       setTrailers(trailersData);
       setDrivers(driversData);
+      setClients(clientsData.filter((c: Client) => c.active !== false));
       setOrigins(locationsData.filter((loc: Location) => 
         loc.type === 'ORIGIN' || loc.type === 'BOTH'
       ));
@@ -122,6 +137,7 @@ export default function TripEditPage() {
         truckId: tripData.truck.id,
         trailerId: tripData.trailer?.id || '',
         driverId: tripData.driver.id,
+        clientId: tripData.client?.id || '',
         origin: tripData.origin,
         destination: tripData.destination,
         startDate: formattedDate,
@@ -148,6 +164,7 @@ export default function TripEditPage() {
         truckId: formData.truckId,
         trailerId: formData.trailerId || null,
         driverId: formData.driverId,
+        clientId: formData.clientId,
         origin: formData.origin,
         destination: formData.destination,
         startDate: new Date(formData.startDate).toISOString(),
@@ -266,6 +283,27 @@ export default function TripEditPage() {
                   {drivers.map((driver) => (
                     <option key={driver.id} value={driver.id}>
                       {driver.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cliente */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cliente *
+                </label>
+                <select
+                  name="clientId"
+                  value={formData.clientId}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione um cliente</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} - {client.city}/{client.state}
                     </option>
                   ))}
                 </select>
