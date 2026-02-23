@@ -207,7 +207,6 @@ const TrucksPage: React.FC = () => {
           ))}
         </div>
       )}
-    </div>
 
     {/* Modal de Confirmação de Exclusão */}
     {showDeleteModal && (
