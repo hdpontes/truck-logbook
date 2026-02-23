@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { expensesAPI, trucksAPI, tripsAPI } from '@/lib/api';
+import { expensesAPI, trucksAPI, tripsAPI, clientsAPI } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 
 interface Truck {
@@ -22,18 +22,30 @@ interface Trip {
   };
 }
 
+interface Client {
+  id: string;
+  name: string;
+  cnpj: string;
+  city: string;
+  state: string;
+}
+
 export default function ExpenseFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const toast = useToast();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     truckId: '',
     tripId: '',
+    clientId: '',
     type: '',
     amount: '',
+    quantity: '',
+    unitPrice: '',
     description: '',
     date: new Date().toISOString().slice(0, 16),
   });
@@ -44,13 +56,15 @@ export default function ExpenseFormPage() {
 
   const fetchData = async () => {
     try {
-      const [trucksData, tripsData] = await Promise.all([
+      const [trucksData, tripsData, clientsData] = await Promise.all([
         trucksAPI.getAll(),
         tripsAPI.getAll(),
+        clientsAPI.getAll(),
       ]);
       setTrucks(trucksData);
       // Filtrar apenas viagens em progresso ou concluídas recentemente
       setTrips(tripsData.filter((t: Trip) => t.origin)); // Filtra viagens válidas
+      setClients(clientsData.filter((c: Client & { active?: boolean }) => c.active !== false));
       
       // Pré-selecionar caminhão se vier da URL
       const truckIdFromUrl = searchParams.get('truckId');
@@ -83,8 +97,11 @@ export default function ExpenseFormPage() {
       const expenseData = {
         truckId: formData.truckId || undefined,
         tripId: formData.tripId || undefined,
+        clientId: formData.clientId || undefined,
         type: formData.type,
         amount: parseFloat(formData.amount),
+        quantity: formData.quantity ? parseFloat(formData.quantity) : undefined,
+        unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : undefined,
         description: formData.description,
         date: new Date(formData.date).toISOString(),
       };
@@ -102,9 +119,27 @@ export default function ExpenseFormPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const { name, value } = e.target;
+    
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: value,
+      };
+
+      // Calcular preço unitário automaticamente para combustível
+      if (name === 'amount' || name === 'quantity') {
+        const amount = name === 'amount' ? parseFloat(value) : parseFloat(prev.amount);
+        const quantity = name === 'quantity' ? parseFloat(value) : parseFloat(prev.quantity);
+        
+        if (amount > 0 && quantity > 0) {
+          updated.unitPrice = (amount / quantity).toFixed(3);
+        } else {
+          updated.unitPrice = '';
+        }
+      }
+
+      return updated;
     });
   };
 
@@ -181,6 +216,28 @@ export default function ExpenseFormPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cliente (Opcional)
+                </label>
+                <select
+                  name="clientId"
+                  value={formData.clientId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Despesa não vinculada a cliente</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} - {client.city}/{client.state}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Marque para rastrear despesas específicas do cliente (ex: abastecimentos em nome do cliente)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tipo de Despesa *
                 </label>
                 <select
@@ -199,9 +256,28 @@ export default function ExpenseFormPage() {
                 </select>
               </div>
 
+              {formData.type === 'FUEL' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantidade de Litros *
+                  </label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    required={formData.type === 'FUEL'}
+                    min="0"
+                    step="0.001"
+                    placeholder="Ex: 120.500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Valor (R$) *
+                  Valor Total (R$) *
                 </label>
                 <input
                   type="number"
@@ -215,6 +291,14 @@ export default function ExpenseFormPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              {formData.type === 'FUEL' && formData.unitPrice && (
+                <div className="bg-blue-50 p-3 rounded-md">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">Valor por litro:</span> R$ {formData.unitPrice}
+                  </p>
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
