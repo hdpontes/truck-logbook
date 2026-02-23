@@ -183,6 +183,5 @@ export default function ExpensesPage() {
         </Card>
       </div>
     )}
-    </div>
   );
 }
