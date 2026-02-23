@@ -101,14 +101,14 @@ export default function TripsPage() {
         filteredData = data.filter((trip: Trip) => trip.driver.id === user.id);
       }
       
-      // Ordenar: IN_PROGRESS primeiro, depois por data mais recente
+      // Ordenar: IN_PROGRESS primeiro, depois por data mais próxima (crescente)
       const sortedTrips = [...filteredData].sort((a: Trip, b: Trip) => {
         // Se um está IN_PROGRESS e o outro não, IN_PROGRESS vem primeiro
         if (a.status === 'IN_PROGRESS' && b.status !== 'IN_PROGRESS') return -1;
         if (a.status !== 'IN_PROGRESS' && b.status === 'IN_PROGRESS') return 1;
         
-        // Se ambos têm o mesmo status, ordenar por data mais recente (decrescente)
-        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+        // Se ambos têm o mesmo status, ordenar por data crescente (hoje, amanhã, depois...)
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
       });
       
       setTrips(sortedTrips);
