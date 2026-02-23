@@ -312,10 +312,10 @@ const TripDetailPage: React.FC = () => {
               <MapPin className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Distância</p>
-                <p className="text-2xl font-bold text-gray-900">{trip.distance} km</p>
-                {trip.startMileage !== undefined && (
+                <p className="text-2xl font-bold text-gray-900">{trip.distance || 0} km</p>
+                {trip.startMileage != null && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {trip.startMileage.toFixed(0)} km → {trip.endMileage ? trip.endMileage.toFixed(0) : '...'} km
+                    {trip.startMileage.toFixed(0)} km → {trip.endMileage != null ? trip.endMileage.toFixed(0) : '...'} km
                   </p>
                 )}
               </div>
@@ -331,7 +331,7 @@ const TripDetailPage: React.FC = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Receita</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(trip.revenue)}
+                    {formatCurrency(trip.revenue || 0)}
                   </p>
                 </div>
               </div>
@@ -346,7 +346,7 @@ const TripDetailPage: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Custo Total</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(trip.totalCost)}
+                  {formatCurrency(trip.totalCost || 0)}
                 </p>
               </div>
             </div>
@@ -361,7 +361,7 @@ const TripDetailPage: React.FC = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Lucro</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(trip.profit)}
+                    {formatCurrency(trip.profit || 0)}
                   </p>
                 </div>
               </div>
@@ -401,7 +401,7 @@ const TripDetailPage: React.FC = () => {
             {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Margem de Lucro:</span>
-                <span className="font-medium">{trip.profitMargin.toFixed(2)}%</span>
+                <span className="font-medium">{(trip.profitMargin || 0).toFixed(2)}%</span>
               </div>
             )}
             {trip.notes && (
@@ -475,15 +475,15 @@ const TripDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 border rounded-lg">
               <p className="text-sm text-gray-600">Combustível</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.fuelCost)}</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.fuelCost || 0)}</p>
             </div>
             <div className="p-4 border rounded-lg">
               <p className="text-sm text-gray-600">Pedágios</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.tollCost)}</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.tollCost || 0)}</p>
             </div>
             <div className="p-4 border rounded-lg">
               <p className="text-sm text-gray-600">Outros Custos</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.otherCosts)}</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.otherCosts || 0)}</p>
             </div>
           </div>
         </CardContent>
