@@ -284,27 +284,33 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
 // POST /api/reports/send-webhook - Enviar screenshot do relatório via webhook
 router.post('/send-webhook', authenticate, async (req: AuthRequest, res) => {
   try {
-    const { imageData, filters } = req.body;
+    const { imageData, csvData, whatsappNumber, type, filters } = req.body;
 
     // Validar permissões
     if (req.user?.role !== 'ADMIN' && req.user?.role !== 'MANAGER') {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
-    if (!imageData) {
-      return res.status(400).json({ message: 'Imagem não fornecida' });
+    if (!imageData && !csvData) {
+      return res.status(400).json({ message: 'Imagem ou CSV não fornecido' });
+    }
+
+    if (!whatsappNumber) {
+      return res.status(400).json({ message: 'Número do WhatsApp não fornecido' });
     }
 
     // Preparar dados para webhook
     const webhookData = {
-      type: 'financial_report',
+      type: type || 'financial_report',
       sentBy: {
         id: req.user?.userId,
         email: req.user?.email,
       },
+      whatsappNumber,
       filters: filters || {},
       timestamp: new Date().toISOString(),
-      imageData, // Base64 da imagem
+      ...(imageData && { imageData }), // Base64 da imagem (se fornecido)
+      ...(csvData && { csvData }), // Dados CSV (se fornecido)
     };
 
     // Enviar para webhook do N8N
