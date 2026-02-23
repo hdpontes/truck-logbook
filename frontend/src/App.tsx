@@ -93,7 +93,7 @@ function App() {
             <Route path="maintenance/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><MaintenanceFormPage /></RoleRoute>} />
             <Route path="maintenance/edit/:id" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><MaintenanceFormPage /></RoleRoute>} />
             <Route path="drivers" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><DriversPage /></RoleRoute>} />
-            <Route path="users" element={<RoleRoute allowedRoles={['ADMIN']}><UsersPage /></RoleRoute>} />
+            <Route path="users" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><UsersPage /></RoleRoute>} />
             <Route path="clients" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ClientsPage /></RoleRoute>} />
             <Route path="locations" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><LocationsPage /></RoleRoute>} />
             <Route path="reports" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ReportsPage /></RoleRoute>} />
