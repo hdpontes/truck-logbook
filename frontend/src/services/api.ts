@@ -52,7 +52,7 @@ export const trailersAPI = {
 
 // Trips API
 export const tripsAPI = {
-  getAll: () => api.get('/trips').then(res => res.data),
+  getAll: (params?: any) => api.get('/trips', { params }).then(res => res.data),
   getById: (id: string) => api.get(`/trips/${id}`).then(res => res.data),
   getByTruck: (truckId: string) => api.get(`/trips/truck/${truckId}`).then(res => res.data),
   create: (data: any) => api.post('/trips', data).then(res => res.data),
