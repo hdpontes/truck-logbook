@@ -127,7 +127,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           isTrip: true,
           truck: trip.truck,
           driver: trip.driver,
-          client: trip.client,
+          client: trip.client || undefined,
         });
       });
     }
@@ -247,7 +247,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           expenseType: expense.type,
           truck: expense.trip?.truck,
           driver: expense.trip?.driver,
-          client: expense.client,
+          client: expense.client || undefined,
         });
       });
     }
