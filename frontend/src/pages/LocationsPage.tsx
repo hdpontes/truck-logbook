@@ -21,6 +21,8 @@ export default function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [locationToDelete, setLocationToDelete] = useState<string | null>(null);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -130,18 +132,26 @@ export default function LocationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta localização?')) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`${API_URL}/api/locations/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setLocations(locations.filter(l => l.id !== id));
-        toast.success('Localização excluída com sucesso!');
-      } catch (error) {
-        console.error('Erro ao excluir localização:', error);
-        toast.error('Erro ao excluir localização.');
-      }
+    setLocationToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!locationToDelete) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/locations/${locationToDelete}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLocations(locations.filter(l => l.id !== locationToDelete));
+      toast.success('Localização excluída com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir localização:', error);
+      toast.error('Erro ao excluir localização.');
+    } finally {
+      setShowDeleteModal(false);
+      setLocationToDelete(null);
     }
   };
 
@@ -326,6 +336,41 @@ export default function LocationsPage() {
                   </Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-red-600">Confirmar Exclusão</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 mb-6">
+                Tem certeza que deseja excluir esta localização? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setLocationToDelete(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
