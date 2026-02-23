@@ -111,7 +111,10 @@ export default function TripFormPage() {
         }).then(res => res.data),
       ]);
       
-      setTrucks(trucksData);
+      // Filtrar apenas caminhões ativos e não em manutenção
+      setTrucks(trucksData.filter((truck: any) => 
+        truck.active === true && truck.status !== 'MAINTENANCE'
+      ));
       setTrailers(trailersData);
       setDrivers(driversData);
       setClients(clientsData.filter((c: Client) => c.active !== false));
