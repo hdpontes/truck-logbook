@@ -7,8 +7,11 @@ import DashboardPage from './pages/DashboardPage';
 import TrucksPage from './pages/TrucksPage';
 import TruckDetailPage from './pages/TruckDetailPage';
 import TruckFormPage from './pages/TruckFormPage';
+import TrailersPage from './pages/TrailersPage';
+import TrailerFormPage from './pages/TrailerFormPage';
 import TripsPage from './pages/TripsPage';
 import TripFormPage from './pages/TripFormPage';
+import TripEditPage from './pages/TripEditPage';
 import TripDetailPage from './pages/TripDetailPage';
 import ExpensesPage from './pages/ExpensesPage';
 import ExpenseFormPage from './pages/ExpenseFormPage';
@@ -73,9 +76,13 @@ function App() {
           <Route path="trucks/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TruckFormPage /></RoleRoute>} />
           <Route path="trucks/:id" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TruckDetailPage /></RoleRoute>} />
           <Route path="trucks/:id/edit" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TruckFormPage /></RoleRoute>} />
+          <Route path="trailers" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TrailersPage /></RoleRoute>} />
+          <Route path="trailers/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TrailerFormPage /></RoleRoute>} />
+          <Route path="trailers/:id/edit" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TrailerFormPage /></RoleRoute>} />
           <Route path="trips" element={<TripsPage />} />
           <Route path="trips/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TripFormPage /></RoleRoute>} />
           <Route path="trips/:id" element={<TripDetailPage />} />
+          <Route path="trips/:id/edit" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TripEditPage /></RoleRoute>} />
           <Route path="expenses" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ExpensesPage /></RoleRoute>} />
           <Route path="expenses/new" element={<ExpenseFormPage />} />
           <Route path="maintenance" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><MaintenancePage /></RoleRoute>} />
