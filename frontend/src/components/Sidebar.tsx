@@ -15,7 +15,8 @@ import {
   Clock,
   Settings,
   X,
-  FileText
+  FileText,
+  CreditCard
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ const getMenuItems = (userRole: string) => {
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
+      { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: Settings, label: 'Configurações', path: '/settings' },
     ];
   }
@@ -61,6 +63,7 @@ const getMenuItems = (userRole: string) => {
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
+      { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: Settings, label: 'Configurações', path: '/settings' },
     ];
   }
