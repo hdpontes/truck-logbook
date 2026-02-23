@@ -87,21 +87,33 @@ router.post('/login', async (req: Request, res: Response) => {
 // POST /api/auth/register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, name } = req.body;
+    const { login, email, password, name } = req.body;
 
-    if (!email || !password || !name) {
+    if (!login || !email || !password || !name) {
       return res.status(400).json({ 
-        message: 'All fields are required' 
+        message: 'Todos os campos são obrigatórios' 
       });
     }
 
+    // Verificar se o login já existe
+    const existingLogin = await prisma.user.findUnique({
+      where: { login }
+    });
+
+    if (existingLogin) {
+      return res.status(409).json({ 
+        message: 'Login já está em uso' 
+      });
+    }
+
+    // Verificar se o email já existe
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
       return res.status(409).json({ 
-        message: 'User already exists' 
+        message: 'Email já está em uso' 
       });
     }
 
@@ -109,6 +121,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const user = await prisma.user.create({
       data: {
+        login,
         email,
         password: hashedPassword,
         name,
