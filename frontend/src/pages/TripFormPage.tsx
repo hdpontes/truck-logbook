@@ -157,6 +157,7 @@ export default function TripFormPage() {
         truckId: formData.truckId,
         trailerId: formData.trailerId || null,
         driverId: formData.driverId,
+        clientId: formData.clientId,
         origin: formData.origin,
         destination: formData.destination,
         startDate: new Date(formData.startDate).toISOString(),
@@ -278,12 +279,13 @@ export default function TripFormPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cliente
+                  Cliente *
                 </label>
                 <select
                   name="clientId"
                   value={formData.clientId}
                   onChange={handleChange}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Selecione um cliente</option>
@@ -293,9 +295,6 @@ export default function TripFormPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Selecione o cliente responsável por esta viagem (opcional)
-                </p>
               </div>
 
               <div>
