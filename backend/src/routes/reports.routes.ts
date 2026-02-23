@@ -299,6 +299,23 @@ router.post('/send-webhook', authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ message: 'Número do WhatsApp não fornecido' });
     }
 
+    // Processar imageData para extrair tipo e base64 puro
+    let imageType: string | undefined;
+    let imageBase64: string | undefined;
+    
+    if (imageData) {
+      // imageData vem no formato: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+      const matches = imageData.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        imageType = matches[1]; // Ex: "image/jpeg"
+        imageBase64 = matches[2]; // Base64 puro
+      } else {
+        // Se não tem o prefixo, assume que já é base64 puro
+        imageBase64 = imageData;
+        imageType = 'image/jpeg'; // Default
+      }
+    }
+
     // Preparar dados para webhook
     const webhookData = {
       type: type || 'financial_report',
@@ -309,7 +326,10 @@ router.post('/send-webhook', authenticate, async (req: AuthRequest, res) => {
       whatsappNumber,
       filters: filters || {},
       timestamp: new Date().toISOString(),
-      ...(imageData && { imageData }), // Base64 da imagem (se fornecido)
+      ...(imageBase64 && { 
+        imageType,
+        imageBase64,
+      }),
       ...(csvData && { csvData }), // Dados CSV (se fornecido)
     };
 
