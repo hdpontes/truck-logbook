@@ -337,6 +337,5 @@ export default function MaintenancePage() {
         </Card>
       </div>
     )}
-    </div>
   );
 }
