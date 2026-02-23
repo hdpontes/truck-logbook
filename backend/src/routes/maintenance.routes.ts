@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
       },
       include: {
         truck: {
-          select: { id: true, plate: true, model: true, brand: true },
+          select: { id: true, plate: true, model: true, brand: true, currentMileage: true },
         },
       },
       orderBy: { scheduledDate: 'desc' },
