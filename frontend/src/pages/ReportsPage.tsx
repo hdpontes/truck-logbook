@@ -20,6 +20,7 @@ interface ReportItem {
   date: string;
   description: string;
   tripCode?: string;
+  tripId?: string;
   category: string;
   amount: number;
   revenue?: number;
@@ -55,6 +56,9 @@ const ReportsPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [trucks, setTrucks] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [showTripModal, setShowTripModal] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<any>(null);
+  const [loadingTrip, setLoadingTrip] = useState(false);
 
   // Filtros
   const [startDate, setStartDate] = useState('');
@@ -158,6 +162,35 @@ const ReportsPage: React.FC = () => {
     setSortOrder('desc');
     
     setTimeout(fetchReportData, 100);
+  };
+
+  const handleTripClick = async (tripId: string) => {
+    try {
+      setLoadingTrip(true);
+      setShowTripModal(true);
+      
+      const response = await fetch(`http://localhost:3000/api/trips/${tripId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Erro ao carregar viagem');
+      
+      const trip = await response.json();
+      setSelectedTrip(trip);
+    } catch (error) {
+      console.error('Erro ao carregar detalhes da viagem:', error);
+      alert('Erro ao carregar detalhes da viagem');
+      setShowTripModal(false);
+    } finally {
+      setLoadingTrip(false);
+    }
+  };
+
+  const handleCloseTripModal = () => {
+    setShowTripModal(false);
+    setSelectedTrip(null);
   };
 
   const handleSendReport = async () => {
@@ -524,8 +557,12 @@ const ReportsPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {reportData.items.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
+                          {reportData.items.filter(item => item.isTrip || !item.tripId).map((item) => (
+                            <tr 
+                              key={item.id} 
+                              className={item.isTrip ? "hover:bg-gray-50 cursor-pointer" : "hover:bg-gray-50"}
+                              onClick={() => item.isTrip && handleTripClick(item.id)}
+                            >
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap">
                                 {item.isTrip ? (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
@@ -587,6 +624,222 @@ const ReportsPage: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* Modal de Detalhes da Viagem */}
+      {showTripModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleCloseTripModal}>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {loadingTrip ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900"></div>
+              </div>
+            ) : selectedTrip ? (
+              <div className="p-6">
+                {/* Header do Modal */}
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Detalhes da Viagem</h2>
+                    <p className="text-gray-500 mt-1">Código: {selectedTrip.tripCode}</p>
+                  </div>
+                  <button
+                    onClick={handleCloseTripModal}
+                    className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Informações da Viagem */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="font-semibold text-lg mb-4">Informações da Viagem</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Origem:</span>
+                          <span className="font-medium">{selectedTrip.origin}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Destino:</span>
+                          <span className="font-medium">{selectedTrip.destination}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Data Início:</span>
+                          <span className="font-medium">{new Date(selectedTrip.startDate).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Data Fim:</span>
+                          <span className="font-medium">{selectedTrip.endDate ? new Date(selectedTrip.endDate).toLocaleDateString('pt-BR') : 'Em andamento'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Distância:</span>
+                          <span className="font-medium">{selectedTrip.distance ? `${selectedTrip.distance} km` : '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`font-medium ${
+                            selectedTrip.status === 'COMPLETED' ? 'text-green-600' :
+                            selectedTrip.status === 'IN_PROGRESS' ? 'text-blue-600' :
+                            'text-gray-600'
+                          }`}>
+                            {selectedTrip.status === 'COMPLETED' ? 'Concluída' :
+                             selectedTrip.status === 'IN_PROGRESS' ? 'Em Andamento' :
+                             selectedTrip.status === 'SCHEDULED' ? 'Agendada' : selectedTrip.status}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <h3 className="font-semibold text-lg mb-4">Recursos</h3>
+                      <div className="space-y-4 text-sm">
+                        <div>
+                          <p className="text-gray-600 mb-1">Caminhão</p>
+                          <p className="font-medium">{selectedTrip.truck.plate} - {selectedTrip.truck.model}</p>
+                        </div>
+                        {selectedTrip.trailer && (
+                          <div>
+                            <p className="text-gray-600 mb-1">Carreta</p>
+                            <p className="font-medium">{selectedTrip.trailer.plate} - {selectedTrip.trailer.type}</p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-gray-600 mb-1">Motorista</p>
+                          <p className="font-medium">{selectedTrip.driver.name}</p>
+                          {selectedTrip.driver.phone && (
+                            <p className="text-gray-500 text-xs">{selectedTrip.driver.phone}</p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Resumo Financeiro */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card className="border-green-200 bg-green-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center">
+                        <ArrowUpCircle className="h-8 w-8 text-green-600" />
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">Receita</p>
+                          <p className="text-xl font-bold text-green-700">
+                            {formatCurrency(selectedTrip.revenue || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-red-200 bg-red-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center">
+                        <ArrowDownCircle className="h-8 w-8 text-red-600" />
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">Custos</p>
+                          <p className="text-xl font-bold text-red-700">
+                            {formatCurrency(selectedTrip.totalCost || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center">
+                        <DollarSign className="h-8 w-8 text-blue-600" />
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">Lucro</p>
+                          <p className={`text-xl font-bold ${
+                            (selectedTrip.profit || 0) >= 0 ? 'text-blue-700' : 'text-red-700'
+                          }`}>
+                            {formatCurrency(selectedTrip.profit || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Lista de Despesas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Despesas da Viagem</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedTrip.expenses && selectedTrip.expenses.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {selectedTrip.expenses.map((expense: any) => (
+                              <tr key={expense.id}>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {new Date(expense.date).toLocaleDateString('pt-BR')}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    {expense.type === 'FUEL' && 'Combustível'}
+                                    {expense.type === 'TOLL' && 'Pedágio'}
+                                    {expense.type === 'MAINTENANCE' && 'Manutenção'}
+                                    {expense.type === 'FOOD' && 'Alimentação'}
+                                    {expense.type === 'ACCOMMODATION' && 'Hospedagem'}
+                                    {expense.type === 'SALARY' && 'Salário'}
+                                    {expense.type === 'OTHER' && 'Outro'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {expense.description || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right font-medium text-red-700">
+                                  {formatCurrency(expense.amount)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="bg-gray-50">
+                            <tr>
+                              <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                                Total:
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-red-700 text-right">
+                                {formatCurrency(selectedTrip.totalCost || 0)}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-gray-500 py-8">Nenhuma despesa registrada para esta viagem.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {selectedTrip.notes && (
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Observações</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-700">{selectedTrip.notes}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
