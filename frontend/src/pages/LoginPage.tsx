@@ -12,7 +12,7 @@ export default function LoginPage() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const { settings, fetchSettings } = useSettingsStore();
   const toast = useToast();
-  const [email, setEmail] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [logoError, setLogoError] = useState(false);
 
@@ -44,11 +44,11 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!login || !password) {
       toast.warning('Preencha todos os campos');
       return;
     }
-    loginMutation.mutate({ email, password });
+    loginMutation.mutate({ login, password });
   };
 
   return (
@@ -76,19 +76,19 @@ export default function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email
+              <label htmlFor="login" className="sr-only">
+                Usuário
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="login"
+                name="login"
+                type="text"
+                autoComplete="username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
+                placeholder="Usuário"
               />
             </div>
             <div>
