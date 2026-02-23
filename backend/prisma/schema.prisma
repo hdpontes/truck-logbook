@@ -87,6 +87,8 @@ model Trip {
   trailer      Trailer?  @relation(fields: [trailerId], references: [id])
   driverId     String
   driver       User      @relation(fields: [driverId], references: [id])
+  clientId     String?
+  client       Client?   @relation(fields: [clientId], references: [id])
   
   tripCode     String?   // Código do pedido fornecido pelo cliente
   origin       String
@@ -120,6 +122,7 @@ model Trip {
   @@index([truckId])
   @@index([trailerId])
   @@index([driverId])
+  @@index([clientId])
   @@index([status])
   @@index([startDate])
   @@map("trips")
@@ -139,6 +142,8 @@ model Expense {
   truck       Truck?      @relation(fields: [truckId], references: [id])
   tripId      String?
   trip        Trip?       @relation(fields: [tripId], references: [id])
+  clientId    String?
+  client      Client?     @relation(fields: [clientId], references: [id])
   
   type        ExpenseType
   category    String? // Subcategoria personalizada
@@ -159,6 +164,7 @@ model Expense {
 
   @@index([truckId])
   @@index([tripId])
+  @@index([clientId])
   @@index([type])
   @@index([date])
   @@map("expenses")
@@ -286,6 +292,9 @@ model Client {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  trips     Trip[]
+  expenses  Expense[]
 
   @@map("clients")
 }
