@@ -1,7 +1,7 @@
 import api from './api';
 
 export interface LoginCredentials {
-  email: string;
+  login: string;
   password: string;
 }
 
@@ -13,6 +13,7 @@ export interface RegisterData {
 
 export interface User {
   id: string;
+  login: string;
   email: string;
   name: string;
   role: string;
@@ -25,7 +26,7 @@ export interface AuthResponse {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    console.log('🔐 Attempting login:', credentials.email);
+    console.log('🔐 Attempting login:', credentials.login);
     const { data } = await api.post<AuthResponse>('/auth/login', credentials);
     console.log('✅ Login response:', data);
     
