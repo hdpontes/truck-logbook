@@ -30,6 +30,8 @@ export default function MaintenancePage() {
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'PENDING' | 'COMPLETED' | 'OVERDUE'>('all');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [maintenanceToDelete, setMaintenanceToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMaintenances();
@@ -49,15 +51,23 @@ export default function MaintenancePage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta manutenção?')) {
-      try {
-        await maintenanceAPI.delete(id);
-        setMaintenances(maintenances.filter(m => m.id !== id));
-        toast.success('Manutenção excluída com sucesso!');
-      } catch (error) {
-        console.error('Erro ao excluir manutenção:', error);
-        toast.error('Erro ao excluir manutenção');
-      }
+    setMaintenanceToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!maintenanceToDelete) return;
+
+    try {
+      await maintenanceAPI.delete(maintenanceToDelete);
+      setMaintenances(maintenances.filter(m => m.id !== maintenanceToDelete));
+      toast.success('Manutenção excluída com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir manutenção:', error);
+      toast.error('Erro ao excluir manutenção');
+    } finally {
+      setShowDeleteModal(false);
+      setMaintenanceToDelete(null);
     }
   };
 
@@ -291,6 +301,42 @@ export default function MaintenancePage() {
           })}
         </div>
       )}
+    </div>
+
+    {/* Modal de Confirmação de Exclusão */}
+    {showDeleteModal && (
+      <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50\">
+        <Card className=\"w-full max-w-md\">
+          <CardHeader>
+            <CardTitle className=\"text-red-600\">Confirmar Exclusão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className=\"text-gray-700 mb-6\">
+              Tem certeza que deseja excluir esta manutenção? Esta ação não pode ser desfeita.
+            </p>
+            <div className=\"flex justify-end gap-4\">
+              <Button
+                type=\"button\"
+                variant=\"outline\"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setMaintenanceToDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type=\"button\"
+                onClick={confirmDelete}
+                className=\"bg-red-600 hover:bg-red-700 text-white\"
+              >
+                Excluir
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
     </div>
   );
 }
