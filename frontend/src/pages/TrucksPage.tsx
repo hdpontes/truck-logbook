@@ -211,19 +211,19 @@ const TrucksPage: React.FC = () => {
 
     {/* Modal de Confirmação de Exclusão */}
     {showDeleteModal && (
-      <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50\">
-        <Card className=\"w-full max-w-md\">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className=\"text-red-600\">Confirmar Exclusão</CardTitle>
+            <CardTitle className="text-red-600">Confirmar Exclusão</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className=\"text-gray-700 mb-6\">
+            <p className="text-gray-700 mb-6">
               Tem certeza que deseja excluir este caminhão? Esta ação não pode ser desfeita.
             </p>
-            <div className=\"flex justify-end gap-4\">
+            <div className="flex justify-end gap-4">
               <Button
-                type=\"button\"
-                variant=\"outline\"
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setShowDeleteModal(false);
                   setTruckToDelete(null);
@@ -232,9 +232,9 @@ const TrucksPage: React.FC = () => {
                 Cancelar
               </Button>
               <Button
-                type=\"button\"
+                type="button"
                 onClick={confirmDelete}
-                className=\"bg-red-600 hover:bg-red-700 text-white\"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Excluir
               </Button>
