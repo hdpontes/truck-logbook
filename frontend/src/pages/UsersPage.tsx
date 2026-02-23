@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
+import { useAuthStore } from '@/store/auth';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -20,6 +21,7 @@ interface User {
 
 export default function UsersPage() {
   const toast = useToast();
+  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -57,6 +59,13 @@ export default function UsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // MANAGER não pode promover para ADMIN
+    if (currentUser?.role === 'MANAGER' && formData.role === 'ADMIN') {
+      toast.error('Você não tem permissão para criar ou promover usuários para administrador');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -87,15 +96,25 @@ export default function UsersPage() {
       setEditingUser(null);
       resetForm();
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar usuário:', error);
-      toast.error('Erro ao salvar usuário. Tente novamente.');
+      if (error.response?.status === 403) {
+        toast.error(error.response?.data?.message || 'Você não tem permissão para esta ação');
+      } else {
+        toast.error('Erro ao salvar usuário. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleEdit = (user: User) => {
+    // MANAGER não pode editar usuários ADMIN
+    if (currentUser?.role === 'MANAGER' && user.role === 'ADMIN') {
+      toast.error('Você não tem permissão para editar usuários administradores');
+      return;
+    }
+
     setEditingUser(user);
     setFormData({
       name: user.name,
@@ -271,12 +290,18 @@ export default function UsersPage() {
                       value={formData.role}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
                       required
-                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={currentUser?.role === 'MANAGER' && editingUser !== null}
+                      className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="DRIVER">Motorista</option>
                       <option value="MANAGER">Gerente</option>
-                      <option value="ADMIN">Administrador</option>
+                      {currentUser?.role === 'ADMIN' && (
+                        <option value="ADMIN">Administrador</option>
+                      )}
                     </select>
+                    {currentUser?.role === 'MANAGER' && editingUser !== null && (
+                      <p className="text-xs text-gray-500 mt-1">Somente administradores podem alterar o tipo de usuário</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
