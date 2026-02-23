@@ -119,4 +119,22 @@ export const reportsAPI = {
   getMonthly: (year: number, month: number) => api.get(`/reports/monthly/${year}/${month}`).then(res => res.data),
 };
 
+// Clients API
+export const clientsAPI = {
+  getAll: () => api.get('/clients').then(res => res.data),
+  getById: (id: string) => api.get(`/clients/${id}`).then(res => res.data),
+  create: (data: any) => api.post('/clients', data).then(res => res.data),
+  update: (id: string, data: any) => api.put(`/clients/${id}`, data).then(res => res.data),
+  delete: (id: string) => api.delete(`/clients/${id}`).then(res => res.data),
+};
+
+// Locations API
+export const locationsAPI = {
+  getAll: () => api.get('/locations').then(res => res.data),
+  getById: (id: string) => api.get(`/locations/${id}`).then(res => res.data),
+  create: (data: any) => api.post('/locations', data).then(res => res.data),
+  update: (id: string, data: any) => api.put(`/locations/${id}`, data).then(res => res.data),
+  delete: (id: string) => api.delete(`/locations/${id}`).then(res => res.data),
+};
+
 export default api;
