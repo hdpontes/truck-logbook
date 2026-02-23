@@ -14,6 +14,7 @@ interface ReportItem {
   date: string;
   description: string;
   tripCode?: string;
+  tripId?: string;
   category: string;
   amount: number;
   revenue?: number; // Para viagens
@@ -218,6 +219,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           date: expense.date.toISOString(),
           description: expense.description || expenseLabels[expense.type] || expense.type,
           tripCode: expense.trip?.tripCode || undefined,
+          tripId: expense.tripId || undefined,
           category: expenseLabels[expense.type] || expense.type,
           amount: expense.amount,
           isTrip: false,
