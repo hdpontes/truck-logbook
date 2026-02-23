@@ -35,6 +35,7 @@ export default function ClientsPage() {
     phone: '',
     email: '',
   });
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -52,6 +53,46 @@ export default function ClientsPage() {
       console.error('Erro ao carregar clientes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCnpjBlur = async () => {
+    const cleanCnpj = formData.cnpj.replace(/\D/g, '');
+    
+    if (cleanCnpj.length !== 14) {
+      return;
+    }
+
+    setLoadingCnpj(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/external/cnpj/${cleanCnpj}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = response.data;
+      
+      // Preencher automaticamente os campos
+      setFormData(prev => ({
+        ...prev,
+        name: data.name || prev.name,
+        address: data.address || prev.address,
+        city: data.city || prev.city,
+        state: data.state || prev.state,
+        phone: data.phone || prev.phone,
+        email: data.email || prev.email,
+      }));
+
+      toast.success('Dados do CNPJ carregados com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao consultar CNPJ:', error);
+      if (error.response?.status === 404) {
+        toast.error('CNPJ não encontrado na Receita Federal.');
+      } else {
+        toast.error('Erro ao consultar CNPJ. Verifique o número digitado.');
+      }
+    } finally {
+      setLoadingCnpj(false);
     }
   };
 
@@ -215,15 +256,22 @@ export default function ClientsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">CNPJ *</label>
+                    <label className="block text-sm font-medium mb-2">
+                      CNPJ * {loadingCnpj && <span className="text-blue-600">(Consultando...)</span>}
+                    </label>
                     <input
                       type="text"
                       value={formData.cnpj}
                       onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                      onBlur={handleCnpjBlur}
                       required
                       placeholder="00.000.000/0000-00"
-                      className="w-full px-3 py-2 border rounded-md"
+                      disabled={loadingCnpj}
+                      className="w-full px-3 py-2 border rounded-md disabled:bg-gray-100"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Digite o CNPJ e saia do campo para buscar dados automaticamente
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Telefone</label>
