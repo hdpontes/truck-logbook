@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/lib/api';
+import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/services/api';
+import { useAuthStore } from '@/store/auth';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -36,30 +37,17 @@ interface Location {
   type: 'ORIGIN' | 'DESTINATION' | 'BOTH';
 }
 
-// Função para obter data/hora atual de Brasília no formato datetime-local (YYYY-MM-DDTHH:mm)
-const getBrasiliaDateTimeLocal = () => {
-  const now = new Date();
-  const brasiliaDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-  
-  const year = brasiliaDate.getFullYear();
-  const month = String(brasiliaDate.getMonth() + 1).padStart(2, '0');
-  const day = String(brasiliaDate.getDate()).padStart(2, '0');
-  const hours = String(brasiliaDate.getHours()).padStart(2, '0');
-  const minutes = String(brasiliaDate.getMinutes()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-export default function TripFormPage() {
+export default function TripEditPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { user } = useAuthStore();
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [origins, setOrigins] = useState<Location[]>([]);
   const [destinations, setDestinations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [minDateTime, setMinDateTime] = useState(getBrasiliaDateTimeLocal());
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     tripCode: '',
     truckId: '',
@@ -70,25 +58,29 @@ export default function TripFormPage() {
     startDate: '',
     distance: '',
     revenue: '',
+    notes: '',
   });
 
-  // Atualizar minDateTime a cada minuto
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMinDateTime(getBrasiliaDateTimeLocal());
-    }, 60000); // Atualiza a cada 1 minuto
+    // Verificar permissões
+    if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+      alert('Você não tem permissão para editar viagens.');
+      navigate('/trips');
+      return;
+    }
 
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+    if (id) {
+      fetchData();
+    }
+  }, [id, user, navigate]);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
-      const [trucksData, trailersData, driversData, locationsData] = await Promise.all([
+      
+      const [tripData, trucksData, trailersData, driversData, locationsData] = await Promise.all([
+        tripsAPI.getById(id!),
         trucksAPI.getAll(),
         trailersAPI.getAll(),
         driversAPI.getAll(),
@@ -96,47 +88,59 @@ export default function TripFormPage() {
           headers: { Authorization: `Bearer ${token}` },
         }).then(res => res.data),
       ]);
-      
+
+      // Verificar se pode editar
+      if (tripData.status !== 'PLANNED' && tripData.status !== 'DELAYED') {
+        alert('Apenas viagens planejadas ou atrasadas podem ser editadas.');
+        navigate(`/trips/${id}`);
+        return;
+      }
+
       setTrucks(trucksData);
       setTrailers(trailersData);
       setDrivers(driversData);
-      
-      // Filtrar origens (ORIGIN ou BOTH)
       setOrigins(locationsData.filter((loc: Location) => 
         loc.type === 'ORIGIN' || loc.type === 'BOTH'
       ));
-      
-      // Filtrar destinos (DESTINATION ou BOTH)
       setDestinations(locationsData.filter((loc: Location) => 
         loc.type === 'DESTINATION' || loc.type === 'BOTH'
       ));
-      
-      // Pré-selecionar caminhão se vier da URL
-      const truckIdFromUrl = searchParams.get('truckId');
-      if (truckIdFromUrl) {
-        setFormData(prev => ({ ...prev, truckId: truckIdFromUrl }));
-      }
+
+      // Preencher formulário com dados da viagem
+      const startDate = new Date(tripData.startDate);
+      const year = startDate.getFullYear();
+      const month = String(startDate.getMonth() + 1).padStart(2, '0');
+      const day = String(startDate.getDate()).padStart(2, '0');
+      const hours = String(startDate.getHours()).padStart(2, '0');
+      const minutes = String(startDate.getMinutes()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+      setFormData({
+        tripCode: tripData.tripCode || '',
+        truckId: tripData.truck.id,
+        trailerId: tripData.trailer?.id || '',
+        driverId: tripData.driver.id,
+        origin: tripData.origin,
+        destination: tripData.destination,
+        startDate: formattedDate,
+        distance: tripData.distance?.toString() || '',
+        revenue: tripData.revenue?.toString() || '',
+        notes: tripData.notes || '',
+      });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      alert('Erro ao carregar dados da viagem.');
+      navigate('/trips');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
 
     try {
-      // Validar data não retroativa
-      const selectedDate = new Date(formData.startDate);
-      const now = new Date();
-      
-      // Comparar timestamps diretos
-      if (selectedDate.getTime() < now.getTime()) {
-        alert('Não é permitido cadastrar viagens com data/horário retroativo.');
-        setLoading(false);
-        return;
-      }
-
       const tripData = {
         tripCode: formData.tripCode || null,
         truckId: formData.truckId,
@@ -147,58 +151,63 @@ export default function TripFormPage() {
         startDate: new Date(formData.startDate).toISOString(),
         distance: parseFloat(formData.distance),
         revenue: parseFloat(formData.revenue),
-        status: 'PLANNED',
+        notes: formData.notes || null,
       };
 
-      await tripsAPI.create(tripData);
+      await tripsAPI.update(id!, tripData);
       
-      alert('Viagem criada com sucesso! Notificação enviada ao motorista.');
-      navigate('/trips');
+      alert('Viagem atualizada com sucesso!');
+      navigate(`/trips/${id}`);
     } catch (error: any) {
-      console.error('Erro ao criar viagem:', error);
+      console.error('Erro ao atualizar viagem:', error);
       
-      // Tratar erros específicos de conflito
       if (error.response?.status === 400) {
         const message = error.response.data.message;
-        if (message.includes('caminhão')) {
-          alert('Já existe uma viagem agendada para este caminhão nesta data/horário.');
-        } else if (message.includes('motorista')) {
-          alert('Já existe uma viagem agendada para este motorista nesta data/horário.');
-        } else {
-          alert(message || 'Erro ao criar viagem. Verifique os dados e tente novamente.');
-        }
+        alert(message || 'Erro ao atualizar viagem.');
+      } else if (error.response?.status === 403) {
+        alert('Você não tem permissão para editar esta viagem.');
       } else {
-        alert('Erro ao criar viagem. Tente novamente.');
+        alert('Erro ao atualizar viagem. Tente novamente.');
       }
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => navigate('/trips')}>
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" onClick={() => navigate(`/trips/${id}`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <h1 className="text-3xl font-bold">Nova Viagem</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Editar Viagem</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Informações da Viagem</CardTitle>
+          <CardTitle>Dados da Viagem</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Caminhão */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Caminhão *
@@ -219,6 +228,7 @@ export default function TripFormPage() {
                 </select>
               </div>
 
+              {/* Carreta */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Carreta
@@ -236,11 +246,9 @@ export default function TripFormPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Selecione a carreta que será utilizada nesta viagem (opcional)
-                </p>
               </div>
 
+              {/* Motorista */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Motorista *
@@ -261,6 +269,7 @@ export default function TripFormPage() {
                 </select>
               </div>
 
+              {/* Código da Viagem */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Código da Viagem
@@ -273,9 +282,9 @@ export default function TripFormPage() {
                   placeholder="Ex: PED-12345"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">Código do pedido fornecido pelo cliente</p>
               </div>
 
+              {/* Origem */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Origem *
@@ -289,13 +298,14 @@ export default function TripFormPage() {
                 >
                   <option value="">Selecione a origem</option>
                   {origins.map((location) => (
-                    <option key={location.id} value={`${location.name} - ${location.city}/${location.state}`}>
+                    <option key={location.id} value={location.name}>
                       {location.name} - {location.city}/{location.state}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Destino */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Destino *
@@ -309,75 +319,90 @@ export default function TripFormPage() {
                 >
                   <option value="">Selecione o destino</option>
                   {destinations.map((location) => (
-                    <option key={location.id} value={`${location.name} - ${location.city}/${location.state}`}>
+                    <option key={location.id} value={location.name}>
                       {location.name} - {location.city}/{location.state}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Data de Início */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data de Início *
+                  Data e Hora de Início *
                 </label>
                 <input
                   type="datetime-local"
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  min={minDateTime}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">Não é possível agendar viagens retroativas</p>
               </div>
 
+              {/* Distância */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Distância (km) *
+                  Distância (km)
                 </label>
                 <input
                   type="number"
                   name="distance"
                   value={formData.distance}
                   onChange={handleChange}
-                  required
+                  step="0.01"
                   min="0"
-                  step="0.1"
                   placeholder="Ex: 450"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
+              {/* Receita */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Receita Estimada (R$) *
+                  Receita (R$)
                 </label>
                 <input
                   type="number"
                   name="revenue"
                   value={formData.revenue}
                   onChange={handleChange}
-                  required
-                  min="0"
                   step="0.01"
-                  placeholder="Ex: 8000"
+                  min="0"
+                  placeholder="Ex: 5000"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 pt-4">
+            {/* Observações */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Observações
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                placeholder="Anotações sobre a viagem..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Botões */}
+            <div className="flex justify-end space-x-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/trips')}
-                disabled={loading}
+                onClick={() => navigate(`/trips/${id}`)}
+                disabled={submitting}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Criando...' : 'Criar Viagem'}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
             </div>
           </form>

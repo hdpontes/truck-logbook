@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth';
 
 interface Trip {
   id: string;
+  tripCode?: string;
   origin: string;
   destination: string;
   startDate: string;
@@ -24,6 +25,11 @@ interface Trip {
     plate: string;
     model: string;
   };
+  trailer?: {
+    id: string;
+    plate: string;
+    model?: string;
+  } | null;
   driver: {
     id: string;
     name: string;
@@ -172,9 +178,14 @@ export default function TripsPage() {
             >
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-gray-500" />
-                    <span className="text-lg">{trip.origin} → {trip.destination}</span>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-gray-500" />
+                      <span className="text-lg">{trip.origin} → {trip.destination}</span>
+                    </div>
+                    {trip.tripCode && (
+                      <span className="text-xs text-gray-500 ml-8">Código: {trip.tripCode}</span>
+                    )}
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[trip.status]}`}>
                     {statusLabels[trip.status]}
@@ -188,6 +199,15 @@ export default function TripsPage() {
                     <p className="font-medium">{trip.truck.plate}</p>
                     <p className="text-sm text-gray-500">{trip.truck.model}</p>
                   </div>
+                  {trip.trailer && (
+                    <div>
+                      <p className="text-sm text-gray-600">Carreta</p>
+                      <p className="font-medium">{trip.trailer.plate}</p>
+                      {trip.trailer.model && (
+                        <p className="text-sm text-gray-500">{trip.trailer.model}</p>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm text-gray-600">Motorista</p>
                     <p className="font-medium">{trip.driver.name}</p>

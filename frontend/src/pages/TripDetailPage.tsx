@@ -17,12 +17,14 @@ import {
   Clock,
   Plus,
   MessageCircle,
+  Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 
 interface TripData {
   id: string;
+  tripCode?: string;
   origin: string;
   destination: string;
   startDate: string;
@@ -45,6 +47,12 @@ interface TripData {
     model: string;
     brand: string;
   };
+  trailer?: {
+    id: string;
+    plate: string;
+    model?: string;
+    brand?: string;
+  } | null;
   driver: {
     id: string;
     name: string;
@@ -271,6 +279,11 @@ const TripDetailPage: React.FC = () => {
             <p className="text-gray-500">
               {trip.origin} → {trip.destination}
             </p>
+            {trip.tripCode && (
+              <p className="text-sm text-gray-400 mt-1">
+                Código: {trip.tripCode}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -299,6 +312,17 @@ const TripDetailPage: React.FC = () => {
             <Button onClick={handleSendReminder} className="bg-green-600 hover:bg-green-700">
               <MessageCircle className="mr-2 h-4 w-4" />
               Enviar Lembrete
+            </Button>
+          )}
+          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && 
+           (trip.status === 'PLANNED' || trip.status === 'DELAYED') && (
+            <Button 
+              onClick={() => navigate(`/trips/${id}/edit`)}
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Editar Viagem
             </Button>
           )}
         </div>
@@ -440,6 +464,31 @@ const TripDetailPage: React.FC = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {trip.trailer && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Carreta
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Placa:</span>
+                  <span className="font-medium">{trip.trailer.plate}</span>
+                </div>
+                {(trip.trailer.brand || trip.trailer.model) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Modelo:</span>
+                    <span className="font-medium">
+                      {trip.trailer.brand} {trip.trailer.model}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
