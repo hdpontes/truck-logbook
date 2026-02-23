@@ -96,11 +96,22 @@ export default function TripsPage() {
       const data = await tripsAPI.getAll(params);
       
       // Se for motorista, filtrar apenas suas viagens
+      let filteredData = data;
       if (user?.role === 'DRIVER') {
-        setTrips(data.filter((trip: Trip) => trip.driver.id === user.id));
-      } else {
-        setTrips(data);
+        filteredData = data.filter((trip: Trip) => trip.driver.id === user.id);
       }
+      
+      // Ordenar: IN_PROGRESS primeiro, depois por data mais recente
+      const sortedTrips = [...filteredData].sort((a: Trip, b: Trip) => {
+        // Se um está IN_PROGRESS e o outro não, IN_PROGRESS vem primeiro
+        if (a.status === 'IN_PROGRESS' && b.status !== 'IN_PROGRESS') return -1;
+        if (a.status !== 'IN_PROGRESS' && b.status === 'IN_PROGRESS') return 1;
+        
+        // Se ambos têm o mesmo status, ordenar por data mais recente (decrescente)
+        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      });
+      
+      setTrips(sortedTrips);
     } catch (error) {
       console.error('Erro ao carregar viagens:', error);
     } finally {
