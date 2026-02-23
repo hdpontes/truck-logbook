@@ -264,29 +264,44 @@ const TripDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => navigate('/trips')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+      <div className="space-y-3 md:space-y-0 md:flex md:items-center md:justify-between">
+        <div className="flex items-center space-x-3 md:space-x-4">
+          <Button variant="outline" size="sm" onClick={() => navigate('/trips')} className="touch-manipulation">
+            <ArrowLeft className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Voltar</span>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-xl md:text-3xl font-bold text-gray-900">
               Detalhes da Viagem
             </h1>
-            <p className="text-gray-500">
+            <p className="text-sm md:text-base text-gray-500">
               {trip.origin} → {trip.destination}
             </p>
             {trip.tripCode && (
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-xs md:text-sm text-gray-400 mt-1">
                 Código: {trip.tripCode}
               </p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        
+        {/* Status and Timer - Mobile */}
+        <div className="flex items-center gap-2 md:hidden">
+          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[trip.status as keyof typeof statusColors]}`}>
+            {statusLabels[trip.status as keyof typeof statusLabels]}
+          </span>
+          {trip.status === 'IN_PROGRESS' && elapsedTime && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+              <Clock className="h-3 w-3" />
+              <span className="text-xs font-semibold">{elapsedTime}</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Status and Timer - Desktop */}
+        <div className="hidden md:flex md:items-center md:gap-2">
           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[trip.status as keyof typeof statusColors]}`}>
             {statusLabels[trip.status as keyof typeof statusLabels]}
           </span>
@@ -296,47 +311,51 @@ const TripDetailPage: React.FC = () => {
               <span className="text-sm font-semibold">{elapsedTime}</span>
             </div>
           )}
-          {(trip.status === 'PLANNED' || trip.status === 'DELAYED') && user?.id === trip.driver.id && (
-            <Button onClick={handleStartTrip} className="bg-green-600 hover:bg-green-700">
-              <Play className="mr-2 h-4 w-4" />
-              Iniciar Viagem
-            </Button>
-          )}
-          {trip.status === 'IN_PROGRESS' && user?.id === trip.driver.id && (
-            <Button onClick={handleFinishTrip} className="bg-red-600 hover:bg-red-700">
-              <StopCircle className="mr-2 h-4 w-4" />
-              Finalizar Viagem
-            </Button>
-          )}
-          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-            <Button onClick={handleSendReminder} className="bg-green-600 hover:bg-green-700">
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Enviar Lembrete
-            </Button>
-          )}
-          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && 
-           (trip.status === 'PLANNED' || trip.status === 'DELAYED') && (
-            <Button 
-              onClick={() => navigate(`/trips/${id}/edit`)}
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Editar Viagem
-            </Button>
-          )}
         </div>
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex flex-col md:flex-row gap-2 md:gap-2 md:flex-wrap">
+        {(trip.status === 'PLANNED' || trip.status === 'DELAYED') && user?.id === trip.driver.id && (
+          <Button onClick={handleStartTrip} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
+            <Play className="mr-2 h-4 w-4" />
+            Iniciar Viagem
+          </Button>
+        )}
+        {trip.status === 'IN_PROGRESS' && user?.id === trip.driver.id && (
+          <Button onClick={handleFinishTrip} className="w-full md:w-auto bg-red-600 hover:bg-red-700 touch-manipulation">
+            <StopCircle className="mr-2 h-4 w-4" />
+            Finalizar Viagem
+          </Button>
+        )}
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+          <Button onClick={handleSendReminder} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
+            <MessageCircle className="mr-2 h-4 w-4" />
+            Enviar Lembrete
+          </Button>
+        )}
+        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && 
+         (trip.status === 'PLANNED' || trip.status === 'DELAYED') && (
+          <Button 
+            onClick={() => navigate(`/trips/${id}/edit`)}
+            variant="outline"
+            className="w-full md:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 touch-manipulation"
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Editar Viagem
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center">
-              <MapPin className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Distância</p>
-                <p className="text-2xl font-bold text-gray-900">{trip.distance || 0} km</p>
+              <MapPin className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+              <div className="ml-3 md:ml-4">
+                <p className="text-xs md:text-sm font-medium text-gray-500">Distância</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900">{trip.distance || 0} km</p>
                 {trip.startMileage != null && (
                   <p className="text-xs text-gray-500 mt-1">
                     {trip.startMileage.toFixed(0)} km → {trip.endMileage != null ? trip.endMileage.toFixed(0) : '...'} km
@@ -349,12 +368,12 @@ const TripDetailPage: React.FC = () => {
 
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Receita</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-green-600 flex-shrink-0" />
+                <div className="ml-3 md:ml-4">
+                  <p className="text-xs md:text-sm font-medium text-gray-500">Receita</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">
                     {formatCurrency(trip.revenue || 0)}
                   </p>
                 </div>
@@ -364,12 +383,12 @@ const TripDetailPage: React.FC = () => {
         )}
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Custo Total</p>
-                <p className="text-2xl font-bold text-gray-900">
+              <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
+              <div className="ml-3 md:ml-4">
+                <p className="text-xs md:text-sm font-medium text-gray-500">Custo Total</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900">
                   {formatCurrency(trip.totalCost || 0)}
                 </p>
               </div>
@@ -379,12 +398,12 @@ const TripDetailPage: React.FC = () => {
 
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Lucro</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                <div className="ml-3 md:ml-4">
+                  <p className="text-xs md:text-sm font-medium text-gray-500">Lucro</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">
                     {formatCurrency(trip.profit || 0)}
                   </p>
                 </div>
@@ -395,69 +414,69 @@ const TripDetailPage: React.FC = () => {
       </div>
 
       {/* Trip Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Route className="h-5 w-5" />
+          <CardHeader className="pb-3 md:pb-6">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Route className="h-4 w-4 md:h-5 md:w-5" />
               Informações da Viagem
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 md:space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Origem:</span>
-              <span className="font-medium">{trip.origin}</span>
+              <span className="text-sm md:text-base text-gray-600">Origem:</span>
+              <span className="font-medium text-sm md:text-base">{trip.origin}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Destino:</span>
-              <span className="font-medium">{trip.destination}</span>
+              <span className="text-sm md:text-base text-gray-600">Destino:</span>
+              <span className="font-medium text-sm md:text-base">{trip.destination}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Data Início:</span>
-              <span className="font-medium">{new Date(trip.startDate).toLocaleString('pt-BR')}</span>
+              <span className="text-sm md:text-base text-gray-600">Data Início:</span>
+              <span className="font-medium text-sm md:text-base">{new Date(trip.startDate).toLocaleString('pt-BR')}</span>
             </div>
             {trip.endDate && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Data Fim:</span>
-                <span className="font-medium">{new Date(trip.endDate).toLocaleString('pt-BR')}</span>
+                <span className="text-sm md:text-base text-gray-600">Data Fim:</span>
+                <span className="font-medium text-sm md:text-base">{new Date(trip.endDate).toLocaleString('pt-BR')}</span>
               </div>
             )}
             {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Margem de Lucro:</span>
-                <span className="font-medium">{(trip.profitMargin || 0).toFixed(2)}%</span>
+                <span className="text-sm md:text-base text-gray-600">Margem de Lucro:</span>
+                <span className="font-medium text-sm md:text-base">{(trip.profitMargin || 0).toFixed(2)}%</span>
               </div>
             )}
             {trip.notes && (
-              <div className="pt-3 border-t">
-                <p className="text-gray-600 text-sm mb-1">Observações:</p>
-                <p className="text-sm">{trip.notes}</p>
+              <div className="pt-2 md:pt-3 border-t">
+                <p className="text-gray-600 text-xs md:text-sm mb-1">Observações:</p>
+                <p className="text-xs md:text-sm">{trip.notes}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
+            <CardHeader className="pb-3 md:pb-6">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Truck className="h-4 w-4 md:h-5 md:w-5" />
                 Caminhão
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Placa:</span>
-                <span className="font-medium">{trip.truck.plate}</span>
+                <span className="text-sm md:text-base text-gray-600">Placa:</span>
+                <span className="font-medium text-sm md:text-base">{trip.truck.plate}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Modelo:</span>
-                <span className="font-medium">{trip.truck.brand} {trip.truck.model}</span>
+                <span className="text-sm md:text-base text-gray-600">Modelo:</span>
+                <span className="font-medium text-sm md:text-base">{trip.truck.brand} {trip.truck.model}</span>
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full mt-2"
+                className="w-full mt-2 touch-manipulation"
                 onClick={() => navigate(`/trucks/${trip.truck.id}`)}
               >
                 Ver Detalhes do Caminhão
@@ -467,21 +486,21 @@ const TripDetailPage: React.FC = () => {
 
           {trip.trailer && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" />
+              <CardHeader className="pb-3 md:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <Truck className="h-4 w-4 md:h-5 md:w-5" />
                   Carreta
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Placa:</span>
-                  <span className="font-medium">{trip.trailer.plate}</span>
+                  <span className="text-sm md:text-base text-gray-600">Placa:</span>
+                  <span className="font-medium text-sm md:text-base">{trip.trailer.plate}</span>
                 </div>
                 {(trip.trailer.brand || trip.trailer.model) && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Modelo:</span>
-                    <span className="font-medium">
+                    <span className="text-sm md:text-base text-gray-600">Modelo:</span>
+                    <span className="font-medium text-sm md:text-base">
                       {trip.trailer.brand} {trip.trailer.model}
                     </span>
                   </div>
@@ -491,24 +510,24 @@ const TripDetailPage: React.FC = () => {
           )}
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+            <CardHeader className="pb-3 md:pb-6">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <User className="h-4 w-4 md:h-5 md:w-5" />
                 Motorista
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-600">Nome:</span>
-                <span className="font-medium">{trip.driver.name}</span>
+                <span className="text-sm md:text-base text-gray-600">Nome:</span>
+                <span className="font-medium text-sm md:text-base">{trip.driver.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-sm">{trip.driver.email}</span>
+                <span className="text-sm md:text-base text-gray-600">Email:</span>
+                <span className="font-medium text-xs md:text-sm break-all">{trip.driver.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Telefone:</span>
-                <span className="font-medium">{trip.driver.phone}</span>
+                <span className="text-sm md:text-base text-gray-600">Telefone:</span>
+                <span className="font-medium text-sm md:text-base">{trip.driver.phone}</span>
               </div>
             </CardContent>
           </Card>
@@ -517,22 +536,22 @@ const TripDetailPage: React.FC = () => {
 
       {/* Breakdown de Custos */}
       <Card>
-        <CardHeader>
-          <CardTitle>Breakdown de Custos</CardTitle>
+        <CardHeader className="pb-3 md:pb-6">
+          <CardTitle className="text-base md:text-lg">Breakdown de Custos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600">Combustível</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.fuelCost || 0)}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="p-3 md:p-4 border rounded-lg">
+              <p className="text-xs md:text-sm text-gray-600">Combustível</p>
+              <p className="text-lg md:text-xl font-bold text-gray-900">{formatCurrency(trip.fuelCost || 0)}</p>
             </div>
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600">Pedágios</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.tollCost || 0)}</p>
+            <div className="p-3 md:p-4 border rounded-lg">
+              <p className="text-xs md:text-sm text-gray-600">Pedágios</p>
+              <p className="text-lg md:text-xl font-bold text-gray-900">{formatCurrency(trip.tollCost || 0)}</p>
             </div>
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600">Outros Custos</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(trip.otherCosts || 0)}</p>
+            <div className="p-3 md:p-4 border rounded-lg">
+              <p className="text-xs md:text-sm text-gray-600">Outros Custos</p>
+              <p className="text-lg md:text-xl font-bold text-gray-900">{formatCurrency(trip.otherCosts || 0)}</p>
             </div>
           </div>
         </CardContent>
@@ -540,11 +559,11 @@ const TripDetailPage: React.FC = () => {
 
       {/* Despesas Relacionadas */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+        <CardHeader className="pb-3 md:pb-6">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-base md:text-lg">
             <span>Despesas Relacionadas</span>
             {user?.role === 'DRIVER' && (trip.status === 'IN_PROGRESS' || trip.status === 'COMPLETED') && (
-              <Button onClick={() => navigate(`/expenses/new?tripId=${trip.id}`)}>
+              <Button onClick={() => navigate(`/expenses/new?tripId=${trip.id}`)} className="w-full sm:w-auto touch-manipulation">
                 <Plus className="mr-2 h-4 w-4" />
                 Adicionar Despesa
               </Button>
@@ -553,18 +572,18 @@ const TripDetailPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           {expenses.length === 0 ? (
-            <p className="text-gray-500">Nenhuma despesa registrada para esta viagem.</p>
+            <p className="text-sm md:text-base text-gray-500">Nenhuma despesa registrada para esta viagem.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {expenses.map((expense) => (
-                <div key={expense.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={expense.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 md:p-4 border rounded-lg">
                   <div>
-                    <p className="font-medium">{expenseTypeLabels[expense.type] || expense.type}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-sm md:text-base">{expenseTypeLabels[expense.type] || expense.type}</p>
+                    <p className="text-xs md:text-sm text-gray-500">
                       {expense.description} • {new Date(expense.date).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <span className="font-medium">{formatCurrency(expense.amount)}</span>
+                  <span className="font-medium text-sm md:text-base">{formatCurrency(expense.amount)}</span>
                 </div>
               ))}
             </div>

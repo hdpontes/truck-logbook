@@ -122,11 +122,11 @@ export default function TripsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Viagens</h1>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens</h1>
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-          <Button onClick={() => navigate('/trips/new')}>
+          <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Nova Viagem
           </Button>
@@ -134,22 +134,28 @@ export default function TripsPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-2">
         <Button
           variant={filter === 'all' ? 'default' : 'outline'}
           onClick={() => setFilter('all')}
+          size="sm"
+          className="whitespace-nowrap"
         >
           Todas ({trips.length})
         </Button>
         <Button
           variant={filter === 'IN_PROGRESS' ? 'default' : 'outline'}
           onClick={() => setFilter('IN_PROGRESS')}
+          size="sm"
+          className="whitespace-nowrap"
         >
           Em Andamento ({trips.filter(t => t.status === 'IN_PROGRESS').length})
         </Button>
         <Button
           variant={filter === 'COMPLETED' ? 'default' : 'outline'}
           onClick={() => setFilter('COMPLETED')}
+          size="sm"
+          className="whitespace-nowrap"
         >
           Concluídas ({trips.filter(t => t.status === 'COMPLETED').length})
         </Button>
@@ -176,86 +182,87 @@ export default function TripsPage() {
                 trip.status === 'COMPLETED' ? 'border-blue-300 bg-blue-50' : ''
               }`}
             >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+              <CardHeader className="pb-3 md:pb-4">
+                <CardTitle className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-5 w-5 text-gray-500" />
-                      <span className="text-lg">{trip.origin} → {trip.destination}</span>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <MapPin className="h-4 w-4 md:h-5 md:w-5 text-gray-500 flex-shrink-0" />
+                      <span className="text-base md:text-lg">{trip.origin} → {trip.destination}</span>
                     </div>
                     {trip.tripCode && (
-                      <span className="text-xs text-gray-500 ml-8">Código: {trip.tripCode}</span>
+                      <span className="text-xs text-gray-500 ml-6 md:ml-8">Código: {trip.tripCode}</span>
                     )}
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[trip.status]}`}>
+                  <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap w-fit ${statusColors[trip.status]}`}>
                     {statusLabels[trip.status]}
                   </span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Caminhão</p>
-                    <p className="font-medium">{trip.truck.plate}</p>
-                    <p className="text-sm text-gray-500">{trip.truck.model}</p>
+                    <p className="text-xs md:text-sm text-gray-600">Caminhão</p>
+                    <p className="font-medium text-sm md:text-base">{trip.truck.plate}</p>
+                    <p className="text-xs md:text-sm text-gray-500">{trip.truck.model}</p>
                   </div>
                   {trip.trailer && (
                     <div>
-                      <p className="text-sm text-gray-600">Carreta</p>
-                      <p className="font-medium">{trip.trailer.plate}</p>
+                      <p className="text-xs md:text-sm text-gray-600">Carreta</p>
+                      <p className="font-medium text-sm md:text-base">{trip.trailer.plate}</p>
                       {trip.trailer.model && (
-                        <p className="text-sm text-gray-500">{trip.trailer.model}</p>
+                        <p className="text-xs md:text-sm text-gray-500">{trip.trailer.model}</p>
                       )}
                     </div>
                   )}
                   <div>
-                    <p className="text-sm text-gray-600">Motorista</p>
-                    <p className="font-medium">{trip.driver.name}</p>
+                    <p className="text-xs md:text-sm text-gray-600">Motorista</p>
+                    <p className="font-medium text-sm md:text-base truncate">{trip.driver.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Distância</p>
-                    <p className="font-medium">{trip.distance} km</p>
+                    <p className="text-xs md:text-sm text-gray-600">Distância</p>
+                    <p className="font-medium text-sm md:text-base">{trip.distance} km</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Data</p>
-                    <p className="font-medium">
+                  <div className="col-span-2 md:col-span-1">
+                    <p className="text-xs md:text-sm text-gray-600">Data</p>
+                    <p className="font-medium text-sm md:text-base">
                       {new Date(trip.startDate).toLocaleDateString('pt-BR')}
                       {trip.endDate && ` - ${new Date(trip.endDate).toLocaleDateString('pt-BR')}`}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <div className="flex gap-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-3 md:mt-4 pt-3 md:pt-4 border-t gap-3">
+                  <div className="grid grid-cols-2 md:flex md:gap-6 gap-3">
                     {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                       <div>
                         <p className="text-xs text-gray-600">Receita</p>
-                        <p className="text-sm font-semibold text-green-600">{formatCurrency(trip.revenue)}</p>
+                        <p className="text-xs md:text-sm font-semibold text-green-600">{formatCurrency(trip.revenue)}</p>
                       </div>
                     )}
                     <div>
                       <p className="text-xs text-gray-600">Custo</p>
-                      <p className="text-sm font-semibold text-red-600">{formatCurrency(trip.totalCost)}</p>
+                      <p className="text-xs md:text-sm font-semibold text-red-600">{formatCurrency(trip.totalCost)}</p>
                     </div>
                     {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                       <>
                         <div>
                           <p className="text-xs text-gray-600">Lucro</p>
-                          <p className="text-sm font-semibold text-blue-600">{formatCurrency(trip.profit)}</p>
+                          <p className="text-xs md:text-sm font-semibold text-blue-600">{formatCurrency(trip.profit)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600">Margem</p>
-                          <p className="text-sm font-semibold">{trip.profitMargin.toFixed(2)}%</p>
+                          <p className="text-xs md:text-sm font-semibold">{trip.profitMargin.toFixed(2)}%</p>
                         </div>
                       </>
                     )}
                   </div>
 
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 justify-end">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/trips/${trip.id}`)}
+                      className="touch-manipulation"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -265,7 +272,7 @@ export default function TripsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/trips/${trip.id}/edit`)}
-                        className="text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700 touch-manipulation"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -275,7 +282,7 @@ export default function TripsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleSendReminder(trip.id)}
-                        className="text-green-600 hover:text-green-700"
+                        className="text-green-600 hover:text-green-700 touch-manipulation"
                       >
                         <MessageCircle className="h-4 w-4" />
                       </Button>
@@ -285,7 +292,7 @@ export default function TripsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(trip.id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 touch-manipulation"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
