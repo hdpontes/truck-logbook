@@ -25,6 +25,8 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -142,18 +144,26 @@ export default function ClientsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`${API_URL}/api/clients/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setClients(clients.filter(c => c.id !== id));
-        toast.success('Cliente excluído com sucesso!');
-      } catch (error) {
-        console.error('Erro ao excluir cliente:', error);
-        toast.error('Erro ao excluir cliente.');
-      }
+    setClientToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/clients/${clientToDelete}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setClients(clients.filter(c => c.id !== clientToDelete));
+      toast.success('Cliente excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast.error('Erro ao excluir cliente.');
+    } finally {
+      setShowDeleteModal(false);
+      setClientToDelete(null);
     }
   };
 
@@ -344,6 +354,41 @@ export default function ClientsPage() {
                   </Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-red-600">Confirmar Exclusão</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 mb-6">
+                Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setClientToDelete(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
