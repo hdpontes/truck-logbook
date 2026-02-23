@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI } from '@/lib/api';
-import { Route, Plus, Eye, Trash2, MapPin, MessageCircle } from 'lucide-react';
+import { Route, Plus, Eye, Edit, Trash2, MapPin, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -259,6 +259,17 @@ export default function TripsPage() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && 
+                     (trip.status === 'PLANNED' || trip.status === 'DELAYED') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/trips/${trip.id}/edit`)}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                     {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                       <Button
                         variant="outline"
