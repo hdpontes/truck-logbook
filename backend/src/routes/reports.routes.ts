@@ -260,9 +260,16 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       .filter((item) => item.type === 'INCOME')
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const totalExpense = reportItems
+    // Calcular total de custos: despesas + custos das viagens
+    const expensesTotal = reportItems
       .filter((item) => item.type === 'EXPENSE')
       .reduce((sum, item) => sum + item.amount, 0);
+    
+    const tripCostsTotal = reportItems
+      .filter((item) => item.type === 'INCOME' && item.cost)
+      .reduce((sum, item) => sum + (item.cost || 0), 0);
+    
+    const totalExpense = expensesTotal + tripCostsTotal;
 
     const profit = totalIncome - totalExpense;
 
