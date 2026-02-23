@@ -13,6 +13,8 @@ import clientsRoutes from './routes/clients.routes';
 import locationsRoutes from './routes/locations.routes';
 import usersRoutes from './routes/users.routes';
 import settingsRoutes from './routes/settings.routes';
+import reportsRoutes from './routes/reports.routes';
+import { startMonthlyCronJob } from './jobs/monthly-report.job';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;  // ✅ FIX: Convert to Number
@@ -58,7 +60,9 @@ app.use('/api/drivers', driversRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/dashboard', dashboardRoutes);app.use('/api/clients', clientsRoutes);
-app.use('/api/locations', locationsRoutes);app.use('/api/settings', settingsRoutes);console.log('✅ All routes mounted successfully');
+app.use('/api/locations', locationsRoutes);app.use('/api/settings', settingsRoutes);
+app.use('/api/reports', reportsRoutes);
+console.log('✅ All routes mounted successfully');
 
 // 404 Handler
 app.use((req, res) => {
@@ -98,6 +102,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('✅ Ready to accept connections!');
   console.log('');
+  
+  // Iniciar cron jobs
+  startMonthlyCronJob();
 });
 
 export default app;
