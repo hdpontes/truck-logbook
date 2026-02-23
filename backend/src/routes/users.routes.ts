@@ -41,6 +41,7 @@ router.get('/', async (req, res) => {
       },
       select: {
         id: true,
+        login: true,
         email: true,
         name: true,
         cpf: true,
@@ -73,6 +74,7 @@ router.get('/:id', async (req, res) => {
       where: { id },
       select: {
         id: true,
+        login: true,
         email: true,
         name: true,
         cpf: true,
@@ -106,19 +108,28 @@ router.get('/:id', async (req, res) => {
 // POST /api/users - Criar novo usuário
 router.post('/', async (req, res) => {
   try {
-    const { email, password, name, cpf, phone, role } = req.body;
+    const { login, email, password, name, cpf, phone, role } = req.body;
 
-    if (!email || !password || !name || !role) {
+    if (!login || !email || !password || !name || !role) {
       return res.status(400).json({ 
-        message: 'Email, password, name and role are required' 
+        message: 'Login, email, senha, nome e perfil são obrigatórios' 
       });
     }
 
     // Validar role
     if (!['ADMIN', 'MANAGER', 'DRIVER'].includes(role)) {
       return res.status(400).json({ 
-        message: 'Invalid role. Must be ADMIN, MANAGER or DRIVER' 
+        message: 'Perfil inválido. Use ADMIN, MANAGER ou DRIVER' 
       });
+    }
+
+    // Verificar se o login já existe
+    const existingLogin = await prisma.user.findUnique({
+      where: { login },
+    });
+
+    if (existingLogin) {
+      return res.status(409).json({ message: 'Login já está em uso' });
     }
 
     // Verificar se o email já existe
@@ -127,7 +138,7 @@ router.post('/', async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(409).json({ message: 'Email already in use' });
+      return res.status(409).json({ message: 'Email já está em uso' });
     }
 
     // Verificar se o CPF já existe (se fornecido)
@@ -137,7 +148,7 @@ router.post('/', async (req, res) => {
       });
 
       if (existingCpf) {
-        return res.status(409).json({ message: 'CPF already in use' });
+        return res.status(409).json({ message: 'CPF já está em uso' });
       }
     }
 
@@ -145,6 +156,7 @@ router.post('/', async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
+        login,
         email,
         password: hashedPassword,
         name,
@@ -154,6 +166,7 @@ router.post('/', async (req, res) => {
       },
       select: {
         id: true,
+        login: true,
         email: true,
         name: true,
         cpf: true,
@@ -168,6 +181,7 @@ router.post('/', async (req, res) => {
     await sendWebhook('user.created', {
       user: {
         id: user.id,
+        login: user.login,
         name: user.name,
         email: user.email,
         cpf: user.cpf,
@@ -175,6 +189,7 @@ router.post('/', async (req, res) => {
         role: user.role,
       },
       credentials: {
+        login: user.login,
         email: user.email,
         password: password, // Senha em texto plano para enviar no WhatsApp
       },
@@ -191,9 +206,10 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, name, cpf, phone, active, password, role } = req.body;
+    const { login, email, name, cpf, phone, active, password, role } = req.body;
 
     const updateData: any = {
+      ...(login && { login }),
       ...(email && { email }),
       ...(name && { name }),
       ...(cpf !== undefined && { cpf }),
