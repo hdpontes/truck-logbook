@@ -12,6 +12,10 @@ export default function DriversPage() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
   const [showModal, setShowModal] = useState(false);
   const [editingDriver, setEditingDriver] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [driverToDelete, setDriverToDelete] = useState<string | null>(null);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [driverToDeactivate, setDriverToDeactivate] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -122,19 +126,27 @@ export default function DriversPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este motorista?')) {
-      deleteMutation.mutate(id);
-    }
+    setDriverToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (!driverToDelete) return;
+    deleteMutation.mutate(driverToDelete);
+    setShowDeleteModal(false);
+    setDriverToDelete(null);
   };
 
   const handleDeactivate = (driver: any) => {
-    const message = driver.active 
-      ? 'Tem certeza que deseja desativar este motorista? Ele não poderá mais fazer login na plataforma.' 
-      : 'Tem certeza que deseja ativar este motorista?';
-    
-    if (confirm(message)) {
-      deactivateMutation.mutate(driver.id);
-    }
+    setDriverToDeactivate(driver);
+    setShowDeactivateModal(true);
+  };
+
+  const confirmDeactivate = () => {
+    if (!driverToDeactivate) return;
+    deactivateMutation.mutate(driverToDeactivate.id);
+    setShowDeactivateModal(false);
+    setDriverToDeactivate(null);
   };
 
   const formatCPF = (value: string) => {
@@ -373,6 +385,72 @@ export default function DriversPage() {
           </div>
         </div>
       )}
+
+    {/* Modal de Confirmação de Exclusão */}
+    {showDeleteModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <h3 className="text-2xl font-bold text-red-600 mb-4">Confirmar Exclusão</h3>
+          <p className="text-gray-700 mb-6">
+            Tem certeza que deseja excluir este motorista? Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDriverToDelete(null);
+              }}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal de Confirmação de Desativação/Ativação */}
+    {showDeactivateModal && driverToDeactivate && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+          <h3 className="text-2xl font-bold text-orange-600 mb-4">
+            {driverToDeactivate.active ? 'Desativar Motorista' : 'Ativar Motorista'}
+          </h3>
+          <p className="text-gray-700 mb-6">
+            {driverToDeactivate.active
+              ? 'Tem certeza que deseja desativar este motorista? Ele não poderá mais fazer login na plataforma.'
+              : 'Tem certeza que deseja ativar este motorista?'}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setShowDeactivateModal(false);
+                setDriverToDeactivate(null);
+              }}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmDeactivate}
+              className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
+                driverToDeactivate.active
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              {driverToDeactivate.active ? 'Desativar' : 'Ativar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
