@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI } from '@/lib/api';
-import { Route, Plus, Eye, Edit, Trash2, MapPin, MessageCircle } from 'lucide-react';
+import { tripsAPI, driversAPI, clientsAPI } from '@/lib/api';
+import { Route, Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +35,10 @@ interface Trip {
     id: string;
     name: string;
   };
+  client?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function TripsPage() {
@@ -48,15 +52,48 @@ export default function TripsPage() {
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [tripToRemind, setTripToRemind] = useState<string | null>(null);
+  
+  // Estados para filtros avançados
+  const [showFilters, setShowFilters] = useState(false);
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [clientFilter, setClientFilter] = useState('');
+  const [driverFilter, setDriverFilter] = useState('');
+  
+  // Dados para dropdowns
+  const [clients, setClients] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
 
   useEffect(() => {
+    loadFiltersData();
     fetchTrips();
   }, []);
+
+  const loadFiltersData = async () => {
+    try {
+      const [clientsData, driversData] = await Promise.all([
+        clientsAPI.getAll(),
+        driversAPI.getAll(),
+      ]);
+      
+      setClients(clientsData.filter((c: any) => c.active !== false));
+      setDrivers(driversData.filter((d: any) => d.active !== false));
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    }
+  };
 
   const fetchTrips = async () => {
     try {
       setLoading(true);
-      const data = await tripsAPI.getAll();
+      
+      const params: any = {};
+      if (startDateFilter) params.startDate = startDateFilter;
+      if (endDateFilter) params.endDate = endDateFilter;
+      if (clientFilter) params.clientId = clientFilter;
+      if (driverFilter) params.driverId = driverFilter;
+      
+      const data = await tripsAPI.getAll(params);
       
       // Se for motorista, filtrar apenas suas viagens
       if (user?.role === 'DRIVER') {
@@ -155,7 +192,7 @@ export default function TripsPage() {
         )}
       </div>
 
-      {/* Filtros */}
+      {/* Filtros de status */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         <Button
           variant={filter === 'all' ? 'default' : 'outline'}
@@ -182,6 +219,93 @@ export default function TripsPage() {
           Concluídas ({trips.filter(t => t.status === 'COMPLETED').length})
         </Button>
       </div>
+
+      {/* Filtros avançados */}
+      <Card>
+        <CardContent className="p-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full md:w-auto"
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros Avançados'}
+          </Button>
+
+          {showFilters && (
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Data Início</label>
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => setStartDateFilter(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Data Fim</label>
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => setEndDateFilter(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Cliente</label>
+                  <select
+                    value={clientFilter}
+                    onChange={(e) => setClientFilter(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Todos os clientes</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Motorista</label>
+                  <select
+                    value={driverFilter}
+                    onChange={(e) => setDriverFilter(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Todos os motoristas</option>
+                    {drivers.map((driver) => (
+                      <option key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={fetchTrips}>
+                  <Search className="mr-2 h-4 w-4" />
+                  Aplicar Filtros
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStartDateFilter('');
+                    setEndDateFilter('');
+                    setClientFilter('');
+                    setDriverFilter('');
+                    fetchTrips();
+                  }}
+                >
+                  Limpar Filtros
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {filteredTrips.length === 0 ? (
         <Card>
