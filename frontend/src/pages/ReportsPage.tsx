@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { reportsAPI, trucksAPI, driversAPI } from '@/lib/api';
+import { reportsAPI, trucksAPI, driversAPI, tripsAPI } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import {
   TrendingUp,
@@ -169,15 +169,7 @@ const ReportsPage: React.FC = () => {
       setLoadingTrip(true);
       setShowTripModal(true);
       
-      const response = await fetch(`http://localhost:3000/api/trips/${tripId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Erro ao carregar viagem');
-      
-      const trip = await response.json();
+      const trip = await tripsAPI.getById(tripId);
       setSelectedTrip(trip);
     } catch (error) {
       console.error('Erro ao carregar detalhes da viagem:', error);
@@ -296,7 +288,7 @@ const ReportsPage: React.FC = () => {
             className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation"
           >
             <Send className="mr-2 h-4 w-4" />
-            {sending ? 'Enviando...' : 'Enviar via Webhook'}
+            {sending ? 'Enviando...' : 'Enviar via WhatsApp'}
           </Button>
         </div>
       </div>
