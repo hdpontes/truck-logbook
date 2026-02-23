@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { reportsAPI } from '@/lib/api';
+import { reportsAPI, trucksAPI, driversAPI } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import {
   TrendingUp,
-  TrendingDown,
   DollarSign,
   Filter,
   Download,
@@ -23,10 +22,17 @@ interface ReportItem {
   tripCode?: string;
   category: string;
   amount: number;
+  revenue?: number;
+  cost?: number;
+  profit?: number;
+  isTrip: boolean;
+  expenseType?: string;
   truck?: {
+    id: string;
     plate: string;
   };
   driver?: {
+    id: string;
     name: string;
   };
 }
@@ -47,12 +53,18 @@ const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sending, setSending] = useState(false);
+  const [trucks, setTrucks] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
 
   // Filtros
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [tripCodeFilter, setTripCodeFilter] = useState('');
+  const [truckFilter, setTruckFilter] = useState('');
+  const [driverFilter, setDriverFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'driver' | 'income' | 'expense'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
@@ -64,8 +76,23 @@ const ReportsPage: React.FC = () => {
     setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
     setEndDate(today.toISOString().split('T')[0]);
     
+    // Carregar trucks e drivers para filtros
+    loadFiltersData();
     fetchReportData();
   }, []);
+
+  const loadFiltersData = async () => {
+    try {
+      const [trucksData, driversData] = await Promise.all([
+        trucksAPI.getAll(),
+        driversAPI.getAll(),
+      ]);
+      setTrucks(trucksData);
+      setDrivers(driversData);
+    } catch (error) {
+      console.error('Erro ao carregar filtros:', error);
+    }
+  };
 
   const fetchReportData = async () => {
     try {
@@ -76,9 +103,34 @@ const ReportsPage: React.FC = () => {
       if (endDate) params.endDate = endDate;
       if (typeFilter !== 'ALL') params.type = typeFilter;
       if (tripCodeFilter) params.tripCode = tripCodeFilter;
+      if (truckFilter) params.truckId = truckFilter;
+      if (driverFilter) params.driverId = driverFilter;
 
       const data = await reportsAPI.getFinancial(params);
-      setReportData(data);
+      
+      // Aplicar ordenação local
+      const sortedItems = [...data.items].sort((a, b) => {
+        let comparison = 0;
+        
+        switch (sortBy) {
+          case 'date':
+            comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+            break;
+          case 'driver':
+            comparison = (a.driver?.name || '').localeCompare(b.driver?.name || '');
+            break;
+          case 'income':
+            comparison = (a.type === 'INCOME' ? a.amount : 0) - (b.type === 'INCOME' ? b.amount : 0);
+            break;
+          case 'expense':
+            comparison = (a.type === 'EXPENSE' ? a.amount : 0) - (b.type === 'EXPENSE' ? b.amount : 0);
+            break;
+        }
+        
+        return sortOrder === 'asc' ? comparison : -comparison;
+      });
+      
+      setReportData({ ...data, items: sortedItems });
     } catch (error) {
       console.error('Erro ao carregar relatório:', error);
       alert('Erro ao carregar relatório');
@@ -100,6 +152,10 @@ const ReportsPage: React.FC = () => {
     setEndDate(today.toISOString().split('T')[0]);
     setTypeFilter('ALL');
     setTripCodeFilter('');
+    setTruckFilter('');
+    setDriverFilter('');
+    setSortBy('date');
+    setSortOrder('desc');
     
     setTimeout(fetchReportData, 100);
   };
@@ -222,7 +278,7 @@ const ReportsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Data Inicial
@@ -270,6 +326,68 @@ const ReportsPage: React.FC = () => {
                   placeholder="Filtrar por código..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Caminhão
+                </label>
+                <select
+                  value={truckFilter}
+                  onChange={(e) => setTruckFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                >
+                  <option value="">Todos os Caminhões</option>
+                  {trucks.map((truck) => (
+                    <option key={truck.id} value={truck.id}>
+                      {truck.plate} - {truck.model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Motorista
+                </label>
+                <select
+                  value={driverFilter}
+                  onChange={(e) => setDriverFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                >
+                  <option value="">Todos os Motoristas</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ordenar Por
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                >
+                  <option value="date">Data</option>
+                  <option value="driver">Motorista</option>
+                  <option value="income">Entradas</option>
+                  <option value="expense">Saídas</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ordem
+                </label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                >
+                  <option value="desc">Decrescente</option>
+                  <option value="asc">Crescente</option>
+                </select>
               </div>
             </div>
             <div className="flex flex-col md:flex-row gap-2 mt-4">
@@ -362,7 +480,7 @@ const ReportsPage: React.FC = () => {
         {reportData && (
           <Card>
             <CardHeader className="pb-3 md:pb-6">
-              <CardTitle className="text-base md:text-lg">Transações</CardTitle>
+              <CardTitle className="text-base md:text-lg">Transações Detalhadas</CardTitle>
             </CardHeader>
             <CardContent>
               {reportData.items.length === 0 ? (
@@ -376,69 +494,86 @@ const ReportsPage: React.FC = () => {
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Data
-                            </th>
-                            <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Tipo
                             </th>
-                            <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Data
+                            </th>
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                               Código
                             </th>
-                            <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Descrição
                             </th>
-                            <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                              Categoria
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                              Motorista
                             </th>
-                            <th className="px-3 md:px-6 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Valor
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                              Caminhão
+                            </th>
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                              Receita
+                            </th>
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Custo
+                            </th>
+                            <th className="px-2 md:px-4 py-2 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                              Lucro
                             </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {reportData.items.map((item) => (
                             <tr key={item.id} className="hover:bg-gray-50">
-                              <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
-                                {new Date(item.date).toLocaleDateString('pt-BR')}
-                              </td>
-                              <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-                                  item.type === 'INCOME'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {item.type === 'INCOME' ? (
-                                    <>
-                                      <TrendingUp className="h-3 w-3 mr-1" />
-                                      Entrada
-                                    </>
-                                  ) : (
-                                    <>
-                                      <TrendingDown className="h-3 w-3 mr-1" />
-                                      Saída
-                                    </>
-                                  )}
-                                </span>
-                              </td>
-                              <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden md:table-cell">
-                                {item.tripCode || '-'}
-                              </td>
-                              <td className="px-3 md:px-6 py-3 md:py-4 text-xs md:text-sm text-gray-900 max-w-xs truncate">
-                                {item.description}
-                                {item.truck && (
-                                  <span className="block text-xs text-gray-500">
-                                    {item.truck.plate} • {item.driver?.name}
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap">
+                                {item.isTrip ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                    Viagem
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    {item.expenseType === 'FUEL' && 'Combustível'}
+                                    {item.expenseType === 'TOLL' && 'Pedágio'}
+                                    {item.expenseType === 'MAINTENANCE' && 'Manutenção'}
+                                    {item.expenseType === 'FOOD' && 'Alimentação'}
+                                    {item.expenseType === 'ACCOMMODATION' && 'Hospedagem'}
+                                    {item.expenseType === 'SALARY' && 'Salário'}
+                                    {item.expenseType === 'OTHER' && 'Outro'}
+                                    {!item.expenseType && 'Despesa'}
                                   </span>
                                 )}
                               </td>
-                              <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden md:table-cell">
-                                {item.category}
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
+                                {new Date(item.date).toLocaleDateString('pt-BR')}
                               </td>
-                              <td className={`px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium ${
-                                item.type === 'INCOME' ? 'text-green-700' : 'text-red-700'
-                              }`}>
-                                {item.type === 'INCOME' ? '+' : '-'} {formatCurrency(item.amount)}
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden lg:table-cell">
+                                {item.tripCode || '-'}
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 text-xs md:text-sm text-gray-900 max-w-xs">
+                                <div className="truncate" title={item.description}>
+                                  {item.description}
+                                </div>
+                                {/* Mostrar informações extras em mobile */}
+                                <div className="block md:hidden text-xs text-gray-500 mt-1">
+                                  {item.driver?.name && <span className="block">{item.driver.name}</span>}
+                                  {item.truck?.plate && <span className="block">{item.truck.plate}</span>}
+                                </div>
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden md:table-cell">
+                                {item.driver?.name || '-'}
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden sm:table-cell">
+                                {item.truck?.plate || '-'}
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-green-700 hidden xl:table-cell">
+                                {item.revenue ? formatCurrency(item.revenue) : '-'}
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-red-700">
+                                {formatCurrency(item.cost || item.amount)}
+                              </td>
+                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-blue-700 hidden lg:table-cell">
+                                {item.profit !== undefined && item.profit !== null ? formatCurrency(item.profit) : '-'}
                               </td>
                             </tr>
                           ))}
