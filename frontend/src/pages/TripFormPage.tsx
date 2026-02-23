@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/lib/api';
+import { tripsAPI, trucksAPI, trailersAPI, driversAPI, clientsAPI } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
 
@@ -27,6 +27,14 @@ interface Driver {
   id: string;
   name: string;
   email: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  cnpj: string;
+  city: string;
+  state: string;
 }
 
 interface Location {
@@ -58,6 +66,7 @@ export default function TripFormPage() {
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [origins, setOrigins] = useState<Location[]>([]);
   const [destinations, setDestinations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +76,7 @@ export default function TripFormPage() {
     truckId: '',
     trailerId: '',
     driverId: '',
+    clientId: '',
     origin: '',
     destination: '',
     startDate: '',
@@ -90,10 +100,11 @@ export default function TripFormPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const [trucksData, trailersData, driversData, locationsData] = await Promise.all([
+      const [trucksData, trailersData, driversData, clientsData, locationsData] = await Promise.all([
         trucksAPI.getAll(),
         trailersAPI.getAll(),
         driversAPI.getAll(),
+        clientsAPI.getAll(),
         axios.get(`${API_URL}/api/locations`, {
           headers: { Authorization: `Bearer ${token}` },
         }).then(res => res.data),
@@ -102,6 +113,7 @@ export default function TripFormPage() {
       setTrucks(trucksData);
       setTrailers(trailersData);
       setDrivers(driversData);
+      setClients(clientsData.filter((c: Client) => c.active !== false));
       
       // Filtrar origens (ORIGIN ou BOTH)
       setOrigins(locationsData.filter((loc: Location) => 
@@ -261,6 +273,28 @@ export default function TripFormPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cliente
+                </label>
+                <select
+                  name="clientId"
+                  value={formData.clientId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione um cliente</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name} - {client.city}/{client.state}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Selecione o cliente responsável por esta viagem (opcional)
+                </p>
               </div>
 
               <div>
