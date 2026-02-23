@@ -1,11 +1,29 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
+import { config } from '../config';
+import axios from 'axios';
 
 const router = Router();
 
 // Todas as rotas requerem autenticação
 router.use(authenticate);
+
+// Função auxiliar para enviar webhook
+async function sendWebhook(eventType: string, data: any) {
+  if (!config.N8N_WEBHOOK_URL) return;
+
+  try {
+    await axios.post(config.N8N_WEBHOOK_URL, {
+      event: eventType,
+      timestamp: new Date().toISOString(),
+      data,
+    });
+    console.log(`✅ Webhook sent: ${eventType}`);
+  } catch (error) {
+    console.error(`❌ Error sending webhook ${eventType}:`, error);
+  }
+}
 
 // GET /api/trucks - Listar todos os caminhões
 router.get('/', async (req, res) => {
@@ -203,6 +221,55 @@ router.put('/:id', async (req, res) => {
         ...(active !== undefined && { active }),
       },
     });
+
+    // Se a quilometragem foi atualizada, verificar manutenções atrasadas
+    if (currentMileage !== undefined) {
+      const scheduledMaintenances = await prisma.maintenance.findMany({
+        where: {
+          truckId: id,
+          status: { in: ['SCHEDULED', 'PENDING'] },
+          scheduledMileage: { not: null },
+        },
+        include: {
+          truck: {
+            select: { id: true, plate: true, model: true, currentMileage: true },
+          },
+        },
+      });
+
+      for (const maintenance of scheduledMaintenances) {
+        if (maintenance.scheduledMileage && 
+            truck.currentMileage >= maintenance.scheduledMileage &&
+            maintenance.status !== 'PENDING') {
+          
+          // Atualizar status para PENDING (atrasada)
+          await prisma.maintenance.update({
+            where: { id: maintenance.id },
+            data: { status: 'PENDING' },
+          });
+
+          // Enviar webhook de manutenção atrasada
+          await sendWebhook('maintenance.overdue', {
+            maintenance: {
+              id: maintenance.id,
+              type: maintenance.type,
+              description: maintenance.description,
+              scheduledMileage: maintenance.scheduledMileage,
+              priority: maintenance.priority,
+            },
+            truck: {
+              id: truck.id,
+              plate: truck.plate,
+              model: truck.model,
+              currentMileage: truck.currentMileage,
+              overdueBy: truck.currentMileage - maintenance.scheduledMileage,
+            },
+          });
+
+          console.log(`⚠️ Manutenção ${maintenance.id} atrasada - Caminhão ${truck.plate}`);
+        }
+      }
+    }
 
     res.json(truck);
   } catch (error: any) {
