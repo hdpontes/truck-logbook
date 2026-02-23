@@ -112,4 +112,11 @@ export const settingsAPI = {
   update: (data: any) => api.put('/settings', data).then(res => res.data),
 };
 
+// Reports API
+export const reportsAPI = {
+  getFinancial: (params?: any) => api.get('/reports/financial', { params }).then(res => res.data),
+  sendWebhook: (data: any) => api.post('/reports/send-webhook', data).then(res => res.data),
+  getMonthly: (year: number, month: number) => api.get(`/reports/monthly/${year}/${month}`).then(res => res.data),
+};
+
 export default api;
