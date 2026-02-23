@@ -19,11 +19,49 @@ router.get('/', async (req, res) => {
             maintenances: true,
           },
         },
+        maintenances: {
+          where: {
+            status: { in: ['PENDING', 'SCHEDULED'] },
+            OR: [
+              {
+                scheduledMileage: { not: null },
+              },
+              {
+                scheduledDate: { not: null },
+              },
+            ],
+          },
+          select: {
+            id: true,
+            type: true,
+            description: true,
+            status: true,
+            scheduledMileage: true,
+            scheduledDate: true,
+            priority: true,
+          },
+          orderBy: { scheduledDate: 'asc' },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(trucks);
+    // Adicionar flag de manutenção atrasada
+    const trucksWithStatus = trucks.map(truck => {
+      const overdueMaintenance = truck.maintenances.find(m => 
+        m.scheduledMileage && 
+        truck.currentMileage && 
+        truck.currentMileage >= m.scheduledMileage
+      );
+      
+      return {
+        ...truck,
+        hasOverdueMaintenance: !!overdueMaintenance,
+        pendingMaintenancesCount: truck.maintenances.length,
+      };
+    });
+
+    res.json(trucksWithStatus);
   } catch (error) {
     console.error('Error fetching trucks:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -57,7 +95,7 @@ router.get('/:id', async (req, res) => {
     });
 
     if (!truck) {
-      return res.status(404).json({ message: 'Truck not found' });
+      return res.status(404).json({ message: 'Caminhão não encontrado' });
     }
 
     // Calcular métricas
@@ -74,6 +112,17 @@ router.get('/:id', async (req, res) => {
       _count: true,
     });
 
+    // Separar manutenções pendentes/atrasadas
+    const pendingMaintenances = truck.maintenances.filter(m => 
+      m.status === 'PENDING' || m.status === 'SCHEDULED'
+    );
+    
+    const overdueMaintenances = pendingMaintenances.filter(m => 
+      m.scheduledMileage && 
+      truck.currentMileage && 
+      truck.currentMileage >= m.scheduledMileage
+    );
+
     res.json({
       ...truck,
       metrics: {
@@ -82,6 +131,9 @@ router.get('/:id', async (req, res) => {
         totalProfit: metrics._sum.profit || 0,
         totalTrips: metrics._count,
       },
+      pendingMaintenancesCount: pendingMaintenances.length,
+      overdueMaintenancesCount: overdueMaintenances.length,
+      hasOverdueMaintenance: overdueMaintenances.length > 0,
     });
   } catch (error) {
     console.error('Error fetching truck:', error);
