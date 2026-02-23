@@ -432,6 +432,43 @@ const BillingPage: React.FC = () => {
       <Card ref={reportRef}>
         <CardHeader>
           <CardTitle>Relatório de Cobranças - {startDate ? new Date(startDate).toLocaleDateString('pt-BR') : ''} até {endDate ? new Date(endDate).toLocaleDateString('pt-BR') : ''}</CardTitle>
+          
+          {/* Informações do cliente (se filtrado) */}
+          {clientFilter && clients.length > 0 && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              {(() => {
+                const selectedClient = clients.find(c => c.id === clientFilter);
+                if (selectedClient) {
+                  return (
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">Cliente:</p>
+                      <p className="text-lg font-bold text-blue-900">{selectedClient.name}</p>
+                      <p className="text-sm text-blue-700">CNPJ: {selectedClient.cnpj}</p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          )}
+
+          {/* Resumo dentro do relatório */}
+          {billingData && (
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-sm text-green-700">Total a Cobrar</p>
+                <p className="text-2xl font-bold text-green-700">
+                  {formatCurrency(billingData.summary.totalAmount)}
+                </p>
+              </div>
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-700">Total de Viagens</p>
+                <p className="text-2xl font-bold text-blue-700">
+                  {billingData.summary.itemCount}
+                </p>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
