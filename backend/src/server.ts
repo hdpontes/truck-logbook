@@ -14,6 +14,7 @@ import locationsRoutes from './routes/locations.routes';
 import usersRoutes from './routes/users.routes';
 import settingsRoutes from './routes/settings.routes';
 import reportsRoutes from './routes/reports.routes';
+import billingRoutes from './routes/billing.routes';
 import externalRoutes from './routes/external.routes';
 import { startMonthlyCronJob } from './jobs/monthly-report.job';
 
@@ -65,6 +66,7 @@ app.use('/api/clients', clientsRoutes);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/external', externalRoutes);
 console.log('✅ All routes mounted successfully');
 
