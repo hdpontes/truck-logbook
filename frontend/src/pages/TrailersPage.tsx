@@ -191,7 +191,6 @@ const TrailersPage: React.FC = () => {
         </Card>
       </div>
     )}
-    </div>
   );
 };
 
