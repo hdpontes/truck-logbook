@@ -28,12 +28,13 @@ async function sendWebhook(eventType: string, data: any) {
 // GET /api/expenses - Listar todas as despesas
 router.get('/', async (req, res) => {
   try {
-    const { truckId, tripId, type } = req.query;
+    const { truckId, tripId, clientId, type } = req.query;
 
     const expenses = await prisma.expense.findMany({
       where: {
         ...(truckId && { truckId: truckId as string }),
         ...(tripId && { tripId: tripId as string }),
+        ...(clientId && { clientId: clientId as string }),
         ...(type && { type: type as any }),
       },
       include: {
@@ -42,6 +43,9 @@ router.get('/', async (req, res) => {
         },
         trip: {
           select: { id: true, origin: true, destination: true },
+        },
+        client: {
+          select: { id: true, name: true, cnpj: true },
         },
       },
       orderBy: { date: 'desc' },
@@ -64,6 +68,9 @@ router.get('/:id', async (req, res) => {
       include: {
         truck: true,
         trip: true,
+        client: {
+          select: { id: true, name: true, cnpj: true, city: true, state: true },
+        },
       },
     });
 
@@ -84,6 +91,7 @@ router.post('/', async (req, res) => {
     const {
       truckId,
       tripId,
+      clientId,
       type,
       category,
       amount,
@@ -105,6 +113,7 @@ router.post('/', async (req, res) => {
       data: {
         truckId: truckId || null,
         tripId: tripId || null,
+        clientId: clientId || null,
         type,
         category,
         amount: parseFloat(amount),
@@ -121,6 +130,9 @@ router.post('/', async (req, res) => {
         } : false,
         trip: tripId ? {
           select: { id: true, origin: true, destination: true },
+        } : false,
+        client: clientId ? {
+          select: { id: true, name: true, cnpj: true },
         } : false,
       },
     });
@@ -166,6 +178,7 @@ router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const {
+      clientId,
       type,
       category,
       amount,
@@ -180,6 +193,7 @@ router.put('/:id', async (req, res) => {
     const expense = await prisma.expense.update({
       where: { id },
       data: {
+        ...(clientId !== undefined && { clientId: clientId || null }),
         ...(type && { type }),
         ...(category !== undefined && { category }),
         ...(amount && { amount: parseFloat(amount) }),
@@ -196,6 +210,9 @@ router.put('/:id', async (req, res) => {
         },
         trip: {
           select: { id: true, origin: true, destination: true },
+        },
+        client: {
+          select: { id: true, name: true, cnpj: true },
         },
       },
     });
