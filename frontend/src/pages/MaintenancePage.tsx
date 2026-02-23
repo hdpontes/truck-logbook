@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { maintenanceAPI } from '@/lib/api';
-import { Wrench, Plus, Trash2, Edit, AlertTriangle } from 'lucide-react';
+import { maintenanceAPI, expensesAPI } from '@/lib/api';
+import { Wrench, Plus, Trash2, Edit, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/contexts/ToastContext';
@@ -18,6 +18,7 @@ interface Maintenance {
   status: 'PENDING' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'IN_PROGRESS';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   truck: {
+    id: string;
     plate: string;
     model: string;
     currentMileage: number;
@@ -32,6 +33,12 @@ export default function MaintenancePage() {
   const [filter, setFilter] = useState<'all' | 'PENDING' | 'COMPLETED' | 'OVERDUE'>('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [maintenanceToDelete, setMaintenanceToDelete] = useState<string | null>(null);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [maintenanceToComplete, setMaintenanceToComplete] = useState<Maintenance | null>(null);
+  const [completionData, setCompletionData] = useState({
+    completedDate: new Date().toISOString().split('T')[0],
+    actualCost: '',
+  });
 
   useEffect(() => {
     fetchMaintenances();
@@ -68,6 +75,54 @@ export default function MaintenancePage() {
     } finally {
       setShowDeleteModal(false);
       setMaintenanceToDelete(null);
+    }
+  };
+
+  const handleComplete = (maintenance: Maintenance) => {
+    setMaintenanceToComplete(maintenance);
+    setCompletionData({
+      completedDate: new Date().toISOString().split('T')[0],
+      actualCost: maintenance.cost.toString(),
+    });
+    setShowCompleteModal(true);
+  };
+
+  const confirmComplete = async () => {
+    if (!maintenanceToComplete) return;
+
+    try {
+      const actualCost = parseFloat(completionData.actualCost);
+      
+      if (isNaN(actualCost) || actualCost < 0) {
+        toast.error('Valor inválido');
+        return;
+      }
+
+      // Atualizar manutenção para COMPLETED
+      await maintenanceAPI.update(maintenanceToComplete.id, {
+        status: 'COMPLETED',
+        completedDate: completionData.completedDate,
+        cost: actualCost,
+      });
+
+      // Criar despesa vinculada ao caminhão
+      await expensesAPI.create({
+        truckId: maintenanceToComplete.truck.id,
+        category: 'MAINTENANCE',
+        description: `Manutenção: ${typeLabels[maintenanceToComplete.type] || maintenanceToComplete.type} - ${maintenanceToComplete.description}`,
+        amount: actualCost,
+        date: completionData.completedDate,
+      });
+
+      // Atualizar lista
+      await fetchMaintenances();
+      
+      toast.success('Manutenção concluída e despesa registrada!');
+      setShowCompleteModal(false);
+      setMaintenanceToComplete(null);
+    } catch (error) {
+      console.error('Erro ao concluir manutenção:', error);
+      toast.error('Erro ao concluir manutenção');
     }
   };
 
@@ -277,6 +332,17 @@ export default function MaintenancePage() {
                   </div>
 
                   <div className="flex justify-end gap-2 mt-4">
+                    {maintenance.status !== 'COMPLETED' && maintenance.status !== 'CANCELLED' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleComplete(maintenance)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Concluir
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -330,6 +396,82 @@ export default function MaintenancePage() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Excluir
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Conclusão de Manutenção */}
+    {showCompleteModal && maintenanceToComplete && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-green-600">Concluir Manutenção</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Caminhão</p>
+                <p className="font-semibold">{maintenanceToComplete.truck.plate} - {maintenanceToComplete.truck.model}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Manutenção</p>
+                <p className="font-semibold">{typeLabels[maintenanceToComplete.type] || maintenanceToComplete.type}</p>
+                <p className="text-sm text-gray-500">{maintenanceToComplete.description}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data de Conclusão *
+                </label>
+                <input
+                  type="date"
+                  value={completionData.completedDate}
+                  onChange={(e) => setCompletionData({ ...completionData, completedDate: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor Realizado (R$) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={completionData.actualCost}
+                  onChange={(e) => setCompletionData({ ...completionData, actualCost: e.target.value })}
+                  required
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Atenção:</strong> Ao concluir, uma despesa de manutenção será automaticamente registrada para este caminhão.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowCompleteModal(false);
+                  setMaintenanceToComplete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmComplete}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Concluir Manutenção
               </Button>
             </div>
           </CardContent>
