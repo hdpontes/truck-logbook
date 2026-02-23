@@ -125,9 +125,9 @@ router.post('/', async (req, res) => {
   try {
     const { truckId, trailerId, driverId, clientId, tripCode, origin, destination, startDate, distance, revenue, notes } = req.body;
 
-    if (!truckId || !driverId || !origin || !destination || !startDate) {
+    if (!truckId || !driverId || !clientId || !origin || !destination || !startDate) {
       return res.status(400).json({ 
-        message: 'TruckId, driverId, origin, destination and startDate are required' 
+        message: 'TruckId, driverId, clientId, origin, destination and startDate are required' 
       });
     }
 
@@ -171,6 +171,15 @@ router.post('/', async (req, res) => {
       if (!trailer) {
         return res.status(404).json({ message: 'Trailer not found' });
       }
+    }
+
+    // Verificar se o cliente existe
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
     }
 
     // Validação 2: Verificar intervalo mínimo de 3h entre início de viagens (caminhão)
@@ -289,6 +298,11 @@ router.post('/', async (req, res) => {
         email: driver.email,
         phone: driver.phone,
       },
+      client: trip.client ? {
+        clientId: trip.client.id,
+        name: trip.client.name,
+        cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
+      } : null,
     });
 
     res.status(201).json(trip);
@@ -513,12 +527,19 @@ router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const user = (req as any).user;
-    const { tripCode, truckId, trailerId, driverId, origin, destination, startDate, endDate, revenue, distance, notes, status } = req.body;
+    const { tripCode, truckId, trailerId, driverId, clientId, origin, destination, startDate, endDate, revenue, distance, notes, status } = req.body;
 
     // Apenas ADMIN e MANAGER podem editar viagens
     if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
       return res.status(403).json({ 
         message: 'Apenas administradores e gerentes podem editar viagens' 
+      });
+    }
+
+    // Validar campos obrigatórios se fornecidos
+    if (clientId === '') {
+      return res.status(400).json({ 
+        message: 'Cliente é obrigatório' 
       });
     }
 
@@ -579,6 +600,16 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Validar cliente se fornecido
+    if (clientId) {
+      const client = await prisma.client.findUnique({
+        where: { id: clientId },
+      });
+      if (!client) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
+    }
+
     const trip = await prisma.trip.update({
       where: { id },
       data: {
@@ -586,6 +617,7 @@ router.put('/:id', async (req, res) => {
         ...(truckId && { truckId }),
         ...(trailerId !== undefined && { trailerId: trailerId || null }),
         ...(driverId && { driverId }),
+        ...(clientId && { clientId }),
         ...(origin && { origin }),
         ...(destination && { destination }),
         ...(startDate && { startDate: new Date(startDate) }),
@@ -600,6 +632,9 @@ router.put('/:id', async (req, res) => {
         trailer: true,
         driver: {
           select: { id: true, name: true, email: true, phone: true },
+        },
+        client: {
+          select: { id: true, name: true, cnpj: true },
         },
       },
     });
@@ -633,6 +668,11 @@ router.put('/:id', async (req, res) => {
         email: driver.email,
         phone: driver.phone,
       },
+      client: trip.client ? {
+        clientId: trip.client.id,
+        name: trip.client.name,
+        cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
+      } : null,
       updatedBy: {
         id: user.id,
         name: user.name,
