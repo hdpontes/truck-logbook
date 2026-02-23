@@ -21,6 +21,7 @@ export default function TruckFormPage() {
     capacity: '',
     avgConsumption: '',
     currentMileage: '',
+    status: 'GARAGE' as 'GARAGE' | 'IN_TRANSIT' | 'MAINTENANCE',
     active: true,
   });
 
@@ -43,6 +44,7 @@ export default function TruckFormPage() {
         capacity: truck.capacity.toString(),
         avgConsumption: truck.avgConsumption.toString(),
         currentMileage: truck.currentMileage ? truck.currentMileage.toString() : '',
+        status: truck.status || 'GARAGE',
         active: truck.active,
       });
     } catch (error) {
@@ -68,6 +70,7 @@ export default function TruckFormPage() {
         capacity: parseFloat(formData.capacity),
         avgConsumption: parseFloat(formData.avgConsumption),
         currentMileage: formData.currentMileage ? parseFloat(formData.currentMileage) : 0,
+        status: formData.status,
         active: formData.active,
       };
 
@@ -253,6 +256,23 @@ export default function TruckFormPage() {
                   placeholder="Ex: 3.5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="GARAGE">Garagem</option>
+                  <option value="IN_TRANSIT">Em Trânsito</option>
+                  <option value="MAINTENANCE">Manutenção</option>
+                </select>
               </div>
 
               <div className="flex items-center">
