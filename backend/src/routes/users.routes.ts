@@ -33,11 +33,18 @@ async function sendWebhook(eventType: string, data: any) {
 router.get('/', async (req, res) => {
   try {
     const { active, role } = req.query;
+    const currentUser = (req as any).user;
 
     const users = await prisma.user.findMany({
       where: {
         ...(active !== undefined && { active: active === 'true' }),
         ...(role && { role: role as any }),
+        // MANAGER não pode ver usuários ADMIN
+        ...(currentUser.role === 'MANAGER' && {
+          role: {
+            not: 'ADMIN',
+          },
+        }),
       },
       select: {
         id: true,
@@ -109,6 +116,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { login, email, password, name, cpf, phone, role } = req.body;
+    const currentUser = (req as any).user;
 
     if (!login || !email || !password || !name || !role) {
       return res.status(400).json({ 
@@ -120,6 +128,13 @@ router.post('/', async (req, res) => {
     if (!['ADMIN', 'MANAGER', 'DRIVER'].includes(role)) {
       return res.status(400).json({ 
         message: 'Perfil inválido. Use ADMIN, MANAGER ou DRIVER' 
+      });
+    }
+
+    // MANAGER só pode criar MANAGER ou DRIVER
+    if (currentUser.role === 'MANAGER' && role === 'ADMIN') {
+      return res.status(403).json({ 
+        message: 'Você não tem permissão para criar usuários administradores' 
       });
     }
 
@@ -207,6 +222,31 @@ router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { login, email, name, cpf, phone, active, password, role } = req.body;
+    const currentUser = (req as any).user;
+
+    // Buscar usuário que será editado
+    const userToEdit = await prisma.user.findUnique({
+      where: { id },
+      select: { role: true },
+    });
+
+    if (!userToEdit) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // MANAGER não pode editar usuários ADMIN
+    if (currentUser.role === 'MANAGER' && userToEdit.role === 'ADMIN') {
+      return res.status(403).json({ 
+        message: 'Você não tem permissão para editar usuários administradores' 
+      });
+    }
+
+    // MANAGER não pode promover usuários para ADMIN
+    if (currentUser.role === 'MANAGER' && role === 'ADMIN') {
+      return res.status(403).json({ 
+        message: 'Você não tem permissão para promover usuários para administrador' 
+      });
+    }
 
     const updateData: any = {
       ...(login && { login }),
