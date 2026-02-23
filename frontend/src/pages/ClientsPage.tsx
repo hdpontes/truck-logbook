@@ -16,6 +16,7 @@ interface Client {
   state: string;
   phone?: string;
   email?: string;
+  active?: boolean;
   createdAt: string;
 }
 
