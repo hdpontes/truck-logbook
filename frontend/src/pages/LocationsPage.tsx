@@ -123,6 +123,7 @@ export default function LocationsPage() {
       name: location.name,
       city: location.city,
       state: location.state,
+      zipCode: '',
       type: location.type,
     });
     setShowModal(true);
