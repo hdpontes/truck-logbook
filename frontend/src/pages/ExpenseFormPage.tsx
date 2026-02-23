@@ -28,6 +28,7 @@ interface Client {
   cnpj: string;
   city: string;
   state: string;
+  active?: boolean;
 }
 
 export default function ExpenseFormPage() {
