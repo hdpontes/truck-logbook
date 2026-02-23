@@ -42,6 +42,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       tripCode,
       truckId,
       driverId,
+      clientId,
     } = req.query;
 
     // Validar permissões (apenas ADMIN e MANAGER)
@@ -87,6 +88,10 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
         tripsFilter.driverId = driverId as string;
       }
 
+      if (clientId) {
+        tripsFilter.clientId = clientId as string;
+      }
+
       const trips = await prisma.trip.findMany({
         where: tripsFilter,
         include: {
@@ -94,6 +99,9 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
             select: { id: true, plate: true },
           },
           driver: {
+            select: { id: true, name: true },
+          },
+          client: {
             select: { id: true, name: true },
           },
         },
@@ -125,6 +133,11 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
 
       if (Object.keys(dateFilter).length > 0) {
         expensesFilter.date = dateFilter;
+      }
+
+      // Filtro direto por cliente em despesas
+      if (clientId) {
+        expensesFilter.clientId = clientId as string;
       }
 
       // Filtros adicionais para despesas
@@ -194,6 +207,9 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
                 select: { id: true, name: true },
               },
             },
+          },
+          client: {
+            select: { id: true, name: true },
           },
         },
         orderBy: { date: 'desc' },
