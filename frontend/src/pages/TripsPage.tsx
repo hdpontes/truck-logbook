@@ -397,6 +397,5 @@ export default function TripsPage() {
         </Card>
       </div>
     )}
-    </div>
   );
 }
