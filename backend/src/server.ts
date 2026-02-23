@@ -14,6 +14,7 @@ import locationsRoutes from './routes/locations.routes';
 import usersRoutes from './routes/users.routes';
 import settingsRoutes from './routes/settings.routes';
 import reportsRoutes from './routes/reports.routes';
+import externalRoutes from './routes/external.routes';
 import { startMonthlyCronJob } from './jobs/monthly-report.job';
 
 const app = express();
@@ -59,9 +60,12 @@ app.use('/api/expenses', expensesRoutes);
 app.use('/api/drivers', driversRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/dashboard', dashboardRoutes);app.use('/api/clients', clientsRoutes);
-app.use('/api/locations', locationsRoutes);app.use('/api/settings', settingsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/clients', clientsRoutes);
+app.use('/api/locations', locationsRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/external', externalRoutes);
 console.log('✅ All routes mounted successfully');
 
 // 404 Handler
