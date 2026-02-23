@@ -62,13 +62,32 @@ model Truck {
   @@map("trucks")
 }
 
+model Trailer {
+  id          String   @id @default(uuid())
+  plate       String   @unique
+  model       String?
+  brand       String?
+  year        Int?
+  capacity    Float?   // Capacidade em toneladas
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trips       Trip[]
+
+  @@map("trailers")
+}
+
 model Trip {
   id           String    @id @default(uuid())
   truckId      String
   truck        Truck     @relation(fields: [truckId], references: [id])
+  trailerId    String?
+  trailer      Trailer?  @relation(fields: [trailerId], references: [id])
   driverId     String
   driver       User      @relation(fields: [driverId], references: [id])
   
+  tripCode     String?   // Código do pedido fornecido pelo cliente
   origin       String
   destination  String
   startDate    DateTime
@@ -98,6 +117,7 @@ model Trip {
   expenses     Expense[]
 
   @@index([truckId])
+  @@index([trailerId])
   @@index([driverId])
   @@index([status])
   @@index([startDate])
