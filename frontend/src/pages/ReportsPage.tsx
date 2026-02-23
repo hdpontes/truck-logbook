@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { reportsAPI, trucksAPI, driversAPI, tripsAPI } from '@/lib/api';
+import { reportsAPI, trucksAPI, driversAPI, tripsAPI, clientsAPI } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/contexts/ToastContext';
 import {
@@ -13,6 +13,7 @@ import {
   Search,
   ArrowUpCircle,
   ArrowDownCircle,
+  FileText,
 } from 'lucide-react';
 
 interface ReportItem {
@@ -58,9 +59,14 @@ const ReportsPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [trucks, setTrucks] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [showTripModal, setShowTripModal] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<any>(null);
   const [loadingTrip, setLoadingTrip] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [showCSVModal, setShowCSVModal] = useState(false);
+  const [csvWhatsappNumber, setCsvWhatsappNumber] = useState('');
 
   // Filtros
   const [startDate, setStartDate] = useState('');
@@ -69,6 +75,7 @@ const ReportsPage: React.FC = () => {
   const [tripCodeFilter, setTripCodeFilter] = useState('');
   const [truckFilter, setTruckFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
+  const [clientFilter, setClientFilter] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'driver' | 'income' | 'expense'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
@@ -89,12 +96,14 @@ const ReportsPage: React.FC = () => {
 
   const loadFiltersData = async () => {
     try {
-      const [trucksData, driversData] = await Promise.all([
+      const [trucksData, driversData, clientsData] = await Promise.all([
         trucksAPI.getAll(),
         driversAPI.getAll(),
+        clientsAPI.getAll(),
       ]);
       setTrucks(trucksData);
       setDrivers(driversData);
+      setClients(clientsData.filter((c: any) => c.active !== false));
     } catch (error) {
       console.error('Erro ao carregar filtros:', error);
     }
@@ -111,6 +120,7 @@ const ReportsPage: React.FC = () => {
       if (tripCodeFilter) params.tripCode = tripCodeFilter;
       if (truckFilter) params.truckId = truckFilter;
       if (driverFilter) params.driverId = driverFilter;
+      if (clientFilter) params.clientId = clientFilter;
 
       const data = await reportsAPI.getFinancial(params);
       
@@ -189,6 +199,14 @@ const ReportsPage: React.FC = () => {
 
   const handleSendReport = async () => {
     if (!reportRef.current) return;
+    setShowWhatsAppModal(true);
+  };
+
+  const handleSendImageViaWhatsApp = async () => {
+    if (!reportRef.current || !whatsappNumber) {
+      toast.error('Por favor, informe o número do WhatsApp');
+      return;
+    }
 
     try {
       setSending(true);
@@ -207,18 +225,89 @@ const ReportsPage: React.FC = () => {
       // Enviar para o backend
       await reportsAPI.sendWebhook({
         imageData,
+        whatsappNumber,
         filters: {
           startDate,
           endDate,
           type: typeFilter,
           tripCode: tripCodeFilter,
+          clientId: clientFilter,
         },
       });
 
       toast.success('Relatório enviado com sucesso via WhatsApp!');
+      setShowWhatsAppModal(false);
+      setWhatsappNumber('');
     } catch (error: any) {
       console.error('Erro ao enviar relatório:', error);
       toast.error(error.response?.data?.message || 'Erro ao enviar relatório');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const generateCSV = () => {
+    if (!reportData) return '';
+
+    // Filtrar apenas viagens (INCOME) para o CSV
+    const tripItems = reportData.items.filter(item => item.isTrip && item.type === 'INCOME');
+
+    let csv = 'Data,Código da Viagem,Origem,Destino,Caminhão,Motorista,Cliente,Receita\n';
+
+    tripItems.forEach(item => {
+      const date = new Date(item.date).toLocaleDateString('pt-BR');
+      const tripCode = item.tripCode || 'N/A';
+      const description = item.description.replace('Viagem: ', '');
+      const [origin, destination] = description.split(' → ');
+      const truck = item.truck?.plate || 'N/A';
+      const driver = item.driver?.name || 'N/A';
+      const client = (item as any).client?.name || 'N/A';
+      const revenue = item.revenue || 0;
+
+      csv += `${date},${tripCode},${origin},${destination},${truck},${driver},${client},R$ ${revenue.toFixed(2)}\n`;
+    });
+
+    return csv;
+  };
+
+  const handleSendCSVViaWhatsApp = () => {
+    setShowCSVModal(true);
+  };
+
+  const handleConfirmSendCSV = async () => {
+    if (!csvWhatsappNumber) {
+      toast.error('Por favor, informe o número do WhatsApp');
+      return;
+    }
+
+    try {
+      setSending(true);
+
+      const csvData = generateCSV();
+      
+      if (!csvData || csvData === 'Data,Código da Viagem,Origem,Destino,Caminhão,Motorista,Cliente,Receita\n') {
+        toast.error('Nenhuma viagem encontrada para exportar');
+        return;
+      }
+
+      // Enviar CSV para o backend
+      await reportsAPI.sendWebhook({
+        csvData,
+        whatsappNumber: csvWhatsappNumber,
+        type: 'csv',
+        filters: {
+          startDate,
+          endDate,
+          clientId: clientFilter,
+        },
+      });
+
+      toast.success('CSV enviado com sucesso via WhatsApp!');
+      setShowCSVModal(false);
+      setCsvWhatsappNumber('');
+    } catch (error: any) {
+      console.error('Erro ao enviar CSV:', error);
+      toast.error(error.response?.data?.message || 'Erro ao enviar CSV');
     } finally {
       setSending(false);
     }
@@ -292,6 +381,14 @@ const ReportsPage: React.FC = () => {
           >
             <Send className="mr-2 h-4 w-4" />
             {sending ? 'Enviando...' : 'Enviar via WhatsApp'}
+          </Button>
+          <Button
+            onClick={handleSendCSVViaWhatsApp}
+            disabled={sending || !reportData}
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 touch-manipulation"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Enviar CSV
           </Button>
         </div>
       </div>
@@ -385,6 +482,23 @@ const ReportsPage: React.FC = () => {
                   {drivers.map((driver) => (
                     <option key={driver.id} value={driver.id}>
                       {driver.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cliente
+                </label>
+                <select
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                >
+                  <option value="">Todos os Clientes</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
                     </option>
                   ))}
                 </select>
@@ -833,6 +947,109 @@ const ReportsPage: React.FC = () => {
               </div>
             ) : null}
           </div>
+        </div>
+      )}
+
+      {/* Modal WhatsApp para Imagem */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Enviar Relatório via WhatsApp</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número do WhatsApp (com DDD)
+                  </label>
+                  <input
+                    type="text"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="Ex: 11999999999"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Digite apenas números, sem espaços ou caracteres especiais
+                  </p>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowWhatsAppModal(false);
+                      setWhatsappNumber('');
+                    }}
+                    disabled={sending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSendImageViaWhatsApp}
+                    disabled={sending || !whatsappNumber}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {sending ? 'Enviando...' : 'Enviar'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal WhatsApp para CSV */}
+      {showCSVModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Enviar CSV via WhatsApp</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número do WhatsApp (com DDD)
+                  </label>
+                  <input
+                    type="text"
+                    value={csvWhatsappNumber}
+                    onChange={(e) => setCsvWhatsappNumber(e.target.value)}
+                    placeholder="Ex: 11999999999"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Digite apenas números, sem espaços ou caracteres especiais
+                  </p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-800">
+                    O CSV conterá apenas as viagens do período selecionado, com data, código, origem, destino, caminhão, motorista, cliente e valor da receita (sem custos).
+                  </p>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowCSVModal(false);
+                      setCsvWhatsappNumber('');
+                    }}
+                    disabled={sending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleConfirmSendCSV}
+                    disabled={sending || !csvWhatsappNumber}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {sending ? 'Enviando...' : 'Enviar CSV'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
