@@ -24,6 +24,7 @@ import ClientsPage from './pages/ClientsPage';
 import LocationsPage from './pages/LocationsPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
+import BillingPage from './pages/BillingPage';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -97,6 +98,7 @@ function App() {
             <Route path="clients" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ClientsPage /></RoleRoute>} />
             <Route path="locations" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><LocationsPage /></RoleRoute>} />
             <Route path="reports" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ReportsPage /></RoleRoute>} />
+            <Route path="billing" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><BillingPage /></RoleRoute>} />
             <Route path="settings" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><SettingsPage /></RoleRoute>} />
           </Route>
         </Routes>
