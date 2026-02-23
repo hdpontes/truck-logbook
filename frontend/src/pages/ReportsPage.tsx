@@ -174,6 +174,7 @@ const ReportsPage: React.FC = () => {
     setTripCodeFilter('');
     setTruckFilter('');
     setDriverFilter('');
+    setClientFilter('');
     setSortBy('date');
     setSortOrder('desc');
     
