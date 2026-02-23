@@ -44,6 +44,10 @@ export default function TripsPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'IN_PROGRESS' | 'COMPLETED'>('all');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState<string | null>(null);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [tripToRemind, setTripToRemind] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTrips();
@@ -68,30 +72,46 @@ export default function TripsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta viagem?')) {
-      try {
-        await tripsAPI.delete(id);
-        setTrips(trips.filter(trip => trip.id !== id));
-      } catch (error: any) {
-        console.error('Erro ao excluir viagem:', error);
-        if (error.response?.status === 403) {
-          toast.error('Apenas administradores podem excluir viagens.');
-        } else {
-          toast.error('Erro ao excluir viagem.');
-        }
+    setTripToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!tripToDelete) return;
+
+    try {
+      await tripsAPI.delete(tripToDelete);
+      setTrips(trips.filter(trip => trip.id !== tripToDelete));
+    } catch (error: any) {
+      console.error('Erro ao excluir viagem:', error);
+      if (error.response?.status === 403) {
+        toast.error('Apenas administradores podem excluir viagens.');
+      } else {
+        toast.error('Erro ao excluir viagem.');
       }
+    } finally {
+      setShowDeleteModal(false);
+      setTripToDelete(null);
     }
   };
 
   const handleSendReminder = async (id: string) => {
-    if (window.confirm('Deseja enviar notificação do lembrete da viagem para o motorista?')) {
-      try {
-        await tripsAPI.sendReminder(id);
-        toast.success('Lembrete enviado com sucesso para o motorista!');
-      } catch (error: any) {
-        console.error('Erro ao enviar lembrete:', error);
-        toast.error(error.response?.data?.message || 'Erro ao enviar lembrete');
-      }
+    setTripToRemind(id);
+    setShowReminderModal(true);
+  };
+
+  const confirmSendReminder = async () => {
+    if (!tripToRemind) return;
+
+    try {
+      await tripsAPI.sendReminder(tripToRemind);
+      toast.success('Lembrete enviado com sucesso para o motorista!');
+    } catch (error: any) {
+      console.error('Erro ao enviar lembrete:', error);
+      toast.error(error.response?.data?.message || 'Erro ao enviar lembrete');
+    } finally {
+      setShowReminderModal(false);
+      setTripToRemind(null);
     }
   };
 
@@ -306,6 +326,77 @@ export default function TripsPage() {
           ))}
         </div>
       )}
+    </div>
+
+    {/* Modal de Confirmação de Exclusão */}
+    {showDeleteModal && (
+      <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50\">
+        <Card className=\"w-full max-w-md\">
+          <CardHeader>
+            <CardTitle className=\"text-red-600\">Confirmar Exclusão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className=\"text-gray-700 mb-6\">
+              Tem certeza que deseja excluir esta viagem? Esta ação não pode ser desfeita.
+            </p>
+            <div className=\"flex justify-end gap-4\">
+              <Button
+                type=\"button\"
+                variant=\"outline\"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setTripToDelete(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type=\"button\"
+                onClick={confirmDelete}
+                className=\"bg-red-600 hover:bg-red-700 text-white\"
+              >
+                Excluir
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Confirmação de Envio de Lembrete */}
+    {showReminderModal && (
+      <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50\">
+        <Card className=\"w-full max-w-md\">
+          <CardHeader>
+            <CardTitle className=\"text-blue-600\">Enviar Lembrete</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className=\"text-gray-700 mb-6\">
+              Deseja enviar notificação do lembrete da viagem para o motorista?
+            </p>
+            <div className=\"flex justify-end gap-4\">
+              <Button
+                type=\"button\"
+                variant=\"outline\"
+                onClick={() => {
+                  setShowReminderModal(false);
+                  setTripToRemind(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type=\"button\"
+                onClick={confirmSendReminder}
+                className=\"bg-blue-600 hover:bg-blue-700 text-white\"
+              >
+                Enviar Lembrete
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
     </div>
   );
 }
