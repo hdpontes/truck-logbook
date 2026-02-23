@@ -58,8 +58,8 @@ export default function DashboardPage() {
       color: 'purple',
     },
     {
-      label: 'Motoristas Ativos',
-      value: overview?.totalDrivers || 0,
+      label: 'Caminhões em Manutenção',
+      value: overview?.trucksInMaintenance || 0,
       icon: AlertTriangle,
       color: 'yellow',
     },
