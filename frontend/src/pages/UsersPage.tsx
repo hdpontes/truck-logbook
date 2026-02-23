@@ -10,6 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 interface User {
   id: string;
   name: string;
+  login: string;
   email: string;
   phone: string;
   cpf: string;
@@ -25,6 +26,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    login: '',
     cpf: '',
     email: '',
     phone: '',
@@ -59,6 +61,7 @@ export default function UsersPage() {
       const token = localStorage.getItem('token');
       const userData = {
         name: formData.name,
+        login: formData.login,
         cpf: formData.cpf,
         email: formData.email,
         phone: formData.phone,
@@ -94,6 +97,7 @@ export default function UsersPage() {
     setEditingUser(user);
     setFormData({
       name: user.name,
+      login: user.login || '',
       cpf: user.cpf,
       email: user.email,
       phone: user.phone,
@@ -122,6 +126,7 @@ export default function UsersPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      login: '',
       cpf: '',
       email: '',
       phone: '',
@@ -204,6 +209,17 @@ export default function UsersPage() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Usuário/Login *</label>
+                    <input
+                      type="text"
+                      value={formData.login}
+                      onChange={(e) => setFormData({ ...formData, login: e.target.value })}
+                      required
+                      placeholder="usuario"
                       className="w-full px-3 py-2 border rounded-md"
                     />
                   </div>
