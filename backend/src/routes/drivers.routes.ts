@@ -106,12 +106,21 @@ router.get('/:id', async (req, res) => {
 // POST /api/drivers - Criar novo motorista
 router.post('/', async (req, res) => {
   try {
-    const { email, password, name, cpf, phone } = req.body;
+    const { login, email, password, name, cpf, phone } = req.body;
 
-    if (!email || !password || !name) {
+    if (!login || !email || !password || !name) {
       return res.status(400).json({ 
-        message: 'Email, password and name are required' 
+        message: 'Login, email, senha e nome são obrigatórios' 
       });
+    }
+
+    // Verificar se o login já existe
+    const existingLogin = await prisma.user.findUnique({
+      where: { login },
+    });
+
+    if (existingLogin) {
+      return res.status(409).json({ message: 'Login já está em uso' });
     }
 
     // Verificar se o email já existe
@@ -138,6 +147,7 @@ router.post('/', async (req, res) => {
 
     const driver = await prisma.user.create({
       data: {
+        login,
         email,
         password: hashedPassword,
         name,
@@ -147,6 +157,7 @@ router.post('/', async (req, res) => {
       },
       select: {
         id: true,
+        login: true,
         email: true,
         name: true,
         cpf: true,
