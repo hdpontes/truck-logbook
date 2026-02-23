@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { trucksAPI } from '@/lib/api';
-import { Truck, Plus, Edit, Trash2, MapPin } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, MapPin, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,6 +16,8 @@ interface TruckData {
   avgConsumption: number;
   status: 'GARAGE' | 'IN_TRANSIT' | 'MAINTENANCE';
   active: boolean;
+  hasOverdueMaintenance?: boolean;
+  pendingMaintenancesCount?: number;
   _count?: {
     trips: number;
     expenses: number;
@@ -138,6 +140,25 @@ const TrucksPage: React.FC = () => {
                     <p className="text-lg font-medium">{truck.brand} {truck.model}</p>
                     <p className="text-sm text-gray-500">Year: {truck.year} | {truck.color}</p>
                   </div>
+                  
+                  {/* Alerta de Manutenção */}
+                  {truck.hasOverdueMaintenance && (
+                    <div className="bg-red-100 border border-red-300 rounded-md p-2 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                      <span className="text-xs text-red-800 font-semibold">
+                        Manutenção Atrasada!
+                      </span>
+                    </div>
+                  )}
+                  
+                  {!truck.hasOverdueMaintenance && truck.pendingMaintenancesCount && truck.pendingMaintenancesCount > 0 && (
+                    <div className="bg-yellow-100 border border-yellow-300 rounded-md p-2 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+                      <span className="text-xs text-yellow-800 font-semibold">
+                        {truck.pendingMaintenancesCount} manutenção(ões) programada(s)
+                      </span>
+                    </div>
+                  )}
                   
                   {truck._count && (
                     <div className="flex items-center text-sm text-gray-600">
