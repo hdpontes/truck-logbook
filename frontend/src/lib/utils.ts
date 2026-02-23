@@ -23,9 +23,10 @@ export function formatDateTime(date: string | Date): string {
   });
 }
 
-export function formatCurrency(value: number): string {
+export function formatCurrency(value: number | null | undefined): string {
+  const numValue = value ?? 0;
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(value);
+  }).format(numValue);
 }
