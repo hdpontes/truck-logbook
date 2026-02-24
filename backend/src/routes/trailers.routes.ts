@@ -262,7 +262,10 @@ router.post('/import/csv', async (req, res) => {
 
     for (const trailerData of trailers) {
       try {
-        const { plate, model, brand, year, capacity, active } = trailerData;
+        let { plate, model, brand, year, capacity, active } = trailerData;
+
+        // Converter placa para string
+        plate = plate ? String(plate).toUpperCase() : null;
 
         if (!plate) {
           results.errors.push({
@@ -274,11 +277,11 @@ router.post('/import/csv', async (req, res) => {
 
         // Verificar se a carreta já existe
         const existingTrailer = await prisma.trailer.findUnique({
-          where: { plate: String(plate).toUpperCase() },
+          where: { plate },
         });
 
         const trailerPayload = {
-          plate: String(plate).toUpperCase(),
+          plate,
           model: model || null,
           brand: brand || null,
           year: year ? parseInt(year) : null,
@@ -289,7 +292,7 @@ router.post('/import/csv', async (req, res) => {
         if (existingTrailer) {
           // Atualizar carreta existente
           await prisma.trailer.update({
-            where: { plate: String(plate).toUpperCase() },
+            where: { plate },
             data: trailerPayload,
           });
         } else {
