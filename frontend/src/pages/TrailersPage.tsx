@@ -143,7 +143,7 @@ const TrailersPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
                     <Truck className="h-5 w-5" />
-                    {trailer.plate}
+                    <span className="uppercase">{trailer.plate}</span>
                   </CardTitle>
                   <div className="flex gap-2">
                     <Button
