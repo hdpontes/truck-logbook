@@ -119,7 +119,6 @@ router.get('/export/csv', async (req, res) => {
     });
 
     const csvData = locations.map(location => ({
-      id: location.id,
       name: location.name,
       city: location.city,
       state: location.state,
