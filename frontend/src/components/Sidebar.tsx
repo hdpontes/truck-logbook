@@ -21,13 +21,6 @@ import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
 
 const getMenuItems = (userRole: string) => {
-  const baseItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Truck, label: 'Caminhões', path: '/trucks' },
-    { icon: Truck, label: 'Carretas', path: '/trailers' },
-    { icon: RouteIcon, label: 'Viagens', path: '/trips' },
-  ];
-
   // DRIVER vê apenas Viagens
   if (userRole === 'DRIVER') {
     return [
@@ -38,35 +31,44 @@ const getMenuItems = (userRole: string) => {
   // ADMIN vê tudo incluindo gestão
   if (userRole === 'ADMIN') {
     return [
-      ...baseItems,
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+      { icon: RouteIcon, label: 'Viagens', path: '/trips' },
+      { icon: Truck, label: 'Caminhões', path: '/trucks' },
+      { icon: Truck, label: 'Carretas', path: '/trailers' },
       { icon: Receipt, label: 'Despesas', path: '/expenses' },
       { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
       { icon: Users, label: 'Motoristas', path: '/drivers' },
-      { icon: UserCog, label: 'Usuários', path: '/users' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
+      { icon: UserCog, label: 'Usuários', path: '/users' },
     ];
   }
 
   // MANAGER vê operacional mas não gestão de usuários
   if (userRole === 'MANAGER') {
     return [
-      ...baseItems,
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+      { icon: RouteIcon, label: 'Viagens', path: '/trips' },
+      { icon: Truck, label: 'Caminhões', path: '/trucks' },
+      { icon: Truck, label: 'Carretas', path: '/trailers' },
       { icon: Receipt, label: 'Despesas', path: '/expenses' },
       { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
       { icon: Users, label: 'Motoristas', path: '/drivers' },
-      { icon: UserCog, label: 'Usuários', path: '/users' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
+      { icon: UserCog, label: 'Usuários', path: '/users' },
     ];
   }
 
   // Default - não deveria chegar aqui
-  return baseItems;
+  return [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: RouteIcon, label: 'Viagens', path: '/trips' },
+  ];
 };
 
 interface SidebarProps {
