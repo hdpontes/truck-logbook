@@ -87,12 +87,19 @@ router.get('/overview', async (req, res) => {
           _sum: { revenue: true, totalCost: true, profit: true },
         });
 
-        const allExpenses = await prisma.expense.aggregate({
+        // Pegar despesas que não estão vinculadas a viagens (despesas avulsas)
+        const standaloneExpenses = await prisma.expense.aggregate({
+          where: { tripId: null },
           _sum: { amount: true },
         });
 
         const totalRevenue = financialMetrics._sum.revenue || 0;
-        const totalCost = (allExpenses._sum.amount || 0);
+        
+        // Somar custos de viagens completas + despesas avulsas (manutenções, etc)
+        const tripCosts = financialMetrics._sum.totalCost || 0;
+        const standaloneCosts = standaloneExpenses._sum.amount || 0;
+        
+        const totalCost = tripCosts + standaloneCosts;
         const totalProfit = totalRevenue - totalCost;
 
         return {
