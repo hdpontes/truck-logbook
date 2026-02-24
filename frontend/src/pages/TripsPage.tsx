@@ -245,12 +245,40 @@ export default function TripsPage() {
       }
     }
 
+    // Se já descarregou, está retornando à garagem
+    const stage = getTripWorkflowStage(trip);
+    if (stage === 'returning') {
+      return { text: 'Retornando à garagem', color: 'bg-blue-100 text-blue-800' };
+    }
+
     return { text: 'Em Andamento', color: 'bg-yellow-100 text-yellow-800' };
   };
 
   const isTripPaused = (trip: Trip): boolean => {
     if (!trip.legs || trip.legs.length === 0) return false;
     return trip.legs.some(leg => leg.status === 'PAUSED' && leg.type === 'AGUARDANDO');
+  };
+
+  const getTripWorkflowStage = (trip: Trip): 'initial' | 'delivering' | 'returning' => {
+    if (!trip.legs || trip.legs.length === 0) return 'initial';
+    
+    // Verificar se já completou o carregamento
+    const hasCompletedLoading = trip.legs.some(
+      leg => leg.type === 'AGUARDANDO' && 
+             leg.waitingType === 'LOADING' && 
+             leg.status === 'COMPLETED'
+    );
+    
+    // Verificar se já completou o descarregamento
+    const hasCompletedUnloading = trip.legs.some(
+      leg => leg.type === 'AGUARDANDO' && 
+             leg.waitingType === 'UNLOADING' && 
+             leg.status === 'COMPLETED'
+    );
+    
+    if (hasCompletedUnloading) return 'returning'; // Após descarregar, retornando para garagem
+    if (hasCompletedLoading) return 'delivering'; // Após carregar, indo para destino
+    return 'initial'; // Ainda não carregou
   };
 
   const handleStartTrip = async (trip: Trip) => {
@@ -385,8 +413,10 @@ export default function TripsPage() {
       
       const pausedLeg = trip.legs?.find(leg => leg.status === 'PAUSED' && leg.type === 'AGUARDANDO');
       const successMessage = pausedLeg?.waitingType === 'LOADING' 
-        ? 'Viagem retomada! Continue para o destino.'
-        : 'Viagem retomada! Carreto descarregado.';
+        ? 'Carreta carregada! Continue para o destino.'
+        : pausedLeg?.waitingType === 'UNLOADING'
+        ? 'Carreta descarregada! Retornando à garagem.'
+        : 'Viagem retomada!';
       
       toast.success(successMessage);
       fetchTrips();
@@ -791,34 +821,45 @@ export default function TripsPage() {
                         {user?.role === 'DRIVER' && trip.driver.id === user.id && (
                           <>
                             {isTripPaused(trip) ? (
-                              // Botão Continuar quando estiver pausado
+                              // Botão contextual quando estiver pausado
                               <Button
                                 size="sm"
                                 onClick={() => handleResumeTrip(trip)}
                                 className="flex-1 min-w-[100px] text-xs h-8 bg-green-600 hover:bg-green-700 text-white"
                               >
                                 <Play className="w-3 h-3 mr-1" />
-                                Continuar
+                                {trip.legs?.find(leg => leg.status === 'PAUSED' && leg.waitingType === 'LOADING')
+                                  ? 'Carreta carregada'
+                                  : trip.legs?.find(leg => leg.status === 'PAUSED' && leg.waitingType === 'UNLOADING')
+                                  ? 'Carreta descarregada'
+                                  : 'Continuar'}
                               </Button>
                             ) : (
-                              // Botões normais quando não estiver pausado
+                              // Botões baseados no estágio do workflow
                               <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenPauseModal(trip, 'LOADING')}
-                                  className="flex-1 min-w-[100px] text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white"
-                                >
-                                  <Package className="w-3 h-3 mr-1" />
-                                  Carreg.
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenPauseModal(trip, 'UNLOADING')}
-                                  className="flex-1 min-w-[100px] text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
-                                >
-                                  <Package className="w-3 h-3 mr-1" />
-                                  Descarreg.
-                                </Button>
+                                {getTripWorkflowStage(trip) === 'initial' && (
+                                  // Estágio inicial: só pode carregar (na origem)
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleOpenPauseModal(trip, 'LOADING')}
+                                    className="flex-1 min-w-[100px] text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white"
+                                  >
+                                    <Package className="w-3 h-3 mr-1" />
+                                    Carregar
+                                  </Button>
+                                )}
+                                {getTripWorkflowStage(trip) === 'delivering' && (
+                                  // Já carregou, indo para destino: só pode descarregar
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleOpenPauseModal(trip, 'UNLOADING')}
+                                    className="flex-1 min-w-[100px] text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
+                                  >
+                                    <Package className="w-3 h-3 mr-1" />
+                                    Descarregar
+                                  </Button>
+                                )}
+                                {/* Estágio 'returning': Já descarregou, nenhum botão de carga/descarga */}
                               </>
                             )}
                             <Button
