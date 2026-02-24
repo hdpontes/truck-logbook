@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { expensesAPI } from '@/lib/api';
-import { Receipt, Plus, Trash2 } from 'lucide-react';
+import { Receipt, Plus, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 interface Expense {
   id: string;
@@ -32,6 +33,7 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     fetchExpenses();
@@ -74,6 +76,33 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await expensesAPI.exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'despesas.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar CSV');
+    }
+  };
+
+  const handleImportCSV = async (csvData: string) => {
+    try {
+      const result = await expensesAPI.importCSV(csvData);
+      await fetchExpenses();
+      return result;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erro ao importar CSV');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -86,10 +115,20 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Despesas</h1>
-        <Button onClick={() => navigate('/expenses/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Despesa
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={() => navigate('/expenses/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Despesa
+          </Button>
+        </div>
       </div>
 
       {expenses.length === 0 ? (
@@ -196,6 +235,14 @@ export default function ExpensesPage() {
         </Card>
       </div>
     )}
+
+      {/* Modal de Import CSV */}
+      <ImportCSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        title="Importar Despesas CSV"
+      />
     </div>
   );
 }
