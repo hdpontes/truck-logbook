@@ -269,6 +269,13 @@ export default function MaintenanceFormPage() {
                   name="scheduledDate"
                   value={formData.scheduledDate}
                   onChange={handleChange}
+                  onClick={(e) => {
+                    try {
+                      (e.target as HTMLInputElement).showPicker?.();
+                    } catch (error) {
+                      // showPicker não suportado em alguns navegadores
+                    }
+                  }}
                   className="w-full px-3 py-2 border rounded-md"
                 />
               </div>
