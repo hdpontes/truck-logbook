@@ -603,11 +603,11 @@ router.post('/:id/legs/:legId/finish', async (req, res) => {
   }
 });
 
-// POST /api/trips/:id/pause - Pausar viagem (deixar carreto carregando)
+// POST /api/trips/:id/pause - Pausar viagem (deixar carreto carregando ou descarregando)
 router.post('/:id/pause', async (req, res) => {
   try {
     const { id } = req.params;
-    const { currentMileage, location } = req.body;
+    const { currentMileage, location, waitingType } = req.body;
 
     const trip = await prisma.trip.findUnique({
       where: { id },
@@ -643,6 +643,18 @@ router.post('/:id/pause', async (req, res) => {
       });
     }
 
+    // Validar tipo de espera
+    const validWaitingType = waitingType || 'LOADING';
+    if (!['LOADING', 'UNLOADING'].includes(validWaitingType)) {
+      return res.status(400).json({ 
+        message: 'Tipo de espera inválido. Use LOADING ou UNLOADING' 
+      });
+    }
+
+    const waitingDescription = validWaitingType === 'LOADING' 
+      ? 'Aguardando carregamento do carreto'
+      : 'Aguardando descarregamento do carreto';
+
     // Finalizar trecho atual e criar trecho de aguardamento
     const transactionOperations: any[] = [
       // Finalizar trecho atual
@@ -668,8 +680,9 @@ router.post('/:id/pause', async (req, res) => {
           driverId: activeLeg.driverId,
           startMileage: finalMileage,
           status: 'PAUSED',
+          waitingType: validWaitingType,
           startTime: new Date(),
-          notes: 'Aguardando carregamento do carreto',
+          notes: waitingDescription,
         },
       }),
       // Atualizar quilometragem do caminhão
