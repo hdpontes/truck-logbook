@@ -825,7 +825,10 @@ export default function TripsPage() {
                               <Button
                                 size="sm"
                                 onClick={() => handleResumeTrip(trip)}
-                                className="flex-1 min-w-[100px] text-xs h-8 bg-green-400 hover:bg-green-500 text-white"
+                                className="flex-1 min-w-[100px] text-xs h-8 text-white"
+                                style={{ backgroundColor: '#86efac', color: 'white' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4ade80'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#86efac'}
                               >
                                 <Play className="w-3 h-3 mr-1" />
                                 {trip.legs?.find(leg => leg.status === 'PAUSED' && leg.waitingType === 'LOADING')
@@ -842,7 +845,10 @@ export default function TripsPage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleOpenPauseModal(trip, 'LOADING')}
-                                    className="flex-1 min-w-[100px] text-xs h-8 bg-purple-400 hover:bg-purple-500 text-white"
+                                    className="flex-1 min-w-[100px] text-xs h-8 text-white"
+                                    style={{ backgroundColor: '#c084fc', color: 'white' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#a855f7'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c084fc'}
                                   >
                                     <Package className="w-3 h-3 mr-1" />
                                     Carregar
@@ -853,7 +859,10 @@ export default function TripsPage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleOpenPauseModal(trip, 'UNLOADING')}
-                                    className="flex-1 min-w-[100px] text-xs h-8 bg-purple-400 hover:bg-purple-500 text-white"
+                                    className="flex-1 min-w-[100px] text-xs h-8 text-white"
+                                    style={{ backgroundColor: '#c084fc', color: 'white' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#a855f7'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c084fc'}
                                   >
                                     <Package className="w-3 h-3 mr-1" />
                                     Descarregar
@@ -864,7 +873,10 @@ export default function TripsPage() {
                                   <Button
                                     size="sm"
                                     onClick={() => handleOpenFinishModal(trip)}
-                                    className="flex-1 min-w-[90px] text-xs h-8 bg-green-400 hover:bg-green-500 text-white"
+                                    className="flex-1 min-w-[90px] text-xs h-8 text-white"
+                                    style={{ backgroundColor: '#86efac', color: 'white' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4ade80'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#86efac'}
                                   >
                                     <CheckCircle className="w-3 h-3 mr-1" />
                                     Concluir
