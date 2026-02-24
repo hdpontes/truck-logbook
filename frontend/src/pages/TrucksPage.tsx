@@ -14,6 +14,7 @@ interface TruckData {
   color: string;
   capacity: number;
   avgConsumption: number;
+  currentMileage: number;
   status: 'GARAGE' | 'IN_TRANSIT' | 'MAINTENANCE';
   active: boolean;
   hasOverdueMaintenance?: boolean;
@@ -148,7 +149,10 @@ const TrucksPage: React.FC = () => {
                 <div className="space-y-3">
                   <div>
                     <p className="text-lg font-medium">{truck.brand} {truck.model}</p>
-                    <p className="text-sm text-gray-500">Year: {truck.year} | {truck.color}</p>
+                    <p className="text-sm text-gray-500">Year: {truck.year}</p>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {truck.currentMileage ? truck.currentMileage.toLocaleString('pt-BR') : '0'} km
+                    </p>
                   </div>
                   
                   {/* Alerta de Manutenção */}
