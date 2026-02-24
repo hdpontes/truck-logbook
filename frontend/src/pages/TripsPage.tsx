@@ -385,14 +385,22 @@ export default function TripsPage() {
                     <p className="font-medium text-sm md:text-base truncate">{trip.driver.name}</p>
                   </div>
                   <div>
+                    <p className="text-xs md:text-sm text-gray-600">Cliente</p>
+                    <p className="font-medium text-sm md:text-base truncate">
+                      {trip.client?.name || 'Não informado'}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-xs md:text-sm text-gray-600">Distância</p>
                     <p className="font-medium text-sm md:text-base">{trip.distance} km</p>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <p className="text-xs md:text-sm text-gray-600">Data</p>
+                    <p className="text-xs md:text-sm text-gray-600">Data/Hora Início</p>
                     <p className="font-medium text-sm md:text-base">
                       {new Date(trip.startDate).toLocaleDateString('pt-BR')}
-                      {trip.endDate && ` - ${new Date(trip.endDate).toLocaleDateString('pt-BR')}`}
+                    </p>
+                    <p className="text-xs md:text-sm text-gray-500">
+                      {new Date(trip.startDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
