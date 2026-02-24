@@ -16,8 +16,7 @@ import {
   Settings,
   X,
   FileText,
-  CreditCard,
-  KeyRound
+  CreditCard
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -30,11 +29,10 @@ const getMenuItems = (userRole: string) => {
     { icon: RouteIcon, label: 'Viagens', path: '/trips' },
   ];
 
-  // DRIVER vê apenas Viagens e Alterar Senha
+  // DRIVER vê apenas Viagens
   if (userRole === 'DRIVER') {
     return [
       { icon: RouteIcon, label: 'Viagens', path: '/trips' },
-      { icon: KeyRound, label: 'Alterar Senha', path: '/change-password' },
     ];
   }
 
@@ -51,7 +49,6 @@ const getMenuItems = (userRole: string) => {
       { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: Settings, label: 'Configurações', path: '/settings' },
-      { icon: KeyRound, label: 'Alterar Senha', path: '/change-password' },
     ];
   }
 
@@ -68,7 +65,6 @@ const getMenuItems = (userRole: string) => {
       { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: Settings, label: 'Configurações', path: '/settings' },
-      { icon: KeyRound, label: 'Alterar Senha', path: '/change-password' },
     ];
   }
 
