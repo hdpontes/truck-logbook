@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, driversAPI, clientsAPI, expensesAPI } from '@/lib/api';
-import { Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search, Clock, Play, CheckCircle, DollarSign } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -67,6 +67,12 @@ export default function TripsPage() {
     description: '',
     date: new Date().toISOString().split('T')[0],
   });
+  
+  // Estados para modal de pausar viagem (deixar carreto)
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [tripToPause, setTripToPause] = useState<Trip | null>(null);
+  const [pauseMileage, setPauseMileage] = useState('');
+  const [pauseLocation, setPauseLocation] = useState('');
   
   // Estados para filtros avançados
   const [showFilters, setShowFilters] = useState(false);
@@ -294,6 +300,44 @@ export default function TripsPage() {
     } catch (error: any) {
       console.error('Erro ao criar despesa:', error);
       toast.error(error.response?.data?.message || 'Erro ao criar despesa');
+    }
+  };
+
+  const handleOpenPauseModal = (trip: Trip) => {
+    setTripToPause(trip);
+    setPauseMileage('');
+    setPauseLocation(trip.destination || '');
+    setShowPauseModal(true);
+  };
+
+  const handlePauseTrip = async () => {
+    if (!tripToPause) return;
+    
+    if (!pauseMileage || parseFloat(pauseMileage) <= 0) {
+      toast.error('Informe a quilometragem atual do caminhão');
+      return;
+    }
+
+    if (!pauseLocation.trim()) {
+      toast.error('Informe o local onde o carreto ficará carregando');
+      return;
+    }
+
+    try {
+      await tripsAPI.pause(tripToPause.id, {
+        currentMileage: parseFloat(pauseMileage),
+        location: pauseLocation,
+      });
+      
+      toast.success('Carreto deixado para carregamento. Você pode iniciar outra viagem!');
+      setShowPauseModal(false);
+      setTripToPause(null);
+      setPauseMileage('');
+      setPauseLocation('');
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao pausar viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao pausar viagem');
     }
   };
 
@@ -693,6 +737,14 @@ export default function TripsPage() {
                           <>
                             <Button
                               size="sm"
+                              onClick={() => handleOpenPauseModal(trip)}
+                              className="flex-1 min-w-[100px] text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              <Package className="w-3 h-3 mr-1" />
+                              Deixar Carreto
+                            </Button>
+                            <Button
+                              size="sm"
                               onClick={() => handleOpenFinishModal(trip)}
                               className="flex-1 min-w-[90px] text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
                             >
@@ -1008,6 +1060,94 @@ export default function TripsPage() {
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Concluir Viagem
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Pausar Viagem (Deixar Carreto) */}
+    {showPauseModal && tripToPause && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-orange-600">Deixar Carreto Carregando</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Viagem: <span className="font-medium">{tripToPause.origin} → {tripToPause.destination}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Caminhão: <span className="font-medium">{tripToPause.truck.plate}</span>
+                </p>
+                {tripToPause.trailer && (
+                  <p className="text-sm text-gray-600 mb-4">
+                    Carreto: <span className="font-medium">{tripToPause.trailer.plate}</span>
+                  </p>
+                )}
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                <p className="text-xs text-yellow-800">
+                  <strong>💡 Atenção:</strong> Ao deixar o carreto carregando, você poderá iniciar outra viagem com o mesmo caminhão. O sistema criará automaticamente os trechos necessários.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quilometragem Atual do Caminhão *
+                </label>
+                <input
+                  type="number"
+                  value={pauseMileage}
+                  onChange={(e) => setPauseMileage(e.target.value)}
+                  placeholder="Ex: 50080"
+                  min="0"
+                  step="0.1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Local onde o carreto ficará *
+                </label>
+                <input
+                  type="text"
+                  value={pauseLocation}
+                  onChange={(e) => setPauseLocation(e.target.value)}
+                  placeholder="Ex: Cliente X - Endereço"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Informe onde o caminhão está deixando o carreto para carregamento
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowPauseModal(false);
+                  setTripToPause(null);
+                  setPauseMileage('');
+                  setPauseLocation('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handlePauseTrip}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                <Package className="w-4 h-4 mr-2" />
+                Deixar Carreto
               </Button>
             </div>
           </CardContent>
