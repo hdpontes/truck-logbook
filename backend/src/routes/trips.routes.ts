@@ -435,6 +435,7 @@ router.post('/:id/finish', async (req, res) => {
     let calculatedFuelCost = fuelCost;
     let shouldCreateFuelExpense = false;
     let estimatedFuelCost = 0;
+    let litersConsumed = 0;
     
     if (finalDistance > 0 && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
       // Buscar preço do diesel nas configurações
@@ -443,7 +444,7 @@ router.post('/:id/finish', async (req, res) => {
       
       if (dieselPrice > 0) {
         // Calcular litros consumidos = distância / km por litro
-        const litersConsumed = finalDistance / trip.truck.avgConsumption;
+        litersConsumed = finalDistance / trip.truck.avgConsumption;
         // Calcular custo estimado
         estimatedFuelCost = litersConsumed * dieselPrice;
         
@@ -501,7 +502,7 @@ router.post('/:id/finish', async (req, res) => {
             truckId: trip.truckId,
             tripId: trip.id,
             type: 'FUEL',
-            description: `Combustível calculado automaticamente (${(finalDistance / trip.truck.avgConsumption).toFixed(2)}L)`,
+            description: `Combustível calculado automaticamente (${litersConsumed.toFixed(2)}L)`,
             amount: estimatedFuelCost,
             date: endDate ? new Date(endDate) : new Date(),
           },
