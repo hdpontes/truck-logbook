@@ -65,6 +65,7 @@ export const tripsAPI = {
   start: (id: string) => api.post(`/trips/${id}/start`).then(res => res.data),
   finish: (id: string, data?: any) => api.post(`/trips/${id}/finish`, data).then(res => res.data),
   pause: (id: string, data: { currentMileage: number; location: string; waitingType: 'LOADING' | 'UNLOADING' }) => api.post(`/trips/${id}/pause`, data).then(res => res.data),
+  resume: (id: string, data?: { currentMileage?: number }) => api.post(`/trips/${id}/resume`, data).then(res => res.data),
   checkDelayed: () => api.post('/trips/check-delayed').then(res => res.data),
   checkUpcoming: () => api.post('/trips/check-upcoming').then(res => res.data),
   sendReminder: (id: string) => api.post(`/trips/${id}/send-reminder`).then(res => res.data),
