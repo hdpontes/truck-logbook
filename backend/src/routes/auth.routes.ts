@@ -93,7 +93,8 @@ router.post('/login', async (req: Request, res: Response) => {
         login: user.login,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        isTemporaryPassword: user.isTemporaryPassword || false
       }
     });
   } catch (error) {
@@ -269,7 +270,10 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     // Atualizar senha do usuário
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashedPassword }
+      data: { 
+        password: hashedPassword,
+        isTemporaryPassword: true
+      }
     });
 
     // Enviar webhook para notificação via WhatsApp com a senha temporária
@@ -363,7 +367,10 @@ router.post('/change-password', async (req: Request, res: Response) => {
     // Atualizar senha
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword }
+      data: { 
+        password: hashedPassword,
+        isTemporaryPassword: false
+      }
     });
 
     console.log('✅ Password changed successfully for:', user.login);
@@ -379,6 +386,91 @@ router.post('/change-password', async (req: Request, res: Response) => {
       });
     }
     console.error('💥 Change password error:', error);
+    res.status(500).json({ 
+      message: 'Erro ao alterar senha. Tente novamente.' 
+    });
+  }
+});
+
+// POST /api/auth/change-temporary-password
+router.post('/change-temporary-password', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ 
+        message: 'Token não fornecido' 
+      });
+    }
+
+    const decoded = jwt.verify(token, config.JWT_SECRET) as any;
+    const userId = decoded.userId;
+
+    const { newPassword } = req.body;
+
+    console.log('🔐 Change temporary password request for user:', userId);
+
+    if (!newPassword) {
+      return res.status(400).json({ 
+        message: 'Nova senha é obrigatória' 
+      });
+    }
+
+    if (newPassword.length < 4) {
+      return res.status(400).json({ 
+        message: 'A nova senha deve ter pelo menos 4 caracteres' 
+      });
+    }
+
+    // Buscar usuário
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        login: true,
+        isTemporaryPassword: true,
+        name: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'Usuário não encontrado' 
+      });
+    }
+
+    // Verificar se realmente tem senha temporária
+    if (!user.isTemporaryPassword) {
+      return res.status(400).json({ 
+        message: 'Esta funcionalidade é apenas para senhas temporárias' 
+      });
+    }
+
+    // Hash da nova senha
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Atualizar senha e remover flag de temporária
+    await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        isTemporaryPassword: false
+      }
+    });
+
+    console.log('✅ Temporary password changed successfully for:', user.login);
+
+    res.json({ 
+      message: 'Senha alterada com sucesso!',
+      success: true
+    });
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({ 
+        message: 'Token inválido' 
+      });
+    }
+    console.error('💥 Change temporary password error:', error);
     res.status(500).json({ 
       message: 'Erro ao alterar senha. Tente novamente.' 
     });
