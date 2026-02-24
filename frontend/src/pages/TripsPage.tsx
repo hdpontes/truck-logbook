@@ -39,6 +39,12 @@ interface Trip {
     id: string;
     name: string;
   };
+  legs?: Array<{
+    id: string;
+    status: 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED';
+    waitingType?: 'LOADING' | 'UNLOADING';
+    type: 'NORMAL' | 'AGUARDANDO' | 'REPOSICIONAMENTO';
+  }>;
 }
 
 export default function TripsPage() {
@@ -223,6 +229,30 @@ export default function TripsPage() {
     return `${hours}h ${minutes}m`;
   };
 
+  const getTripDisplayStatus = (trip: Trip) => {
+    if (trip.status !== 'IN_PROGRESS' || !trip.legs || trip.legs.length === 0) {
+      return { text: 'Em Andamento', color: 'bg-yellow-100 text-yellow-800' };
+    }
+
+    // Verificar se existe leg pausado
+    const pausedLeg = trip.legs.find(leg => leg.status === 'PAUSED' && leg.type === 'AGUARDANDO');
+    
+    if (pausedLeg) {
+      if (pausedLeg.waitingType === 'LOADING') {
+        return { text: 'Carregando', color: 'bg-purple-100 text-purple-800' };
+      } else if (pausedLeg.waitingType === 'UNLOADING') {
+        return { text: 'Descarregando', color: 'bg-indigo-100 text-indigo-800' };
+      }
+    }
+
+    return { text: 'Em Andamento', color: 'bg-yellow-100 text-yellow-800' };
+  };
+
+  const isTripPaused = (trip: Trip): boolean => {
+    if (!trip.legs || trip.legs.length === 0) return false;
+    return trip.legs.some(leg => leg.status === 'PAUSED' && leg.type === 'AGUARDANDO');
+  };
+
   const handleStartTrip = async (trip: Trip) => {
     try {
       await tripsAPI.start(trip.id);
@@ -346,6 +376,23 @@ export default function TripsPage() {
     } catch (error: any) {
       console.error('Erro ao pausar viagem:', error);
       toast.error(error.response?.data?.message || 'Erro ao pausar viagem');
+    }
+  };
+
+  const handleResumeTrip = async (trip: Trip) => {
+    try {
+      await tripsAPI.resume(trip.id, {});
+      
+      const pausedLeg = trip.legs?.find(leg => leg.status === 'PAUSED' && leg.type === 'AGUARDANDO');
+      const successMessage = pausedLeg?.waitingType === 'LOADING' 
+        ? 'Viagem retomada! Continue para o destino.'
+        : 'Viagem retomada! Carreto descarregado.';
+      
+      toast.success(successMessage);
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao continuar viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao continuar viagem');
     }
   };
 
@@ -673,8 +720,8 @@ export default function TripsPage() {
                             )}
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 bg-yellow-100 text-yellow-800">
-                          Em Andamento
+                        <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 ${getTripDisplayStatus(trip).color}`}>
+                          {getTripDisplayStatus(trip).text}
                         </span>
                       </div>
 
@@ -743,22 +790,37 @@ export default function TripsPage() {
                         {/* Botões para Motorista da viagem */}
                         {user?.role === 'DRIVER' && trip.driver.id === user.id && (
                           <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleOpenPauseModal(trip, 'LOADING')}
-                              className="flex-1 min-w-[100px] text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white"
-                            >
-                              <Package className="w-3 h-3 mr-1" />
-                              Carreg.
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleOpenPauseModal(trip, 'UNLOADING')}
-                              className="flex-1 min-w-[100px] text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
-                            >
-                              <Package className="w-3 h-3 mr-1" />
-                              Descarreg.
-                            </Button>
+                            {isTripPaused(trip) ? (
+                              // Botão Continuar quando estiver pausado
+                              <Button
+                                size="sm"
+                                onClick={() => handleResumeTrip(trip)}
+                                className="flex-1 min-w-[100px] text-xs h-8 bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <Play className="w-3 h-3 mr-1" />
+                                Continuar
+                              </Button>
+                            ) : (
+                              // Botões normais quando não estiver pausado
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenPauseModal(trip, 'LOADING')}
+                                  className="flex-1 min-w-[100px] text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white"
+                                >
+                                  <Package className="w-3 h-3 mr-1" />
+                                  Carreg.
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenPauseModal(trip, 'UNLOADING')}
+                                  className="flex-1 min-w-[100px] text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
+                                >
+                                  <Package className="w-3 h-3 mr-1" />
+                                  Descarreg.
+                                </Button>
+                              </>
+                            )}
                             <Button
                               size="sm"
                               onClick={() => handleOpenFinishModal(trip)}
