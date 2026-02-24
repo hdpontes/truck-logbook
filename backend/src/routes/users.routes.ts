@@ -471,8 +471,8 @@ router.post('/import/csv', async (req, res) => {
           login: login || email, // Se não tiver login, usa o email
           email,
           name,
-          cpf: cpf || null,
-          phone: phone || null,
+          cpf: cpf ? String(cpf) : null,
+          phone: phone ? String(phone) : null,
           role: role || 'DRIVER', // Default DRIVER
           active: active !== false, // Default to true if not specified
         };
