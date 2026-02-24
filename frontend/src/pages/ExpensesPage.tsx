@@ -5,6 +5,8 @@ import { Receipt, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Expense {
   id: string;
@@ -18,11 +20,14 @@ interface Expense {
   trip?: {
     origin: string;
     destination: string;
+    status: string;
   };
 }
 
 export default function ExpensesPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const toast = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -55,8 +60,14 @@ export default function ExpensesPage() {
     try {
       await expensesAPI.delete(expenseToDelete);
       setExpenses(expenses.filter(exp => exp.id !== expenseToDelete));
-    } catch (error) {
+      toast.success('Despesa excluída com sucesso!');
+    } catch (error: any) {
       console.error('Erro ao excluir despesa:', error);
+      if (error.response?.status === 403) {
+        toast.error(error.response?.data?.message || 'Você não tem permissão para excluir esta despesa.');
+      } else {
+        toast.error('Erro ao excluir despesa.');
+      }
     } finally {
       setShowDeleteModal(false);
       setExpenseToDelete(null);
@@ -132,15 +143,18 @@ export default function ExpensesPage() {
                 )}
 
                 <div className="flex justify-end mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(expense.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
-                  </Button>
+                  {/* Motorista não pode deletar despesa de viagem concluída */}
+                  {!(user?.role === 'DRIVER' && expense.trip?.status === 'COMPLETED') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(expense.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
