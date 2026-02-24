@@ -526,12 +526,12 @@ export default function TripsPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="text-gray-500">Caminhão:</span>
-                          <p className="font-medium">{trip.truck.plate}</p>
+                          <p className="font-medium uppercase">{trip.truck.plate}</p>
                         </div>
                         {trip.trailer && (
                           <div>
                             <span className="text-gray-500">Reboque:</span>
-                            <p className="font-medium">{trip.trailer.plate}</p>
+                            <p className="font-medium uppercase">{trip.trailer.plate}</p>
                           </div>
                         )}
                         <div>
@@ -690,12 +690,12 @@ export default function TripsPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="text-gray-500">Caminhão:</span>
-                          <p className="font-medium">{trip.truck.plate}</p>
+                          <p className="font-medium uppercase">{trip.truck.plate}</p>
                         </div>
                         {trip.trailer && (
                           <div>
                             <span className="text-gray-500">Reboque:</span>
-                            <p className="font-medium">{trip.trailer.plate}</p>
+                            <p className="font-medium uppercase">{trip.trailer.plate}</p>
                           </div>
                         )}
                         <div>
@@ -871,12 +871,12 @@ export default function TripsPage() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <span className="text-gray-500">Caminhão:</span>
-                          <p className="font-medium">{trip.truck.plate}</p>
+                          <p className="font-medium uppercase">{trip.truck.plate}</p>
                         </div>
                         {trip.trailer && (
                           <div>
                             <span className="text-gray-500">Reboque:</span>
-                            <p className="font-medium">{trip.trailer.plate}</p>
+                            <p className="font-medium uppercase">{trip.trailer.plate}</p>
                           </div>
                         )}
                         <div>
@@ -1035,7 +1035,7 @@ export default function TripsPage() {
                   Viagem: <span className="font-medium">{tripToFinish.origin} → {tripToFinish.destination}</span>
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
-                  Caminhão: <span className="font-medium">{tripToFinish.truck.plate}</span>
+                  Caminhão: <span className="font-medium uppercase">{tripToFinish.truck.plate}</span>
                 </p>
               </div>
               <div>
@@ -1099,11 +1099,11 @@ export default function TripsPage() {
                   Viagem: <span className="font-medium">{tripToPause.origin} → {tripToPause.destination}</span>
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
-                  Caminhão: <span className="font-medium">{tripToPause.truck.plate}</span>
+                  Caminhão: <span className="font-medium uppercase">{tripToPause.truck.plate}</span>
                 </p>
                 {tripToPause.trailer && (
                   <p className="text-sm text-gray-600 mb-4">
-                    Carreto: <span className="font-medium">{tripToPause.trailer.plate}</span>
+                    Carreto: <span className="font-medium uppercase">{tripToPause.trailer.plate}</span>
                   </p>
                 )}
               </div>
