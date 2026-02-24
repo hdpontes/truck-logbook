@@ -419,7 +419,6 @@ router.get('/export/csv', async (req, res) => {
     });
 
     const csvData = expenses.map(expense => ({
-      id: expense.id,
       truckPlate: expense.truck?.plate || '',
       tripOrigin: expense.trip?.origin || '',
       tripDestination: expense.trip?.destination || '',
