@@ -376,6 +376,13 @@ export default function TripEditPage() {
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
+                  onClick={(e) => {
+                    try {
+                      (e.target as HTMLInputElement).showPicker?.();
+                    } catch (error) {
+                      // showPicker não suportado em alguns navegadores
+                    }
+                  }}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
