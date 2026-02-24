@@ -433,6 +433,8 @@ router.post('/:id/finish', async (req, res) => {
 
     // Calcular consumo de combustível baseado na kilometragem e consumo do caminhão
     let calculatedFuelCost = fuelCost;
+    let shouldCreateFuelExpense = false;
+    let estimatedFuelCost = 0;
     
     if (finalDistance > 0 && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
       // Buscar preço do diesel nas configurações
@@ -443,11 +445,12 @@ router.post('/:id/finish', async (req, res) => {
         // Calcular litros consumidos = distância / km por litro
         const litersConsumed = finalDistance / trip.truck.avgConsumption;
         // Calcular custo estimado
-        const estimatedFuelCost = litersConsumed * dieselPrice;
+        estimatedFuelCost = litersConsumed * dieselPrice;
         
         // Se não há despesas de combustível registradas, usar o cálculo estimado
         if (fuelCost === 0) {
           calculatedFuelCost = estimatedFuelCost;
+          shouldCreateFuelExpense = true; // Marcar para criar expense
         }
       }
     }
@@ -456,8 +459,8 @@ router.post('/:id/finish', async (req, res) => {
     const profit = trip.revenue - totalCost;
     const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
 
-    // Atualizar trip, retornar caminhão para garagem e atualizar quilometragem
-    const [updatedTrip] = await prisma.$transaction([
+    // Atualizar trip, retornar caminhão para garagem, atualizar quilometragem e criar despesa de combustível se necessário
+    const transactionOperations: any[] = [
       prisma.trip.update({
         where: { id },
         data: {
@@ -488,7 +491,25 @@ router.post('/:id/finish', async (req, res) => {
           ...(finalEndMileage && { currentMileage: finalEndMileage }),
         },
       }),
-    ]);
+    ];
+
+    // Adicionar criação de despesa de combustível se foi calculada automaticamente
+    if (shouldCreateFuelExpense) {
+      transactionOperations.push(
+        prisma.expense.create({
+          data: {
+            truckId: trip.truckId,
+            tripId: trip.id,
+            type: 'FUEL',
+            description: `Combustível calculado automaticamente (${(finalDistance / trip.truck.avgConsumption).toFixed(2)}L)`,
+            amount: estimatedFuelCost,
+            date: endDate ? new Date(endDate) : new Date(),
+          },
+        })
+      );
+    }
+
+    const [updatedTrip] = await prisma.$transaction(transactionOperations);
 
     // Enviar webhook de corrida finalizada
     await sendWebhook('trip.completed', {
