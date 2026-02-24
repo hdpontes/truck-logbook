@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { config } from '../config';
 import axios from 'axios';
+import { convertToCSV, parseCSV } from '../utils/csv';
 
 const router = Router();
 
@@ -336,6 +337,118 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Truck not found' });
     }
     
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/trucks/export/csv - Exportar caminhões para CSV
+router.get('/export/csv', async (req, res) => {
+  try {
+    const trucks = await prisma.truck.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csvData = trucks.map(truck => ({
+      id: truck.id,
+      plate: truck.plate,
+      model: truck.model,
+      brand: truck.brand,
+      year: truck.year,
+      color: truck.color || '',
+      chassisNum: truck.chassisNum || '',
+      capacity: truck.capacity || '',
+      avgConsumption: truck.avgConsumption || '',
+      currentMileage: truck.currentMileage || '',
+      status: truck.status,
+      active: truck.active,
+    }));
+
+    const csv = convertToCSV(csvData);
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=caminhoes.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting trucks to CSV:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trucks/import/csv - Importar caminhões do CSV
+router.post('/import/csv', async (req, res) => {
+  try {
+    const { csvData } = req.body;
+
+    if (!csvData) {
+      return res.status(400).json({ message: 'CSV data is required' });
+    }
+
+    const trucks = parseCSV(csvData);
+    
+    if (trucks.length === 0) {
+      return res.status(400).json({ message: 'No valid data found in CSV' });
+    }
+
+    const results = {
+      success: 0,
+      errors: [] as any[],
+    };
+
+    for (const truckData of trucks) {
+      try {
+        // Verificar se já existe (por placa)
+        const existing = await prisma.truck.findUnique({
+          where: { plate: truckData.plate },
+        });
+
+        if (existing) {
+          // Atualizar
+          await prisma.truck.update({
+            where: { plate: truckData.plate },
+            data: {
+              model: truckData.model,
+              brand: truckData.brand,
+              year: parseInt(truckData.year),
+              color: truckData.color || null,
+              chassisNum: truckData.chassisNum || null,
+              capacity: truckData.capacity ? parseFloat(truckData.capacity) : null,
+              avgConsumption: truckData.avgConsumption ? parseFloat(truckData.avgConsumption) : null,
+              currentMileage: truckData.currentMileage ? parseFloat(truckData.currentMileage) : null,
+              status: truckData.status || 'GARAGE',
+              active: truckData.active !== false,
+            },
+          });
+        } else {
+          // Criar novo
+          await prisma.truck.create({
+            data: {
+              plate: truckData.plate,
+              model: truckData.model,
+              brand: truckData.brand,
+              year: parseInt(truckData.year),
+              color: truckData.color || null,
+              chassisNum: truckData.chassisNum || null,
+              capacity: truckData.capacity ? parseFloat(truckData.capacity) : null,
+              avgConsumption: truckData.avgConsumption ? parseFloat(truckData.avgConsumption) : null,
+              currentMileage: truckData.currentMileage ? parseFloat(truckData.currentMileage) : null,
+              status: truckData.status || 'GARAGE',
+              active: truckData.active !== false,
+            },
+          });
+        }
+
+        results.success++;
+      } catch (error: any) {
+        results.errors.push({
+          plate: truckData.plate,
+          error: error.message,
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error importing trucks from CSV:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
