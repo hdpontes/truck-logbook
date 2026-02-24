@@ -260,7 +260,19 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
       });
     }
 
-    // Enviar webhook para notificação via WhatsApp
+    // Gerar senha temporária (8 caracteres aleatórios)
+    const tempPassword = Math.random().toString(36).slice(-8);
+    
+    // Hash da senha temporária
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    
+    // Atualizar senha do usuário
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
+
+    // Enviar webhook para notificação via WhatsApp com a senha temporária
     await sendWebhook('auth.forgot_password', {
       user: {
         id: user.id,
@@ -270,19 +282,105 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
         phone: user.phone,
         role: user.role
       },
+      temporaryPassword: tempPassword,
       timestamp: new Date().toISOString()
     });
 
-    console.log('✅ Forgot password notification sent for:', user.login);
+    console.log('✅ Temporary password generated and sent for:', user.login);
 
     res.json({ 
-      message: 'Notificação enviada! O administrador entrará em contato em breve.',
+      message: 'Uma senha temporária foi gerada e enviada! O administrador entrará em contato via WhatsApp.',
       success: true
     });
   } catch (error) {
     console.error('💥 Forgot password error:', error);
     res.status(500).json({ 
       message: 'Erro ao processar solicitação. Tente novamente.' 
+    });
+  }
+});
+
+// POST /api/auth/change-password
+router.post('/change-password', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ 
+        message: 'Token não fornecido' 
+      });
+    }
+
+    const decoded = jwt.verify(token, config.JWT_SECRET) as any;
+    const userId = decoded.userId;
+
+    const { currentPassword, newPassword } = req.body;
+
+    console.log('🔒 Change password request for user:', userId);
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        message: 'Senha atual e nova senha são obrigatórias' 
+      });
+    }
+
+    if (newPassword.length < 4) {
+      return res.status(400).json({ 
+        message: 'A nova senha deve ter pelo menos 4 caracteres' 
+      });
+    }
+
+    // Buscar usuário
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        login: true,
+        password: true,
+        name: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'Usuário não encontrado' 
+      });
+    }
+
+    // Validar senha atual
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      console.log('❌ Invalid current password for:', user.login);
+      return res.status(401).json({ 
+        message: 'Senha atual incorreta' 
+      });
+    }
+
+    // Hash da nova senha
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Atualizar senha
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    console.log('✅ Password changed successfully for:', user.login);
+
+    res.json({ 
+      message: 'Senha alterada com sucesso!',
+      success: true
+    });
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({ 
+        message: 'Token inválido' 
+      });
+    }
+    console.error('💥 Change password error:', error);
+    res.status(500).json({ 
+      message: 'Erro ao alterar senha. Tente novamente.' 
     });
   }
 });
