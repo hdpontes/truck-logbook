@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, AlertTriangle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { trucksAPI } from '@/lib/api';
-import api from '@/services/api';
 
 export default function TruckFormPage() {
   const navigate = useNavigate();
@@ -13,8 +12,6 @@ export default function TruckFormPage() {
   const toast = useToast();
   const isEdit = !!id;
   const [loading, setLoading] = useState(false);
-  const [consultingPlate, setConsultingPlate] = useState(false);
-  const [plateConsulted, setPlateConsulted] = useState(false);
   const [formData, setFormData] = useState({
     plate: '',
     model: '',
@@ -96,58 +93,10 @@ export default function TruckFormPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    // Se alterar a placa, resetar flag de consulta
-    if (name === 'plate') {
-      setPlateConsulted(false);
-    }
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     });
-  };
-
-  const handleConsultPlate = async () => {
-    if (!formData.plate || formData.plate.length < 7) {
-      toast.error('Digite uma placa válida (mínimo 7 caracteres)');
-      return;
-    }
-
-    try {
-      setConsultingPlate(true);
-      const cleanPlate = formData.plate.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-      
-      const response = await api.get(`/trucks/plate/${cleanPlate}`);
-      
-      if (response.data.success) {
-        const { data } = response.data;
-        
-        // Preencher campos com dados da consulta
-        setFormData(prev => ({
-          ...prev,
-          plate: data.plate || prev.plate,
-          brand: data.brand || prev.brand,
-          model: data.model || prev.model,
-          year: data.year || prev.year,
-          color: data.color || prev.color,
-        }));
-        
-        setPlateConsulted(true);
-        toast.success('Dados da placa consultados com sucesso!');
-        toast.warning(response.data.warning);
-      }
-    } catch (error: any) {
-      console.error('Erro ao consultar placa:', error);
-      
-      const errorMessage = error.response?.data?.message || 'Erro ao consultar placa';
-      const suggestion = error.response?.data?.suggestion;
-      
-      toast.error(errorMessage);
-      if (suggestion) {
-        toast.info(suggestion);
-      }
-    } finally {
-      setConsultingPlate(false);
-    }
   };
 
   if (loading && isEdit) {
@@ -174,60 +123,25 @@ export default function TruckFormPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Aviso sobre consulta de placa */}
-            {!isEdit && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-900">
-                    Consulta automática de placa disponível!
-                  </p>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Digite a placa e clique em "Consultar" para preencher automaticamente marca, modelo e ano.
-                    Esta consulta usa API não oficial e pode falhar ocasionalmente.
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Placa *
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="plate"
-                    value={formData.plate}
-                    onChange={handleChange}
-                    required
-                    disabled={isEdit}
-                    placeholder="Ex: ABC1234 ou ABC1D23"
-                    maxLength={8}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  />
-                  {!isEdit && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleConsultPlate}
-                      disabled={consultingPlate || !formData.plate}
-                      className="flex-shrink-0"
-                    >
-                      <Search className="w-4 h-4 mr-2" />
-                      {consultingPlate ? 'Consultando...' : 'Consultar'}
-                    </Button>
-                  )}
-                </div>
+                <input
+                  type="text"
+                  name="plate"
+                  value={formData.plate}
+                  onChange={handleChange}
+                  required
+                  disabled={isEdit}
+                  placeholder="Ex: ABC1234 ou ABC1D23"
+                  maxLength={8}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
                 {isEdit && (
                   <p className="text-xs text-gray-500 mt-1">
                     A placa não pode ser alterada após o cadastro
-                  </p>
-                )}
-                {plateConsulted && (
-                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                    ✓ Dados consultados com sucesso. Verifique antes de salvar.
                   </p>
                 )}
               </div>
