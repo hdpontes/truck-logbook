@@ -564,7 +564,7 @@ const TripDetailPage: React.FC = () => {
         <CardHeader className="pb-3 md:pb-6">
           <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-base md:text-lg">
             <span>Despesas Relacionadas</span>
-            {user?.role === 'DRIVER' && (trip.status === 'IN_PROGRESS' || trip.status === 'COMPLETED') && (
+            {(trip.status === 'IN_PROGRESS' || trip.status === 'COMPLETED') && (
               <Button onClick={() => navigate(`/expenses/new?tripId=${trip.id}`)} className="w-full sm:w-auto touch-manipulation">
                 <Plus className="mr-2 h-4 w-4" />
                 Adicionar Despesa
