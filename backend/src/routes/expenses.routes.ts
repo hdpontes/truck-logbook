@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { config } from '../config';
 import axios from 'axios';
+import { convertToCSV, parseCSV } from '../utils/csv';
 
 const router = Router();
 
@@ -395,6 +396,128 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Expense not found' });
     }
     
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/expenses/export/csv - Exportar todas as despesas para CSV
+router.get('/export/csv', async (req, res) => {
+  try {
+    const expenses = await prisma.expense.findMany({
+      include: {
+        truck: {
+          select: { plate: true },
+        },
+        trip: {
+          select: { origin: true, destination: true },
+        },
+        client: {
+          select: { name: true },
+        },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const csvData = expenses.map(expense => ({
+      id: expense.id,
+      truckPlate: expense.truck?.plate || '',
+      tripOrigin: expense.trip?.origin || '',
+      tripDestination: expense.trip?.destination || '',
+      clientName: expense.client?.name || '',
+      type: expense.type,
+      category: expense.category || '',
+      amount: expense.amount,
+      quantity: expense.quantity || '',
+      unitPrice: expense.unitPrice || '',
+      description: expense.description || '',
+      supplier: expense.supplier || '',
+      location: expense.location || '',
+      date: expense.date.toISOString(),
+    }));
+
+    const csv = convertToCSV(csvData);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=despesas.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting expenses CSV:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/expenses/import/csv - Importar despesas do CSV
+router.post('/import/csv', async (req, res) => {
+  try {
+    const { csvData } = req.body;
+
+    if (!csvData) {
+      return res.status(400).json({ message: 'CSV data is required' });
+    }
+
+    const expenses = parseCSV(csvData);
+
+    if (!expenses || expenses.length === 0) {
+      return res.status(400).json({ message: 'No valid data in CSV' });
+    }
+
+    const results = {
+      success: 0,
+      errors: [] as Array<{ row: number; error: string }>,
+    };
+
+    for (let i = 0; i < expenses.length; i++) {
+      try {
+        const expenseData = expenses[i];
+        const { truckPlate, type, amount, quantity, unitPrice, description, supplier, location, date, category } = expenseData;
+
+        if (!type || !amount) {
+          results.errors.push({
+            row: i + 1,
+            error: 'Type and amount are required',
+          });
+          continue;
+        }
+
+        // Buscar truck se placa foi fornecida
+        let truckId = null;
+        if (truckPlate) {
+          const truck = await prisma.truck.findUnique({
+            where: { plate: truckPlate },
+          });
+          truckId = truck?.id || null;
+        }
+
+        // Criar nova despesa (não faz upsert, sempre cria nova)
+        await prisma.expense.create({
+          data: {
+            truckId,
+            tripId: null, // Não vincula a trip no import
+            clientId: null, // Não vincula a client no import
+            type,
+            category: category || null,
+            amount: parseFloat(amount),
+            quantity: quantity ? parseFloat(quantity) : null,
+            unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+            description: description || null,
+            supplier: supplier || null,
+            location: location || null,
+            date: date ? new Date(date) : new Date(),
+          },
+        });
+
+        results.success++;
+      } catch (error: any) {
+        results.errors.push({
+          row: i + 1,
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error importing expenses CSV:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
