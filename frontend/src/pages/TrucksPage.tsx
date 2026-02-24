@@ -165,7 +165,7 @@ const TrucksPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {!truck.hasOverdueMaintenance && truck.pendingMaintenancesCount && truck.pendingMaintenancesCount > 0 && (
+                  {!truck.hasOverdueMaintenance && (truck.pendingMaintenancesCount || 0) > 0 && (
                     <div className="bg-yellow-100 border border-yellow-300 rounded-md p-2 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
                       <span className="text-xs text-yellow-800 font-semibold">
