@@ -156,7 +156,7 @@ const TrucksPage: React.FC = () => {
               <CardHeader className="pl-6">
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span>{truck.plate}</span>
+                    <span className="uppercase">{truck.plate}</span>
                     {/* Badge de cor */}
                     <div 
                       className="w-6 h-6 rounded-full border-2 border-gray-300"
