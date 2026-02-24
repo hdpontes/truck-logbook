@@ -208,7 +208,7 @@ export default function TripsPage() {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens - Kanban</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens</h1>
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
           <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
             <Plus className="mr-2 h-4 w-4" />
