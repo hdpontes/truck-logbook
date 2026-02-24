@@ -441,14 +441,14 @@ export default function TripsPage() {
           <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-300px)]">
             {plannedTrips.length === 0 ? (
               <Card className="bg-white/50">
-                <CardContent className="p-4 text-center text-sm text-gray-500">
+                <CardContent className="p-5 text-center text-sm text-gray-500">
                   Nenhuma viagem agendada
                 </CardContent>
               </Card>
             ) : (
               plannedTrips.map((trip) => (
                 <Card key={trip.id} className="hover:shadow-lg transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-5">
                     <div className="space-y-3">
                       {/* Header */}
                       <div className="flex items-start justify-between">
@@ -597,14 +597,14 @@ export default function TripsPage() {
           <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-300px)]">
             {inProgressTrips.length === 0 ? (
               <Card className="bg-white/50">
-                <CardContent className="p-4 text-center text-sm text-gray-500">
+                <CardContent className="p-5 text-center text-sm text-gray-500">
                   Nenhuma viagem em andamento
                 </CardContent>
               </Card>
             ) : (
               inProgressTrips.map((trip) => (
                 <Card key={trip.id} className="hover:shadow-lg transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-5">
                     <div className="space-y-3">
                       {/* Header */}
                       <div className="flex items-start justify-between">
@@ -761,14 +761,14 @@ export default function TripsPage() {
           <div className="space-y-3 overflow-y-auto max-h-[calc(100vh-300px)]">
             {completedTrips.length === 0 ? (
               <Card className="bg-white/50">
-                <CardContent className="p-4 text-center text-sm text-gray-500">
+                <CardContent className="p-5 text-center text-sm text-gray-500">
                   Nenhuma viagem concluída
                 </CardContent>
               </Card>
             ) : (
               completedTrips.map((trip) => (
                 <Card key={trip.id} className="hover:shadow-lg transition-shadow bg-white">
-                  <CardContent className="p-4">
+                  <CardContent className="p-5">
                     <div className="space-y-3">
                       {/* Header */}
                       <div className="flex items-start justify-between">
