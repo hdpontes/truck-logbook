@@ -133,7 +133,7 @@ export default function TruckFormPage() {
         
         setPlateConsulted(true);
         toast.success('Dados da placa consultados com sucesso!');
-        toast.warning(response.data.warning, { duration: 5000 });
+        toast.warning(response.data.warning);
       }
     } catch (error: any) {
       console.error('Erro ao consultar placa:', error);
@@ -143,7 +143,7 @@ export default function TruckFormPage() {
       
       toast.error(errorMessage);
       if (suggestion) {
-        toast.info(suggestion, { duration: 5000 });
+        toast.info(suggestion);
       }
     } finally {
       setConsultingPlate(false);
