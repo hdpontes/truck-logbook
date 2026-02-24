@@ -39,6 +39,8 @@ export const trucksAPI = {
   update: (id: string, data: any) => api.put(`/trucks/${id}`, data).then(res => res.data),
   updateStatus: (id: string, status: string) => api.patch(`/trucks/${id}/status`, { status }).then(res => res.data),
   delete: (id: string) => api.delete(`/trucks/${id}`).then(res => res.data),
+  exportCSV: () => api.get('/trucks/export/csv', { responseType: 'blob' }).then(res => res.data),
+  importCSV: (csvData: string) => api.post('/trucks/import/csv', { csvData }).then(res => res.data),
 };
 
 // Trailers API
@@ -48,6 +50,8 @@ export const trailersAPI = {
   create: (data: any) => api.post('/trailers', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/trailers/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/trailers/${id}`).then(res => res.data),
+  exportCSV: () => api.get('/trailers/export/csv', { responseType: 'blob' }).then(res => res.data),
+  importCSV: (csvData: string) => api.post('/trailers/import/csv', { csvData }).then(res => res.data),
 };
 
 // Trips API
@@ -78,6 +82,8 @@ export const expensesAPI = {
   create: (data: any) => api.post('/expenses', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/expenses/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/expenses/${id}`).then(res => res.data),
+  exportCSV: () => api.get('/expenses/export/csv', { responseType: 'blob' }).then(res => res.data),
+  importCSV: (csvData: string) => api.post('/expenses/import/csv', { csvData }).then(res => res.data),
 };
 
 // Drivers API
@@ -88,6 +94,8 @@ export const driversAPI = {
   update: (id: string, data: any) => api.put(`/drivers/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/drivers/${id}`).then(res => res.data),
   deactivate: (id: string) => api.patch(`/drivers/${id}/deactivate`).then(res => res.data),
+  exportCSV: () => api.get('/users/export/csv', { responseType: 'blob' }).then(res => res.data),
+  importCSV: (csvData: string) => api.post('/users/import/csv', { csvData }).then(res => res.data),
 };
 
 // Maintenance API
@@ -136,6 +144,8 @@ export const clientsAPI = {
   create: (data: any) => api.post('/clients', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/clients/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/clients/${id}`).then(res => res.data),
+  exportCSV: () => api.get('/clients/export/csv', { responseType: 'blob' }).then(res => res.data),
+  importCSV: (csvData: string) => api.post('/clients/import/csv', { csvData }).then(res => res.data),
 };
 
 // Locations API
@@ -145,6 +155,8 @@ export const locationsAPI = {
   create: (data: any) => api.post('/locations', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/locations/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/locations/${id}`).then(res => res.data),
+  exportCSV: () => api.get('/locations/export/csv', { responseType: 'blob' }).then(res => res.data),
+  importCSV: (csvData: string) => api.post('/locations/import/csv', { csvData }).then(res => res.data),
 };
 
 export default api;
