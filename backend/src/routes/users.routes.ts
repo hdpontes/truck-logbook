@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import bcrypt from 'bcrypt';
 import { config } from '../config';
 import axios from 'axios';
+import { convertToCSV, parseCSV } from '../utils/csv';
 
 const router = Router();
 
@@ -374,6 +375,137 @@ router.patch('/:id/deactivate', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/users/export/csv - Exportar todos os usuários para CSV
+router.get('/export/csv', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csvData = users.map(user => ({
+      id: user.id,
+      login: user.login,
+      email: user.email,
+      name: user.name,
+      cpf: user.cpf || '',
+      phone: user.phone || '',
+      role: user.role,
+      active: user.active,
+      // Senha não é incluída por segurança
+    }));
+
+    const csv = convertToCSV(csvData);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=usuarios.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting users CSV:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/users/import/csv - Importar usuários do CSV
+router.post('/import/csv', async (req, res) => {
+  try {
+    const { csvData } = req.body;
+    const currentUser = (req as any).user;
+
+    if (!csvData) {
+      return res.status(400).json({ message: 'CSV data is required' });
+    }
+
+    const users = parseCSV(csvData);
+
+    if (!users || users.length === 0) {
+      return res.status(400).json({ message: 'No valid data in CSV' });
+    }
+
+    const results = {
+      success: 0,
+      errors: [] as Array<{ email: string; error: string }>,
+    };
+
+    // Senha padrão para novos usuários importados
+    const defaultPassword = await bcrypt.hash('123456', 10);
+
+    for (const userData of users) {
+      try {
+        const { login, email, name, cpf, phone, role, active } = userData;
+
+        if (!email || !name) {
+          results.errors.push({
+            email: email || 'unknown',
+            error: 'Email and name are required',
+          });
+          continue;
+        }
+
+        // Validar role
+        if (role && !['ADMIN', 'MANAGER', 'DRIVER'].includes(role)) {
+          results.errors.push({
+            email,
+            error: 'Invalid role. Must be ADMIN, MANAGER or DRIVER',
+          });
+          continue;
+        }
+
+        // MANAGER não pode importar usuários ADMIN
+        if (currentUser.role === 'MANAGER' && role === 'ADMIN') {
+          results.errors.push({
+            email,
+            error: 'You do not have permission to create ADMIN users',
+          });
+          continue;
+        }
+
+        // Verificar se o usuário já existe
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        const userPayload = {
+          login: login || email, // Se não tiver login, usa o email
+          email,
+          name,
+          cpf: cpf || null,
+          phone: phone || null,
+          role: role || 'DRIVER', // Default DRIVER
+          active: active !== false, // Default to true if not specified
+        };
+
+        if (existingUser) {
+          // Atualizar usuário existente (exceto senha)
+          await prisma.user.update({
+            where: { email },
+            data: userPayload,
+          });
+        } else {
+          // Criar novo usuário com senha padrão
+          await prisma.user.create({
+            data: {
+              ...userPayload,
+              password: defaultPassword, // Senha padrão: 123456
+            },
+          });
+        }
+
+        results.success++;
+      } catch (error: any) {
+        results.errors.push({
+          email: userData.email || 'unknown',
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error importing users CSV:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
