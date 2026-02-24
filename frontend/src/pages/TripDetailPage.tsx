@@ -60,6 +60,12 @@ interface TripData {
     email: string;
     phone: string;
   };
+  calculations?: {
+    timeInTransit: { hours: number; minutes: number };
+    timeLoading: { hours: number; minutes: number };
+    timeUnloading: { hours: number; minutes: number };
+    totalDistance: number;
+  };
 }
 
 interface Expense {
@@ -558,6 +564,53 @@ const TripDetailPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Breakdown de Tempo */}
+      {trip.calculations && (trip.calculations.timeInTransit.hours > 0 || trip.calculations.timeLoading.hours > 0 || trip.calculations.timeUnloading.hours > 0 || 
+                             trip.calculations.timeInTransit.minutes > 0 || trip.calculations.timeLoading.minutes > 0 || trip.calculations.timeUnloading.minutes > 0) && (
+        <Card>
+          <CardHeader className="pb-3 md:pb-6">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Clock className="h-4 w-4 md:h-5 md:w-5" />
+              Breakdown de Tempo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+              {(trip.calculations.timeInTransit.hours > 0 || trip.calculations.timeInTransit.minutes > 0) && (
+                <div className="p-3 md:p-4 border rounded-lg bg-yellow-50">
+                  <p className="text-xs md:text-sm text-gray-600">Tempo em Trânsito</p>
+                  <p className="text-lg md:text-xl font-bold text-gray-900">
+                    {trip.calculations.timeInTransit.hours}h {trip.calculations.timeInTransit.minutes}m
+                  </p>
+                </div>
+              )}
+              {(trip.calculations.timeLoading.hours > 0 || trip.calculations.timeLoading.minutes > 0) && (
+                <div className="p-3 md:p-4 border rounded-lg bg-purple-50">
+                  <p className="text-xs md:text-sm text-gray-600">Tempo Carregando</p>
+                  <p className="text-lg md:text-xl font-bold text-gray-900">
+                    {trip.calculations.timeLoading.hours}h {trip.calculations.timeLoading.minutes}m
+                  </p>
+                </div>
+              )}
+              {(trip.calculations.timeUnloading.hours > 0 || trip.calculations.timeUnloading.minutes > 0) && (
+                <div className="p-3 md:p-4 border rounded-lg bg-indigo-50">
+                  <p className="text-xs md:text-sm text-gray-600">Tempo Descarregando</p>
+                  <p className="text-lg md:text-xl font-bold text-gray-900">
+                    {trip.calculations.timeUnloading.hours}h {trip.calculations.timeUnloading.minutes}m
+                  </p>
+                </div>
+              )}
+            </div>
+            {trip.calculations.totalDistance > 0 && (
+              <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t">
+                <p className="text-xs md:text-sm text-gray-600">Distância Total Calculada dos Trechos</p>
+                <p className="text-base md:text-lg font-semibold text-gray-900">{trip.calculations.totalDistance.toFixed(1)} km</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Despesas Relacionadas */}
       <Card>
