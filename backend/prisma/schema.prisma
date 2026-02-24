@@ -172,6 +172,9 @@ model TripLeg {
   // Status
   status       TripLegStatus @default(IN_PROGRESS)
   
+  // Tipo de espera (se status for PAUSED)
+  waitingType  TripLegWaitingType?
+  
   // Observações
   notes        String?
   
@@ -188,7 +191,12 @@ model TripLeg {
 enum TripLegType {
   NORMAL              // Trecho normal com carga
   REPOSICIONAMENTO    // Reposicionamento sem carga (buscar outro carreto)
-  AGUARDANDO          // Parado aguardando carregamento
+  AGUARDANDO          // Parado aguardando carregamento ou descarregamento
+}
+
+enum TripLegWaitingType {
+  LOADING     // Aguardando carregamento
+  UNLOADING   // Aguardando descarregamento
 }
 
 enum TripLegStatus {
