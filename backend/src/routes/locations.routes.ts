@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
+import { convertToCSV, parseCSV } from '../utils/csv';
 
 const router = Router();
 
@@ -106,6 +107,118 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Location deleted successfully' });
   } catch (error) {
     console.error('Error deleting location:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/locations/export/csv - Exportar todas as localizações para CSV
+router.get('/export/csv', async (req, res) => {
+  try {
+    const locations = await prisma.location.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csvData = locations.map(location => ({
+      id: location.id,
+      name: location.name,
+      city: location.city,
+      state: location.state,
+      type: location.type,
+    }));
+
+    const csv = convertToCSV(csvData);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=localizacoes.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting locations CSV:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/locations/import/csv - Importar localizações do CSV
+router.post('/import/csv', async (req, res) => {
+  try {
+    const { csvData } = req.body;
+
+    if (!csvData) {
+      return res.status(400).json({ message: 'CSV data is required' });
+    }
+
+    const locations = parseCSV(csvData);
+
+    if (!locations || locations.length === 0) {
+      return res.status(400).json({ message: 'No valid data in CSV' });
+    }
+
+    const results = {
+      success: 0,
+      errors: [] as Array<{ location: string; error: string }>,
+    };
+
+    for (const locationData of locations) {
+      try {
+        const { name, city, state, type } = locationData;
+
+        if (!name || !city || !state || !type) {
+          results.errors.push({
+            location: name || 'unknown',
+            error: 'Name, city, state and type are required',
+          });
+          continue;
+        }
+
+        // Validar type
+        if (!['ORIGIN', 'DESTINATION', 'BOTH'].includes(type)) {
+          results.errors.push({
+            location: name,
+            error: 'Invalid type. Must be ORIGIN, DESTINATION or BOTH',
+          });
+          continue;
+        }
+
+        // Verificar se a localização já existe (por nome, cidade e estado)
+        const existingLocation = await prisma.location.findFirst({
+          where: {
+            name,
+            city,
+            state,
+          },
+        });
+
+        const locationPayload = {
+          name,
+          city,
+          state,
+          type,
+        };
+
+        if (existingLocation) {
+          // Atualizar localização existente
+          await prisma.location.update({
+            where: { id: existingLocation.id },
+            data: locationPayload,
+          });
+        } else {
+          // Criar nova localização
+          await prisma.location.create({
+            data: locationPayload,
+          });
+        }
+
+        results.success++;
+      } catch (error: any) {
+        results.errors.push({
+          location: locationData.name || 'unknown',
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error importing locations CSV:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
