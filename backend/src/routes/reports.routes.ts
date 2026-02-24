@@ -203,6 +203,9 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       const expenses = await prisma.expense.findMany({
         where: expensesFilter,
         include: {
+          truck: {
+            select: { id: true, plate: true },
+          },
           trip: {
             include: {
               truck: {
@@ -245,7 +248,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           amount: expense.amount,
           isTrip: false,
           expenseType: expense.type,
-          truck: expense.trip?.truck,
+          truck: expense.truck || expense.trip?.truck,
           driver: expense.trip?.driver,
           client: expense.client || undefined,
         });
