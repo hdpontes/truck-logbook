@@ -84,6 +84,24 @@ const ReportsPage: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Funções helper para encurtar nomes
+  const getFirstName = (fullName: string) => {
+    if (!fullName) return '';
+    return fullName.split(' ')[0];
+  };
+
+  const truncateClientName = (fullName: string) => {
+    if (!fullName) return '';
+    const words = fullName.split(' ');
+    const twoNames = words.slice(0, 2).join(' ');
+    
+    if (twoNames.length <= 20) {
+      return twoNames;
+    }
+    
+    return fullName.length > 20 ? fullName.substring(0, 20) + '...' : fullName;
+  };
+
   useEffect(() => {
     // Carregar dados iniciais (últimos 30 dias)
     const today = new Date();
@@ -265,8 +283,8 @@ const ReportsPage: React.FC = () => {
       const description = item.description.replace('Viagem: ', '');
       const [origin, destination] = description.split(' → ');
       const truck = item.truck?.plate || 'N/A';
-      const driver = item.driver?.name || 'N/A';
-      const client = (item as any).client?.name || 'N/A';
+      const driver = item.driver?.name ? getFirstName(item.driver.name) : 'N/A';
+      const client = (item as any).client?.name ? truncateClientName((item as any).client.name) : 'N/A';
       const revenue = item.revenue || 0;
 
       csv += `${date},${tripCode},${origin},${destination},${truck},${driver},${client},R$ ${revenue.toFixed(2)}\n`;
@@ -710,15 +728,15 @@ const ReportsPage: React.FC = () => {
                                 </div>
                                 {/* Mostrar informações extras em mobile */}
                                 <div className="block md:hidden text-xs text-gray-500 mt-1">
-                                  {item.driver?.name && <span className="block">{item.driver.name}</span>}
+                                  {item.driver?.name && <span className="block">{getFirstName(item.driver.name)}</span>}
                                   {item.truck?.plate && <span className="block">{item.truck.plate}</span>}
                                 </div>
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden md:table-cell">
-                                {item.driver?.name || '-'}
+                                {item.driver?.name ? getFirstName(item.driver.name) : '-'}
                               </td>
-                              <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden md:table-cell">
-                                {item.client?.name || '-'}
+                              <td className="px-2 md:px-4 py-3 md:py-4 text-xs md:text-sm text-gray-700 hidden md:table-cell" title={item.client?.name}>
+                                {item.client?.name ? truncateClientName(item.client.name) : '-'}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-700 hidden sm:table-cell">
                                 {item.truck?.plate || '-'}
