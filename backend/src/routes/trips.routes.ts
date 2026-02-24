@@ -116,6 +116,13 @@ router.get('/:id', async (req, res) => {
           select: { id: true, name: true, cnpj: true, phone: true, email: true, city: true, state: true },
         },
         expenses: true,
+        legs: {
+          orderBy: { legNumber: 'asc' },
+          include: {
+            driver: { select: { id: true, name: true } },
+            trailer: { select: { id: true, plate: true } },
+          },
+        },
       },
     });
 
@@ -331,6 +338,11 @@ router.post('/:id/start', async (req, res) => {
       where: { id },
       include: {
         truck: true,
+        trailer: true,
+        driver: true,
+        legs: {
+          where: { status: { in: ['IN_PROGRESS', 'PAUSED'] } },
+        },
       },
     });
 
@@ -338,7 +350,47 @@ router.post('/:id/start', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
+    // Verificar se o caminhão já tem uma viagem ativa
+    const activeTripOnSameTruck = await prisma.tripLeg.findFirst({
+      where: {
+        truckId: trip.truckId,
+        status: 'IN_PROGRESS',
+        tripId: { not: trip.id },
+      },
+      include: {
+        trip: true,
+      },
+    });
+
+    // Se tem viagem ativa, verificar se ela está pausada (aguardando carregamento)
+    if (activeTripOnSameTruck) {
+      const activeTrip = activeTripOnSameTruck.trip;
+      const hasActiveLeg = await prisma.tripLeg.findFirst({
+        where: {
+          tripId: activeTrip.id,
+          status: 'IN_PROGRESS',
+        },
+      });
+
+      // Se a viagem ativa tem um trecho EM ANDAMENTO (não pausado), não pode iniciar
+      if (hasActiveLeg) {
+        return res.status(400).json({ 
+          message: `Este caminhão já está em viagem (${activeTrip.origin} → ${activeTrip.destination})` 
+        });
+      }
+    }
+
     if (trip.status !== 'PLANNED' && trip.status !== 'DELAYED') {
+      // Se já está IN_PROGRESS, verificar se tem trechos pausados
+      if (trip.status === 'IN_PROGRESS') {
+        const pausedLeg = trip.legs.find(leg => leg.status === 'PAUSED');
+        if (pausedLeg) {
+          // Retomar viagem pausada - não criar novo trecho, apenas reativar
+          return res.status(400).json({ 
+            message: 'Esta viagem já está em andamento. Use a rota de retomar viagem' 
+          });
+        }
+      }
       return res.status(400).json({ 
         message: 'Only planned or delayed trips can be started' 
       });
@@ -347,31 +399,311 @@ router.post('/:id/start', async (req, res) => {
     // Pegar quilometragem atual do caminhão
     const startMileage = trip.truck.currentMileage || 0;
 
+    // Verificar se precisa criar trecho de reposicionamento
+    const needsRepositioning = activeTripOnSameTruck !== null;
+    let legNumber = 1;
+    let actualStartMileage = startMileage;
+
+    const transactionOperations: any[] = [];
+
+    // Se precisa de reposicionamento, criar trecho 0
+    if (needsRepositioning) {
+      const pausedLeg = await prisma.tripLeg.findFirst({
+        where: {
+          tripId: activeTripOnSameTruck.tripId,
+          status: 'PAUSED',
+        },
+        orderBy: { legNumber: 'desc' },
+      });
+
+      if (pausedLeg) {
+        // Criar trecho de reposicionamento (volta sem carreto)
+        transactionOperations.push(
+          prisma.tripLeg.create({
+            data: {
+              tripId: trip.id,
+              legNumber: 0,
+              type: 'REPOSICIONAMENTO',
+              origin: pausedLeg.destination || pausedLeg.origin,
+              destination: trip.origin,
+              truckId: trip.truckId,
+              trailerId: null, // Sem carreto no reposicionamento
+              driverId: trip.driverId,
+              startMileage: pausedLeg.endMileage || startMileage,
+              status: 'IN_PROGRESS',
+              startTime: new Date(),
+            },
+          })
+        );
+        
+        actualStartMileage = pausedLeg.endMileage || startMileage;
+        legNumber = 1;
+      }
+    }
+
+    // Criar primeiro trecho normal da viagem
+    transactionOperations.push(
+      prisma.tripLeg.create({
+        data: {
+          tripId: trip.id,
+          legNumber,
+          type: 'NORMAL',
+          origin: trip.origin,
+          destination: trip.destination,
+          truckId: trip.truckId,
+          trailerId: trip.trailerId,
+          driverId: trip.driverId,
+          startMileage: actualStartMileage,
+          status: needsRepositioning ? 'PAUSED' : 'IN_PROGRESS', // Se há reposicionamento, pausar até completar
+          startTime: new Date(),
+        },
+      })
+    );
+
     // Atualizar trip e status do caminhão
-    const [updatedTrip] = await prisma.$transaction([
+    transactionOperations.push(
       prisma.trip.update({
         where: { id },
         data: {
           status: 'IN_PROGRESS',
           startDate: new Date(),
-          startMileage,
+          startMileage: actualStartMileage,
         },
-        include: {
-          truck: true,
-          driver: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      }),
+      })
+    );
+
+    transactionOperations.push(
       prisma.truck.update({
         where: { id: trip.truckId },
         data: { status: 'IN_TRANSIT' },
-      }),
-    ]);
+      })
+    );
+
+    await prisma.$transaction(transactionOperations);
+
+    // Buscar viagem atualizada com todas as informações
+    const updatedTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        trailer: true,
+        driver: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        client: true,
+        legs: {
+          orderBy: { legNumber: 'asc' },
+          include: {
+            driver: { select: { id: true, name: true } },
+            trailer: true,
+          },
+        },
+      },
+    });
 
     res.json(updatedTrip);
   } catch (error) {
     console.error('Error starting trip:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/trips/:id/legs - Listar trechos de uma viagem
+router.get('/:id/legs', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const legs = await prisma.tripLeg.findMany({
+      where: { tripId: id },
+      orderBy: { legNumber: 'asc' },
+      include: {
+        driver: {
+          select: { id: true, name: true },
+        },
+        trailer: {
+          select: { id: true, plate: true },
+        },
+      },
+    });
+
+    res.json(legs);
+  } catch (error) {
+    console.error('Error fetching trip legs:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trips/:id/legs/:legId/finish - Finalizar trecho
+router.post('/:id/legs/:legId/finish', async (req, res) => {
+  try {
+    const { id, legId } = req.params;
+    const { endMileage, fuelCost, tollCost, otherCosts, notes } = req.body;
+
+    const leg = await prisma.tripLeg.findUnique({
+      where: { id: legId },
+      include: { trip: true, truck: true },
+    });
+
+    if (!leg) {
+      return res.status(404).json({ message: 'Trip leg not found' });
+    }
+
+    if (leg.tripId !== id) {
+      return res.status(400).json({ message: 'Leg does not belong to this trip' });
+    }
+
+    if (leg.status === 'COMPLETED') {
+      return res.status(400).json({ message: 'This leg is already completed' });
+    }
+
+    const finalEndMileage = parseFloat(endMileage);
+    const distance = finalEndMileage - leg.startMileage;
+
+    if (distance < 0) {
+      return res.status(400).json({ 
+        message: 'A quilometragem final deve ser maior que a inicial' 
+      });
+    }
+
+    const finalFuelCost = fuelCost ? parseFloat(fuelCost) : 0;
+    const finalTollCost = tollCost ? parseFloat(tollCost) : 0;
+    const finalOtherCosts = otherCosts ? parseFloat(otherCosts) : 0;
+    const totalCost = finalFuelCost + finalTollCost + finalOtherCosts;
+
+    // Atualizar trecho e quilometragem do caminhão
+    const [updatedLeg] = await prisma.$transaction([
+      prisma.tripLeg.update({
+        where: { id: legId },
+        data: {
+          endMileage: finalEndMileage,
+          distance,
+          endTime: new Date(),
+          status: 'COMPLETED',
+          fuelCost: finalFuelCost,
+          tollCost: finalTollCost,
+          otherCosts: finalOtherCosts,
+          totalCost,
+          notes,
+        },
+        include: {
+          driver: { select: { id: true, name: true } },
+          trailer: { select: { id: true, plate: true } },
+        },
+      }),
+      prisma.truck.update({
+        where: { id: leg.truckId },
+        data: { currentMileage: finalEndMileage },
+      }),
+    ]);
+
+    res.json(updatedLeg);
+  } catch (error) {
+    console.error('Error finishing trip leg:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trips/:id/pause - Pausar viagem (deixar carreto carregando)
+router.post('/:id/pause', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentMileage, location } = req.body;
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        legs: {
+          where: { status: 'IN_PROGRESS' },
+          orderBy: { legNumber: 'desc' },
+        },
+      },
+    });
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    if (trip.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ 
+        message: 'Only in progress trips can be paused' 
+      });
+    }
+
+    const activeLeg = trip.legs[0];
+    if (!activeLeg) {
+      return res.status(400).json({ message: 'No active leg found' });
+    }
+
+    const finalMileage = parseFloat(currentMileage);
+    const distance = finalMileage - activeLeg.startMileage;
+
+    if (distance < 0) {
+      return res.status(400).json({ 
+        message: 'A quilometragem atual deve ser maior que a inicial' 
+      });
+    }
+
+    // Finalizar trecho atual e criar trecho de aguardamento
+    const transactionOperations: any[] = [
+      // Finalizar trecho atual
+      prisma.tripLeg.update({
+        where: { id: activeLeg.id },
+        data: {
+          endMileage: finalMileage,
+          distance,
+          endTime: new Date(),
+          status: 'COMPLETED',
+          destination: location || activeLeg.destination,
+        },
+      }),
+      // Criar trecho de aguardamento
+      prisma.tripLeg.create({
+        data: {
+          tripId: trip.id,
+          legNumber: activeLeg.legNumber + 1,
+          type: 'AGUARDANDO',
+          origin: location || activeLeg.destination || activeLeg.origin,
+          truckId: activeLeg.truckId,
+          trailerId: activeLeg.trailerId,
+          driverId: activeLeg.driverId,
+          startMileage: finalMileage,
+          status: 'PAUSED',
+          startTime: new Date(),
+          notes: 'Aguardando carregamento do carreto',
+        },
+      }),
+      // Atualizar quilometragem do caminhão
+      prisma.truck.update({
+        where: { id: activeLeg.truckId },
+        data: { currentMileage: finalMileage },
+      }),
+    ];
+
+    await prisma.$transaction(transactionOperations);
+
+    // Buscar viagem atualizada
+    const updatedTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        trailer: true,
+        driver: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        client: true,
+        legs: {
+          orderBy: { legNumber: 'asc' },
+          include: {
+            driver: { select: { id: true, name: true } },
+            trailer: { select: { id: true, plate: true } },
+          },
+        },
+      },
+    });
+
+    res.json(updatedTrip);
+  } catch (error) {
+    console.error('Error pausing trip:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
