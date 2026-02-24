@@ -25,6 +25,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   trips Trip[]
+  tripLegs TripLeg[]
 
   @@map("users")
 }
@@ -60,6 +61,7 @@ model Truck {
   trips       Trip[]
   expenses    Expense[]
   maintenances Maintenance[]
+  tripLegs    TripLeg[]
 
   @@map("trucks")
 }
@@ -76,6 +78,7 @@ model Trailer {
   updatedAt   DateTime @updatedAt
 
   trips       Trip[]
+  tripLegs    TripLeg[]
 
   @@map("trailers")
 }
@@ -119,6 +122,7 @@ model Trip {
   updatedAt    DateTime  @updatedAt
 
   expenses     Expense[]
+  legs         TripLeg[]
 
   @@index([truckId])
   @@index([trailerId])
@@ -127,6 +131,70 @@ model Trip {
   @@index([status])
   @@index([startDate])
   @@map("trips")
+}
+
+model TripLeg {
+  id          String      @id @default(uuid())
+  tripId      String
+  trip        Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  
+  // Informações do trecho
+  legNumber   Int         // Número sequencial do trecho (1, 2, 3...)
+  type        TripLegType @default(NORMAL)
+  
+  // Localização
+  origin      String
+  destination String?     // Pode ser null se ainda não chegou
+  
+  // Veículo e motorista
+  truckId     String
+  truck       Truck       @relation(fields: [truckId], references: [id])
+  trailerId   String?
+  trailer     Trailer?    @relation(fields: [trailerId], references: [id])
+  driverId    String
+  driver      User        @relation(fields: [driverId], references: [id])
+  
+  // Quilometragem
+  startMileage Float
+  endMileage   Float?
+  distance     Float       @default(0)
+  
+  // Tempo
+  startTime    DateTime    @default(now())
+  endTime      DateTime?
+  
+  // Custos específicos deste trecho
+  fuelCost     Float       @default(0)
+  tollCost     Float       @default(0)
+  otherCosts   Float       @default(0)
+  totalCost    Float       @default(0)
+  
+  // Status
+  status       TripLegStatus @default(IN_PROGRESS)
+  
+  // Observações
+  notes        String?
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([tripId])
+  @@index([truckId])
+  @@index([driverId])
+  @@index([status])
+  @@map("trip_legs")
+}
+
+enum TripLegType {
+  NORMAL              // Trecho normal com carga
+  REPOSICIONAMENTO    // Reposicionamento sem carga (buscar outro carreto)
+  AGUARDANDO          // Parado aguardando carregamento
+}
+
+enum TripLegStatus {
+  IN_PROGRESS  // Em andamento
+  PAUSED       // Pausado (aguardando carregamento)
+  COMPLETED    // Concluído
 }
 
 enum TripStatus {
