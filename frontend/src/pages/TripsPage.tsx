@@ -62,7 +62,7 @@ export default function TripsPage() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [tripForExpense, setTripForExpense] = useState<Trip | null>(null);
   const [expenseData, setExpenseData] = useState({
-    type: 'FUEL' as 'FUEL' | 'TOLL' | 'MAINTENANCE' | 'OTHER',
+    type: 'FUEL' as 'FUEL' | 'TOLL' | 'MAINTENANCE' | 'TIRE' | 'FOOD' | 'PARKING' | 'INSURANCE' | 'TAX' | 'SALARY' | 'OTHER',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -1025,6 +1025,12 @@ export default function TripsPage() {
                   <option value="FUEL">Combustível</option>
                   <option value="TOLL">Pedágio</option>
                   <option value="MAINTENANCE">Manutenção</option>
+                  <option value="TIRE">Pneus</option>
+                  <option value="FOOD">Alimentação</option>
+                  <option value="PARKING">Estacionamento</option>
+                  <option value="INSURANCE">Seguro</option>
+                  <option value="TAX">Impostos</option>
+                  <option value="SALARY">Salário do Motorista</option>
                   <option value="OTHER">Outro</option>
                 </select>
               </div>
