@@ -63,6 +63,10 @@ router.get('/', async (req, res) => {
         client: {
           select: { id: true, name: true, cnpj: true, city: true, state: true },
         },
+        legs: {
+          select: { id: true, status: true, type: true, waitingType: true },
+          orderBy: { legNumber: 'asc' },
+        },
       },
       orderBy: { startDate: 'desc' },
     });
@@ -717,6 +721,126 @@ router.post('/:id/pause', async (req, res) => {
     res.json(updatedTrip);
   } catch (error) {
     console.error('Error pausing trip:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trips/:id/resume - Continuar viagem após carregamento/descarregamento
+router.post('/:id/resume', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentMileage } = req.body;
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        legs: {
+          where: { status: 'PAUSED' },
+          orderBy: { legNumber: 'desc' },
+        },
+      },
+    });
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    if (trip.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ 
+        message: 'Only in progress trips can be resumed' 
+      });
+    }
+
+    const pausedLeg = trip.legs[0];
+    if (!pausedLeg) {
+      return res.status(400).json({ message: 'No paused leg found' });
+    }
+
+    if (pausedLeg.type !== 'AGUARDANDO') {
+      return res.status(400).json({ message: 'Can only resume waiting legs' });
+    }
+
+    const finalMileage = currentMileage ? parseFloat(currentMileage) : pausedLeg.startMileage;
+
+    // Se forneceu km e é diferente do inicial, validar
+    if (currentMileage) {
+      const distance = finalMileage - pausedLeg.startMileage;
+      if (distance < 0) {
+        return res.status(400).json({ 
+          message: 'A quilometragem atual deve ser maior ou igual à inicial' 
+        });
+      }
+    }
+
+    const continueDescription = pausedLeg.waitingType === 'LOADING' 
+      ? 'Continuando após carregamento'
+      : 'Continuando após descarregamento';
+
+    // Finalizar trecho de aguardamento e criar novo trecho em andamento
+    const transactionOperations: any[] = [
+      // Finalizar trecho de aguardamento
+      prisma.tripLeg.update({
+        where: { id: pausedLeg.id },
+        data: {
+          endMileage: finalMileage,
+          endTime: new Date(),
+          status: 'COMPLETED',
+          destination: pausedLeg.origin, // Destino é o mesmo que origem (ficou parado)
+        },
+      }),
+      // Criar novo trecho em andamento
+      prisma.tripLeg.create({
+        data: {
+          tripId: trip.id,
+          legNumber: pausedLeg.legNumber + 1,
+          type: 'NORMAL',
+          origin: pausedLeg.origin,
+          truckId: pausedLeg.truckId,
+          trailerId: pausedLeg.trailerId,
+          driverId: pausedLeg.driverId,
+          startMileage: finalMileage,
+          status: 'IN_PROGRESS',
+          startTime: new Date(),
+          notes: continueDescription,
+        },
+      }),
+    ];
+
+    // Atualizar quilometragem do caminhão apenas se forneceu valor diferente
+    if (currentMileage && finalMileage !== pausedLeg.startMileage) {
+      transactionOperations.push(
+        prisma.truck.update({
+          where: { id: pausedLeg.truckId },
+          data: { currentMileage: finalMileage },
+        })
+      );
+    }
+
+    await prisma.$transaction(transactionOperations);
+
+    // Buscar viagem atualizada
+    const updatedTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        trailer: true,
+        driver: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        client: true,
+        legs: {
+          orderBy: { legNumber: 'asc' },
+          include: {
+            driver: { select: { id: true, name: true } },
+            trailer: { select: { id: true, plate: true } },
+          },
+        },
+      },
+    });
+
+    res.json(updatedTrip);
+  } catch (error) {
+    console.error('Error resuming trip:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
