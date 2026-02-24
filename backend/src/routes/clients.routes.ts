@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
+import { convertToCSV, parseCSV } from '../utils/csv';
 
 const router = Router();
 
@@ -109,6 +110,111 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Client deleted successfully' });
   } catch (error) {
     console.error('Error deleting client:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/clients/export/csv - Exportar todos os clientes para CSV
+router.get('/export/csv', async (req, res) => {
+  try {
+    const clients = await prisma.client.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csvData = clients.map(client => ({
+      id: client.id,
+      name: client.name,
+      cnpj: client.cnpj,
+      address: client.address,
+      city: client.city,
+      state: client.state,
+      phone: client.phone || '',
+      email: client.email || '',
+    }));
+
+    const csv = convertToCSV(csvData);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=clientes.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting clients CSV:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/clients/import/csv - Importar clientes do CSV
+router.post('/import/csv', async (req, res) => {
+  try {
+    const { csvData } = req.body;
+
+    if (!csvData) {
+      return res.status(400).json({ message: 'CSV data is required' });
+    }
+
+    const clients = parseCSV(csvData);
+
+    if (!clients || clients.length === 0) {
+      return res.status(400).json({ message: 'No valid data in CSV' });
+    }
+
+    const results = {
+      success: 0,
+      errors: [] as Array<{ cnpj: string; error: string }>,
+    };
+
+    for (const clientData of clients) {
+      try {
+        const { name, cnpj, address, city, state, phone, email } = clientData;
+
+        if (!name || !cnpj || !address || !city || !state) {
+          results.errors.push({
+            cnpj: cnpj || 'unknown',
+            error: 'Name, CNPJ, address, city and state are required',
+          });
+          continue;
+        }
+
+        // Verificar se o cliente já existe
+        const existingClient = await prisma.client.findUnique({
+          where: { cnpj },
+        });
+
+        const clientPayload = {
+          name,
+          cnpj,
+          address,
+          city,
+          state,
+          phone: phone || null,
+          email: email || null,
+        };
+
+        if (existingClient) {
+          // Atualizar cliente existente
+          await prisma.client.update({
+            where: { cnpj },
+            data: clientPayload,
+          });
+        } else {
+          // Criar novo cliente
+          await prisma.client.create({
+            data: clientPayload,
+          });
+        }
+
+        results.success++;
+      } catch (error: any) {
+        results.errors.push({
+          cnpj: clientData.cnpj || 'unknown',
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error importing clients CSV:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
