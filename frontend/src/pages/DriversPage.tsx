@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { driversAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
-import { Plus, User, Phone, FileText, Edit, Trash2, Ban, CheckCircle } from 'lucide-react';
+import { Plus, User, Phone, FileText, Edit, Trash2, Ban, CheckCircle, Download, Upload } from 'lucide-react';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 export default function DriversPage() {
   const queryClient = useQueryClient();
@@ -16,6 +17,7 @@ export default function DriversPage() {
   const [driverToDelete, setDriverToDelete] = useState<string | null>(null);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [driverToDeactivate, setDriverToDeactivate] = useState<any>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -149,6 +151,33 @@ export default function DriversPage() {
     setDriverToDeactivate(null);
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await driversAPI.exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'usuarios.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar CSV');
+    }
+  };
+
+  const handleImportCSV = async (csvData: string) => {
+    try {
+      const result = await driversAPI.importCSV(csvData);
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+      return result;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erro ao importar CSV');
+    }
+  };
+
   const formatCPF = (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -182,13 +211,29 @@ export default function DriversPage() {
           <p className="text-gray-600 mt-1">Gerencie os motoristas da frota</p>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Adicionar Motorista
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              Exportar CSV
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              <Upload className="w-5 h-5" />
+              Importar CSV
+            </button>
+            <button
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Adicionar Motorista
+            </button>
+          </div>
         )}
       </div>
 
@@ -451,6 +496,14 @@ export default function DriversPage() {
         </div>
       </div>
     )}
+
+      {/* Modal de Import CSV */}
+      <ImportCSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        title="Importar Motoristas CSV"
+      />
     </div>
   );
 }
