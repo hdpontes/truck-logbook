@@ -78,12 +78,11 @@ const BillingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Carregar dados iniciais (últimos 30 dias)
+    // Carregar dados iniciais (primeiro dia do mês atual até hoje)
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     
-    setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+    setStartDate(firstDayOfMonth.toISOString().split('T')[0]);
     setEndDate(today.toISOString().split('T')[0]);
     
     loadFiltersData();
@@ -390,10 +389,19 @@ const BillingPage: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={() => {
+                  // Resetar para primeiro dia do mês atual até hoje
+                  const today = new Date();
+                  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                  
+                  setStartDate(firstDayOfMonth.toISOString().split('T')[0]);
+                  setEndDate(today.toISOString().split('T')[0]);
                   setTripCodeFilter('');
                   setTruckFilter('');
                   setDriverFilter('');
                   setClientFilter('');
+                  
+                  // Recarregar dados com filtros limpos
+                  setTimeout(() => fetchBillingData(), 100);
                 }}
               >
                 Limpar Filtros
