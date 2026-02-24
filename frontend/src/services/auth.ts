@@ -17,6 +17,7 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  isTemporaryPassword?: boolean;
 }
 
 export interface AuthResponse {
@@ -78,6 +79,11 @@ export const authService = {
 
   async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string; success: boolean }> {
     const { data } = await api.post('/auth/change-password', { currentPassword, newPassword });
+    return data;
+  },
+
+  async changeTemporaryPassword(newPassword: string): Promise<{ message: string; success: boolean }> {
+    const { data } = await api.post('/auth/change-temporary-password', { newPassword });
     return data;
   }
 };
