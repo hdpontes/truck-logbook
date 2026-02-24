@@ -103,12 +103,11 @@ const ReportsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Carregar dados iniciais (últimos 30 dias)
+    // Carregar dados iniciais (primeiro dia do mês atual até hoje)
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     
-    setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+    setStartDate(firstDayOfMonth.toISOString().split('T')[0]);
     setEndDate(today.toISOString().split('T')[0]);
     
     // Carregar trucks e drivers para filtros
@@ -183,10 +182,9 @@ const ReportsPage: React.FC = () => {
 
   const handleClearFilters = () => {
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     
-    setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+    setStartDate(firstDayOfMonth.toISOString().split('T')[0]);
     setEndDate(today.toISOString().split('T')[0]);
     setTypeFilter('ALL');
     setTripCodeFilter('');
