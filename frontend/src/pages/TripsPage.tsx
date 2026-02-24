@@ -93,6 +93,15 @@ export default function TripsPage() {
     fetchTrips();
   }, []);
 
+  // Auto-refresh trips every 30 seconds for real-time updates
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      fetchTrips();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(refreshInterval);
+  }, [startDateFilter, endDateFilter, clientFilter, driverFilter, tripCodeFilter]);
+
   const loadFiltersData = async () => {
     try {
       const [clientsData, driversData] = await Promise.all([
