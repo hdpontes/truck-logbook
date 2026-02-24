@@ -87,14 +87,22 @@ router.get('/overview', async (req, res) => {
           _sum: { revenue: true, totalCost: true, profit: true },
         });
 
+        const allExpenses = await prisma.expense.aggregate({
+          _sum: { amount: true },
+        });
+
+        const totalRevenue = financialMetrics._sum.revenue || 0;
+        const totalCost = (allExpenses._sum.amount || 0);
+        const totalProfit = totalRevenue - totalCost;
+
         return {
           totalTrucks,
           trucksInMaintenance,
           activeTrips,
           completedTrips,
-          totalRevenue: financialMetrics._sum.revenue || 0,
-          totalCost: financialMetrics._sum.totalCost || 0,
-          totalProfit: financialMetrics._sum.profit || 0,
+          totalRevenue,
+          totalCost,
+          totalProfit,
         };
       })(),
 
