@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/store/auth';
-import { Bell, User, Menu, KeyRound, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, User, Menu, KeyRound, LogOut, ChevronDown, Settings } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,13 +10,15 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Fechar menu quando clicar fora
+  // Fechar menu desktop quando clicar fora
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (desktopMenuRef.current && !desktopMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
       }
     }
@@ -28,6 +30,22 @@ export default function Header({ onMenuClick }: HeaderProps) {
       };
     }
   }, [showUserMenu]);
+
+  // Fechar menu mobile quando clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setShowMobileMenu(false);
+      }
+    }
+
+    if (showMobileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showMobileMenu]);
 
   return (
     <header className="bg-white shadow-sm">
@@ -61,7 +79,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </button>
 
           {/* Desktop: User menu dropdown */}
-          <div className="hidden md:block relative" ref={menuRef}>
+          <div className="hidden md:block relative" ref={desktopMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -90,6 +108,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <span className="text-sm font-medium">Alterar Senha</span>
                 </button>
                 
+                {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/settings');
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <Settings className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm font-medium">Configurações</span>
+                  </button>
+                )}
+                
                 <div className="border-t border-gray-200 my-1"></div>
                 
                 <button
@@ -107,16 +138,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
 
           {/* Mobile: User menu dropdown */}
-          <div className="md:hidden relative" ref={menuRef}>
+          <div className="md:hidden relative" ref={mobileMenuRef}>
             <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
             >
               <User className="w-6 h-6" />
             </button>
 
             {/* Dropdown Menu Mobile */}
-            {showUserMenu && (
+            {showMobileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                 <div className="px-4 py-2 border-b border-gray-200">
                   <p className="text-sm font-medium text-gray-800">{user?.name}</p>
@@ -125,7 +156,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 
                 <button
                   onClick={() => {
-                    setShowUserMenu(false);
+                    setShowMobileMenu(false);
                     navigate('/change-password');
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -134,11 +165,24 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <span className="text-sm font-medium">Alterar Senha</span>
                 </button>
                 
+                {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      navigate('/settings');
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <Settings className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm font-medium">Configurações</span>
+                  </button>
+                )}
+                
                 <div className="border-t border-gray-200 my-1"></div>
                 
                 <button
                   onClick={() => {
-                    setShowUserMenu(false);
+                    setShowMobileMenu(false);
                     logout();
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
