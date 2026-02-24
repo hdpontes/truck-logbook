@@ -646,6 +646,35 @@ router.post('/:id/pause', async (req, res) => {
       ? 'Aguardando carregamento do carreto'
       : 'Aguardando descarregamento do carreto';
 
+    // Verificar se o leg ativo é um reposicionamento
+    const isRepositioning = activeLeg.type === 'REPOSICIONAMENTO';
+    let nextLegNumber = activeLeg.legNumber + 1;
+
+    // Se está finalizando um reposicionamento, ativar o próximo leg (que deve estar PAUSED)
+    if (isRepositioning) {
+      const pausedNextLeg = await prisma.tripLeg.findFirst({
+        where: {
+          tripId: trip.id,
+          legNumber: nextLegNumber,
+          status: 'PAUSED',
+        },
+      });
+
+      if (pausedNextLeg) {
+        // Ativar o leg que estava pausado esperando o reposicionamento
+        await prisma.tripLeg.update({
+          where: { id: pausedNextLeg.id },
+          data: {
+            status: 'IN_PROGRESS',
+            startMileage: finalMileage, // Atualizar km de início
+          },
+        });
+        
+        // O próximo leg de aguardamento será criado após este leg ativado
+        nextLegNumber = pausedNextLeg.legNumber + 1;
+      }
+    }
+
     // Finalizar trecho atual e criar trecho de aguardamento
     const transactionOperations: any[] = [
       // Finalizar trecho atual
@@ -663,7 +692,7 @@ router.post('/:id/pause', async (req, res) => {
       prisma.tripLeg.create({
         data: {
           tripId: trip.id,
-          legNumber: activeLeg.legNumber + 1,
+          legNumber: nextLegNumber,
           type: 'AGUARDANDO',
           origin: location || activeLeg.destination || activeLeg.origin,
           truckId: activeLeg.truckId,
@@ -787,6 +816,9 @@ router.post('/:id/resume', async (req, res) => {
       ? 'Continuando após carregamento'
       : 'Continuando após descarregamento';
 
+    // Calcular distância do leg de aguardamento (geralmente 0, mas pode ter movido)
+    const waitingDistance = finalMileage - pausedLeg.startMileage;
+
     // Finalizar trecho de aguardamento e criar novo trecho em andamento
     const transactionOperations: any[] = [
       // Finalizar trecho de aguardamento
@@ -794,6 +826,7 @@ router.post('/:id/resume', async (req, res) => {
         where: { id: pausedLeg.id },
         data: {
           endMileage: finalMileage,
+          distance: waitingDistance,
           endTime: new Date(),
           status: 'COMPLETED',
           destination: pausedLeg.origin, // Destino é o mesmo que origem (ficou parado)
@@ -883,19 +916,60 @@ router.post('/:id/finish', async (req, res) => {
       });
     }
 
-    // Calcular distância percorrida baseada na quilometragem
-    let finalDistance = trip.distance;
+    // Calcular distância percorrida baseada nos legs (soma das distâncias dos trechos)
+    // Isso garante que múltiplas viagens simultâneas não afetem o cálculo
+    const completedLegs = await prisma.tripLeg.findMany({
+      where: {
+        tripId: trip.id,
+        status: 'COMPLETED',
+      },
+      orderBy: { legNumber: 'asc' },
+    });
+
+    // Buscar leg ativo para finalizar
+    const activeLeg = await prisma.tripLeg.findFirst({
+      where: {
+        tripId: trip.id,
+        status: 'IN_PROGRESS',
+      },
+      orderBy: { legNumber: 'desc' },
+    });
+
     let finalEndMileage = endMileage ? parseFloat(endMileage) : null;
+    let finalDistance = 0;
     
-    if (finalEndMileage && trip.startMileage) {
-      finalDistance = finalEndMileage - trip.startMileage;
+    // Somar distâncias dos legs já completados (excluindo AGUARDANDO que têm distance 0)
+    finalDistance = completedLegs
+      .filter(leg => leg.type !== 'AGUARDANDO' && leg.distance != null)
+      .reduce((sum, leg) => sum + leg.distance, 0);
+
+    // Adicionar distância do leg final
+    if (activeLeg && finalEndMileage) {
+      const finalLegDistance = finalEndMileage - activeLeg.startMileage;
       
-      // Validação: quilometragem final deve ser maior que inicial
-      if (finalDistance < 0) {
+      // Validação: quilometragem final deve ser maior que inicial do leg
+      if (finalLegDistance < 0) {
         return res.status(400).json({ 
-          message: 'A quilometragem final deve ser maior que a quilometragem inicial' 
+          message: 'A quilometragem final deve ser maior que a quilometragem do último trecho' 
         });
       }
+      
+      finalDistance += finalLegDistance;
+      
+      // Finalizar leg ativo
+      await prisma.tripLeg.update({
+        where: { id: activeLeg.id },
+        data: {
+          endMileage: finalEndMileage,
+          distance: finalLegDistance,
+          endTime: new Date(),
+          status: 'COMPLETED',
+        },
+      });
+    } else if (!finalEndMileage) {
+      return res.status(400).json({ 
+        message: 'Informe a quilometragem final para concluir a viagem' 
+      });
     }
 
     // Calcular custos totais a partir das despesas
