@@ -70,6 +70,13 @@ const BillingPage: React.FC = () => {
   const [clientFilter, setClientFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Função helper para formatar data sem problemas de timezone
+  const formatDateLocal = (dateString: string) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('pt-BR');
+  };
+
   useEffect(() => {
     // Carregar dados iniciais (últimos 30 dias)
     const today = new Date();
@@ -431,7 +438,7 @@ const BillingPage: React.FC = () => {
       {/* Tabela de cobranças */}
       <Card ref={reportRef}>
         <CardHeader>
-          <CardTitle className="mb-6">Relatório de Cobranças - {startDate ? new Date(startDate).toLocaleDateString('pt-BR') : ''} até {endDate ? new Date(endDate).toLocaleDateString('pt-BR') : ''}</CardTitle>
+          <CardTitle className="mb-6">Relatório de Cobranças - {formatDateLocal(startDate)} até {formatDateLocal(endDate)}</CardTitle>
           
           {/* Informações do cliente (se filtrado) */}
           {clientFilter && clients.length > 0 && (
