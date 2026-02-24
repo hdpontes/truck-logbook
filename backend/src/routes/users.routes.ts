@@ -387,7 +387,6 @@ router.get('/export/csv', async (req, res) => {
     });
 
     const csvData = users.map(user => ({
-      id: user.id,
       login: user.login,
       email: user.email,
       name: user.name,
