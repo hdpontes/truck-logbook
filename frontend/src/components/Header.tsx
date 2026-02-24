@@ -1,12 +1,33 @@
 import { useAuthStore } from '@/store/auth';
-import { Bell, User, Menu } from 'lucide-react';
+import { Bell, User, Menu, KeyRound, LogOut, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  // Fechar menu quando clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showUserMenu]);
 
   return (
     <header className="bg-white shadow-sm">
@@ -39,12 +60,94 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
 
-          <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-gray-100 rounded-lg">
-            <User className="w-6 h-6 text-gray-600" />
-            <div>
-              <p className="text-sm font-medium text-gray-800">{user?.name}</p>
-              <p className="text-xs text-gray-600">{user?.role}</p>
-            </div>
+          {/* Desktop: User menu dropdown */}
+          <div className="hidden md:block relative" ref={menuRef}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <User className="w-6 h-6 text-gray-600" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-gray-800">{user?.name}</p>
+                <p className="text-xs text-gray-600">{user?.role}</p>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${
+                showUserMenu ? 'rotate-180' : ''
+              }`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/change-password');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <KeyRound className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium">Alterar Senha</span>
+                </button>
+                
+                <div className="border-t border-gray-200 my-1"></div>
+                
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sair</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile: User menu dropdown */}
+          <div className="md:hidden relative" ref={menuRef}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
+            >
+              <User className="w-6 h-6" />
+            </button>
+
+            {/* Dropdown Menu Mobile */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-200">
+                  <p className="text-sm font-medium text-gray-800">{user?.name}</p>
+                  <p className="text-xs text-gray-600">{user?.role}</p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/change-password');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  <KeyRound className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-medium">Alterar Senha</span>
+                </button>
+                
+                <div className="border-t border-gray-200 my-1"></div>
+                
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sair</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
