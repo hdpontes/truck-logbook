@@ -108,7 +108,7 @@ export default function MaintenancePage() {
       // Criar despesa vinculada ao caminhão
       await expensesAPI.create({
         truckId: maintenanceToComplete.truck.id,
-        category: 'MAINTENANCE',
+        type: 'MAINTENANCE',
         description: `Manutenção: ${typeLabels[maintenanceToComplete.type] || maintenanceToComplete.type} - ${maintenanceToComplete.description}`,
         amount: actualCost,
         date: completionData.completedDate,
