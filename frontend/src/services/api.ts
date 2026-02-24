@@ -60,9 +60,13 @@ export const tripsAPI = {
   delete: (id: string) => api.delete(`/trips/${id}`).then(res => res.data),
   start: (id: string) => api.post(`/trips/${id}/start`).then(res => res.data),
   finish: (id: string, data?: any) => api.post(`/trips/${id}/finish`, data).then(res => res.data),
+  pause: (id: string, data: { currentMileage: number; location: string }) => api.post(`/trips/${id}/pause`, data).then(res => res.data),
   checkDelayed: () => api.post('/trips/check-delayed').then(res => res.data),
   checkUpcoming: () => api.post('/trips/check-upcoming').then(res => res.data),
   sendReminder: (id: string) => api.post(`/trips/${id}/send-reminder`).then(res => res.data),
+  // Trip Legs (Trechos)
+  getLegs: (id: string) => api.get(`/trips/${id}/legs`).then(res => res.data),
+  finishLeg: (tripId: string, legId: string, data: any) => api.post(`/trips/${tripId}/legs/${legId}/finish`, data).then(res => res.data),
 };
 
 // Expenses API
