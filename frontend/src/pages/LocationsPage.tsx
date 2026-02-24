@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Plus, Edit, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Edit, Trash2, Download, Upload } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import axios from 'axios';
+import { locationsAPI } from '@/lib/api';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -32,6 +34,7 @@ export default function LocationsPage() {
     type: 'BOTH' as 'ORIGIN' | 'DESTINATION' | 'BOTH',
   });
   const [loadingCep, setLoadingCep] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     fetchLocations();
@@ -155,6 +158,33 @@ export default function LocationsPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await locationsAPI.exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'localizacoes.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar CSV');
+    }
+  };
+
+  const handleImportCSV = async (csvData: string) => {
+    try {
+      const result = await locationsAPI.importCSV(csvData);
+      await fetchLocations();
+      return result;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erro ao importar CSV');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -189,10 +219,20 @@ export default function LocationsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Origens e Destinos</h1>
-        <Button onClick={() => { resetForm(); setShowModal(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Localização
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={() => { resetForm(); setShowModal(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Localização
+          </Button>
+        </div>
       </div>
 
       {locations.length === 0 ? (
@@ -375,6 +415,14 @@ export default function LocationsPage() {
           </Card>
         </div>
       )}
+
+      {/* Modal de Import CSV */}
+      <ImportCSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        title="Importar Localizações CSV"
+      />
     </div>
   );
 }
