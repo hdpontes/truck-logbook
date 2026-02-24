@@ -81,6 +81,11 @@ export default function TripsPage() {
   const [pauseLocation, setPauseLocation] = useState('');
   const [waitingType, setWaitingType] = useState<'LOADING' | 'UNLOADING'>('LOADING');
   
+  // Estados para modal de quilometragem ao resumir viagem
+  const [showResumeMileageModal, setShowResumeMileageModal] = useState(false);
+  const [tripToResumeWithMileage, setTripToResumeWithMileage] = useState<Trip | null>(null);
+  const [resumeMileage, setResumeMileage] = useState('');
+  
   // Estados para filtros avançados
   const [showFilters, setShowFilters] = useState(false);
   const [startDateFilter, setStartDateFilter] = useState('');
@@ -419,6 +424,45 @@ export default function TripsPage() {
         : 'Viagem retomada!';
       
       toast.success(successMessage);
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao continuar viagem:', error);
+      
+      // Se o erro for sobre precisar informar quilometragem, abrir modal
+      if (error.response?.data?.message?.includes('Informe a quilometragem atual')) {
+        setTripToResumeWithMileage(trip);
+        setResumeMileage('');
+        setShowResumeMileageModal(true);
+      } else {
+        toast.error(error.response?.data?.message || 'Erro ao continuar viagem');
+      }
+    }
+  };
+
+  const handleResumeWithMileage = async () => {
+    if (!tripToResumeWithMileage) return;
+    
+    if (!resumeMileage || parseFloat(resumeMileage) <= 0) {
+      toast.error('Informe a quilometragem atual do caminhão');
+      return;
+    }
+
+    try {
+      await tripsAPI.resume(tripToResumeWithMileage.id, { 
+        currentMileage: parseFloat(resumeMileage) 
+      });
+      
+      const pausedLeg = tripToResumeWithMileage.legs?.find(leg => leg.status === 'PAUSED' && leg.type === 'AGUARDANDO');
+      const successMessage = pausedLeg?.waitingType === 'LOADING' 
+        ? 'Carreta carregada! Continue para o destino.'
+        : pausedLeg?.waitingType === 'UNLOADING'
+        ? 'Carreta descarregada! Retornando à garagem.'
+        : 'Viagem retomada!';
+      
+      toast.success(successMessage);
+      setShowResumeMileageModal(false);
+      setTripToResumeWithMileage(null);
+      setResumeMileage('');
       fetchTrips();
     } catch (error: any) {
       console.error('Erro ao continuar viagem:', error);
@@ -1284,6 +1328,75 @@ export default function TripsPage() {
               >
                 <Package className="w-4 h-4 mr-2" />
                 {waitingType === 'LOADING' ? 'Deixar Carregando' : 'Deixar Descarregando'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Quilometragem ao Resumir Viagem */}
+    {showResumeMileageModal && tripToResumeWithMileage && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Quilometragem Atual</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Viagem: <span className="font-medium">{tripToResumeWithMileage.origin} → {tripToResumeWithMileage.destination}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Caminhão: <span className="font-medium uppercase">{tripToResumeWithMileage.truck.plate}</span>
+                </p>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>💡 Atenção:</strong> O caminhão participou de outras viagens enquanto a carreta estava aguardando. Informe a quilometragem atual do caminhão para continuarmos.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quilometragem Atual do Caminhão *
+                </label>
+                <input
+                  type="number"
+                  value={resumeMileage}
+                  onChange={(e) => setResumeMileage(e.target.value)}
+                  placeholder="Ex: 50150"
+                  min="0"
+                  step="0.1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Informe a quilometragem atual do caminhão ao retomar a viagem
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowResumeMileageModal(false);
+                  setTripToResumeWithMileage(null);
+                  setResumeMileage('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleResumeWithMileage}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Continuar Viagem
               </Button>
             </div>
           </CardContent>
