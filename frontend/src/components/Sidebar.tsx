@@ -13,7 +13,6 @@ import {
   MapPin,
   LogOut,
   Clock,
-  Settings,
   X,
   FileText,
   CreditCard
@@ -48,7 +47,6 @@ const getMenuItems = (userRole: string) => {
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
-      { icon: Settings, label: 'Configurações', path: '/settings' },
     ];
   }
 
@@ -64,7 +62,6 @@ const getMenuItems = (userRole: string) => {
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
-      { icon: Settings, label: 'Configurações', path: '/settings' },
     ];
   }
 
