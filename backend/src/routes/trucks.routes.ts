@@ -404,13 +404,13 @@ router.post('/import/csv', async (req, res) => {
         if (existing) {
           // Atualizar
           await prisma.truck.update({
-            where: { plate: truckData.plate },
+            where: { plate: String(truckData.plate) },
             data: {
               model: truckData.model,
               brand: truckData.brand,
               year: parseInt(truckData.year),
               color: truckData.color || null,
-              chassisNum: truckData.chassisNum || null,
+              chassisNum: truckData.chassisNum ? String(truckData.chassisNum) : null,
               capacity: truckData.capacity ? parseFloat(truckData.capacity) : null,
               avgConsumption: truckData.avgConsumption ? parseFloat(truckData.avgConsumption) : null,
               currentMileage: truckData.currentMileage ? parseFloat(truckData.currentMileage) : null,
@@ -422,12 +422,12 @@ router.post('/import/csv', async (req, res) => {
           // Criar novo
           await prisma.truck.create({
             data: {
-              plate: truckData.plate,
+              plate: String(truckData.plate),
               model: truckData.model,
               brand: truckData.brand,
               year: parseInt(truckData.year),
               color: truckData.color || null,
-              chassisNum: truckData.chassisNum || null,
+              chassisNum: truckData.chassisNum ? String(truckData.chassisNum) : null,
               capacity: truckData.capacity ? parseFloat(truckData.capacity) : null,
               avgConsumption: truckData.avgConsumption ? parseFloat(truckData.avgConsumption) : null,
               currentMileage: truckData.currentMileage ? parseFloat(truckData.currentMileage) : null,
