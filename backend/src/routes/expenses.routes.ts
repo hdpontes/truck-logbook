@@ -468,7 +468,10 @@ router.post('/import/csv', async (req, res) => {
     for (let i = 0; i < expenses.length; i++) {
       try {
         const expenseData = expenses[i];
-        const { truckPlate, type, amount, quantity, unitPrice, description, supplier, location, date, category } = expenseData;
+        let { truckPlate, type, amount, quantity, unitPrice, description, supplier, location, date, category } = expenseData;
+
+        // Converter truckPlate para string se fornecido
+        truckPlate = truckPlate ? String(truckPlate) : null;
 
         if (!type || !amount) {
           results.errors.push({
