@@ -167,7 +167,11 @@ router.post('/import/csv', async (req, res) => {
 
     for (const clientData of clients) {
       try {
-        const { name, cnpj, address, city, state, phone, email } = clientData;
+        let { name, cnpj, address, city, state, phone, email } = clientData;
+
+        // Converter campos numéricos para string
+        cnpj = cnpj ? String(cnpj) : null;
+        phone = phone ? String(phone) : null;
 
         console.log('🔍 Processing client:', { name, cnpj, city, state });
 
@@ -187,11 +191,11 @@ router.post('/import/csv', async (req, res) => {
 
         const clientPayload = {
           name,
-          cnpj: String(cnpj),
+          cnpj,
           address,
           city,
           state,
-          phone: phone ? String(phone) : null,
+          phone,
           email: email || null,
         };
 
