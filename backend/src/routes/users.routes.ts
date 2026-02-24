@@ -434,7 +434,11 @@ router.post('/import/csv', async (req, res) => {
 
     for (const userData of users) {
       try {
-        const { login, email, name, cpf, phone, role, active } = userData;
+        let { login, email, name, cpf, phone, role, active } = userData;
+
+        // Converter campos numéricos para string
+        cpf = cpf ? String(cpf) : null;
+        phone = phone ? String(phone) : null;
 
         if (!email || !name) {
           results.errors.push({
@@ -471,8 +475,8 @@ router.post('/import/csv', async (req, res) => {
           login: login || email, // Se não tiver login, usa o email
           email,
           name,
-          cpf: cpf ? String(cpf) : null,
-          phone: phone ? String(phone) : null,
+          cpf,
+          phone,
           role: role || 'DRIVER', // Default DRIVER
           active: active !== false, // Default to true if not specified
         };
