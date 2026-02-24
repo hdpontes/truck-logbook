@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { trailersAPI } from '@/services/api';
-import { Truck, Plus, Edit, Trash2 } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 interface TrailerData {
   id: string;
@@ -24,6 +25,7 @@ const TrailersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [trailerToDelete, setTrailerToDelete] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     fetchTrailers();
@@ -60,6 +62,32 @@ const TrailersPage: React.FC = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await trailersAPI.exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'carretas.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+    }
+  };
+
+  const handleImportCSV = async (csvData: string) => {
+    try {
+      const result = await trailersAPI.importCSV(csvData);
+      await fetchTrailers();
+      return result;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erro ao importar CSV');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -72,10 +100,20 @@ const TrailersPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Gestão de Carretas</h1>
-        <Button onClick={() => navigate('/trailers/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Carreta
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={() => navigate('/trailers/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Carreta
+          </Button>
+        </div>
       </div>
 
       {trailers.length === 0 ? (
@@ -190,6 +228,14 @@ const TrailersPage: React.FC = () => {
         </Card>
       </div>
     )}
+
+      {/* Modal de Import CSV */}
+      <ImportCSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        title="Importar Carretas CSV"
+      />
     </div>
   );
 };
