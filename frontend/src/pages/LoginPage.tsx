@@ -5,7 +5,7 @@ import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
 import { useSettingsStore } from '@/store/settings';
 import { useToast } from '@/contexts/ToastContext';
-import { LogIn } from 'lucide-react';
+import { LogIn, X } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [logoError, setLogoError] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordIdentifier, setForgotPasswordIdentifier] = useState('');
 
   useEffect(() => {
     // Buscar settings apenas uma vez ao montar o componente
@@ -49,6 +51,27 @@ export default function LoginPage() {
       return;
     }
     loginMutation.mutate({ login, password });
+  };
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: (identifier: string) => authService.forgotPassword(identifier),
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setShowForgotPassword(false);
+      setForgotPasswordIdentifier('');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao processar solicitação');
+    },
+  });
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotPasswordIdentifier) {
+      toast.warning('Digite seu login ou email');
+      return;
+    }
+    forgotPasswordMutation.mutate(forgotPasswordIdentifier);
   };
 
   return (
@@ -118,7 +141,78 @@ export default function LoginPage() {
               {loginMutation.isPending ? 'Entrando...' : 'Entrar'}
             </button>
           </div>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-blue-600 hover:text-blue-500"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
         </form>
+
+        {/* Modal Esqueci Minha Senha */}
+        {showForgotPassword && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Esqueci minha senha</h3>
+                <button
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordIdentifier('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4">
+                Digite seu login ou email e o administrador entrará em contato via WhatsApp para ajudá-lo a recuperar sua senha.
+              </p>
+
+              <form onSubmit={handleForgotPassword}>
+                <div className="mb-4">
+                  <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-1">
+                    Login ou Email
+                  </label>
+                  <input
+                    id="identifier"
+                    type="text"
+                    value={forgotPasswordIdentifier}
+                    onChange={(e) => setForgotPasswordIdentifier(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Digite seu login ou email"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setForgotPasswordIdentifier('');
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotPasswordMutation.isPending}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {forgotPasswordMutation.isPending ? 'Enviando...' : 'Enviar'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
