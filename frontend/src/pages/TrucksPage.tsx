@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { trucksAPI } from '@/lib/api';
-import { Truck, Plus, Edit, Trash2, MapPin, AlertTriangle } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, MapPin, AlertTriangle, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 interface TruckData {
   id: string;
@@ -32,6 +33,7 @@ const TrucksPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [truckToDelete, setTruckToDelete] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   // Removed showAddModal as it's not used
 
   useEffect(() => {
@@ -69,6 +71,32 @@ const TrucksPage: React.FC = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await trucksAPI.exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'caminhoes.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+    }
+  };
+
+  const handleImportCSV = async (csvData: string) => {
+    try {
+      const result = await trucksAPI.importCSV(csvData);
+      await fetchTrucks(); // Recarregar lista
+      return result;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erro ao importar CSV');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -81,10 +109,20 @@ const TrucksPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Gestão de Frota</h1>
-        <Button onClick={() => navigate('/trucks/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Caminhão
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={() => navigate('/trucks/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Caminhão
+          </Button>
+        </div>
       </div>
 
       {trucks.length === 0 ? (
@@ -246,6 +284,14 @@ const TrucksPage: React.FC = () => {
         </Card>
       </div>
     )}
+
+      {/* Modal de Import CSV */}
+      <ImportCSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        title="Importar Caminhões CSV"
+      />
     </div>
   );
 };
