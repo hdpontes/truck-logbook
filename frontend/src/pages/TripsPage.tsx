@@ -62,7 +62,7 @@ export default function TripsPage() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [tripForExpense, setTripForExpense] = useState<Trip | null>(null);
   const [expenseData, setExpenseData] = useState({
-    type: 'FUEL' as 'FUEL' | 'TOLL' | 'MAINTENANCE' | 'TIRE' | 'FOOD' | 'PARKING' | 'INSURANCE' | 'TAX' | 'SALARY' | 'OTHER',
+    type: 'FUEL' as 'FUEL' | 'TOLL' | 'MAINTENANCE' | 'TIRE' | 'FOOD' | 'PARKING' | 'INSURANCE' | 'TAX' | 'SALARY' | 'OVERTIME' | 'OTHER',
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -455,7 +455,7 @@ export default function TripsPage() {
                         <div className="flex items-start gap-2 flex-1 min-w-0">
                           <MapPin className="w-4 h-4 mt-1 text-gray-500 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm leading-tight">
+                            <p className="font-medium text-sm leading-normal">
                               {trip.origin} → {trip.destination}
                             </p>
                             {trip.tripCode && (
@@ -611,7 +611,7 @@ export default function TripsPage() {
                         <div className="flex items-start gap-2 flex-1 min-w-0">
                           <MapPin className="w-4 h-4 mt-1 text-gray-500 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm leading-tight">
+                            <p className="font-medium text-sm leading-normal">
                               {trip.origin} → {trip.destination}
                             </p>
                             {trip.tripCode && (
@@ -775,7 +775,7 @@ export default function TripsPage() {
                         <div className="flex items-start gap-2 flex-1 min-w-0">
                           <MapPin className="w-4 h-4 mt-1 text-gray-500 flex-shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <p className="font-medium text-sm leading-tight">
+                            <p className="font-medium text-sm leading-normal">
                               {trip.origin} → {trip.destination}
                             </p>
                             {trip.tripCode && (
@@ -1030,7 +1030,12 @@ export default function TripsPage() {
                   <option value="PARKING">Estacionamento</option>
                   <option value="INSURANCE">Seguro</option>
                   <option value="TAX">Impostos</option>
-                  <option value="SALARY">Salário do Motorista</option>
+                  {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                    <>
+                      <option value="SALARY">Salário</option>
+                      <option value="OVERTIME">Hora Extra</option>
+                    </>
+                  )}
                   <option value="OTHER">Outro</option>
                 </select>
               </div>
