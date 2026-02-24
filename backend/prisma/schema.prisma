@@ -180,7 +180,8 @@ enum ExpenseType {
   PARKING // Estacionamento
   INSURANCE // Seguro
   TAX // Impostos
-  SALARY // Salário do motorista
+  SALARY // Salário
+  OVERTIME // Hora Extra
   OTHER // Outros
 }
 
