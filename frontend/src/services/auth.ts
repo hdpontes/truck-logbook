@@ -69,6 +69,11 @@ export const authService = {
 
   isAuthenticated(): boolean {
     return !!this.getToken();
+  },
+
+  async forgotPassword(identifier: string): Promise<{ message: string; success: boolean }> {
+    const { data } = await api.post('/auth/forgot-password', { identifier });
+    return data;
   }
 };
 
