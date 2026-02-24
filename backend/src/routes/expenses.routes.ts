@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
           select: { id: true, plate: true, model: true },
         },
         trip: {
-          select: { id: true, origin: true, destination: true },
+          select: { id: true, origin: true, destination: true, status: true },
         },
         client: {
           select: { id: true, name: true, cnpj: true },
@@ -129,13 +129,48 @@ router.post('/', async (req, res) => {
           select: { id: true, plate: true, model: true },
         } : false,
         trip: tripId ? {
-          select: { id: true, origin: true, destination: true },
+          select: { id: true, origin: true, destination: true, status: true, revenue: true },
         } : false,
         client: clientId ? {
           select: { id: true, name: true, cnpj: true },
         } : false,
       },
     });
+
+    // Se a despesa foi adicionada a uma viagem concluída, recalcular os totais
+    if (tripId && expense.trip?.status === 'COMPLETED') {
+      const allExpenses = await prisma.expense.findMany({
+        where: { tripId },
+      });
+
+      const fuelCost = allExpenses
+        .filter((e) => e.type === 'FUEL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const tollCost = allExpenses
+        .filter((e) => e.type === 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const otherCosts = allExpenses
+        .filter((e) => e.type !== 'FUEL' && e.type !== 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const totalCost = fuelCost + tollCost + otherCosts;
+      const profit = (expense.trip.revenue || 0) - totalCost;
+      const profitMargin = expense.trip.revenue > 0 ? (profit / expense.trip.revenue) * 100 : 0;
+
+      await prisma.trip.update({
+        where: { id: tripId },
+        data: {
+          fuelCost,
+          tollCost,
+          otherCosts,
+          totalCost,
+          profit,
+          profitMargin,
+        },
+      });
+    }
 
     // Enviar webhook de despesa criada
     await sendWebhook('expense.created', {
@@ -177,6 +212,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const user = (req as any).user;
     const {
       clientId,
       type,
@@ -189,6 +225,27 @@ router.put('/:id', async (req, res) => {
       location,
       date,
     } = req.body;
+
+    // Buscar a despesa para validação
+    const existingExpense = await prisma.expense.findUnique({
+      where: { id },
+      include: {
+        trip: {
+          select: { status: true },
+        },
+      },
+    });
+
+    if (!existingExpense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    // Motorista não pode editar despesa de viagem concluída
+    if (user.role === 'DRIVER' && existingExpense.tripId && existingExpense.trip?.status === 'COMPLETED') {
+      return res.status(403).json({ 
+        message: 'Motoristas não podem editar despesas de viagens concluídas. Apenas gerentes e administradores podem fazer isso.' 
+      });
+    }
 
     const expense = await prisma.expense.update({
       where: { id },
@@ -209,13 +266,48 @@ router.put('/:id', async (req, res) => {
           select: { id: true, plate: true, model: true },
         },
         trip: {
-          select: { id: true, origin: true, destination: true },
+          select: { id: true, origin: true, destination: true, status: true, revenue: true },
         },
         client: {
           select: { id: true, name: true, cnpj: true },
         },
       },
     });
+
+    // Se a despesa pertence a uma viagem concluída, recalcular os totais
+    if (expense.tripId && expense.trip?.status === 'COMPLETED') {
+      const allExpenses = await prisma.expense.findMany({
+        where: { tripId: expense.tripId },
+      });
+
+      const fuelCost = allExpenses
+        .filter((e) => e.type === 'FUEL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const tollCost = allExpenses
+        .filter((e) => e.type === 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const otherCosts = allExpenses
+        .filter((e) => e.type !== 'FUEL' && e.type !== 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const totalCost = fuelCost + tollCost + otherCosts;
+      const profit = (expense.trip.revenue || 0) - totalCost;
+      const profitMargin = expense.trip.revenue > 0 ? (profit / expense.trip.revenue) * 100 : 0;
+
+      await prisma.trip.update({
+        where: { id: expense.tripId },
+        data: {
+          fuelCost,
+          tollCost,
+          otherCosts,
+          totalCost,
+          profit,
+          profitMargin,
+        },
+      });
+    }
 
     res.json(expense);
   } catch (error: any) {
@@ -233,10 +325,67 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const user = (req as any).user;
+
+    // Buscar a despesa antes de deletar para recalcular viagem se necessário e validar permissão
+    const expense = await prisma.expense.findUnique({
+      where: { id },
+      include: {
+        trip: {
+          select: { id: true, status: true, revenue: true },
+        },
+      },
+    });
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    // Motorista não pode deletar despesa de viagem concluída
+    if (user.role === 'DRIVER' && expense.tripId && expense.trip?.status === 'COMPLETED') {
+      return res.status(403).json({ 
+        message: 'Motoristas não podem excluir despesas de viagens concluídas. Apenas gerentes e administradores podem fazer isso.' 
+      });
+    }
 
     await prisma.expense.delete({
       where: { id },
     });
+
+    // Se a despesa pertencia a uma viagem concluída, recalcular os totais
+    if (expense.tripId && expense.trip?.status === 'COMPLETED') {
+      const allExpenses = await prisma.expense.findMany({
+        where: { tripId: expense.tripId },
+      });
+
+      const fuelCost = allExpenses
+        .filter((e) => e.type === 'FUEL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const tollCost = allExpenses
+        .filter((e) => e.type === 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const otherCosts = allExpenses
+        .filter((e) => e.type !== 'FUEL' && e.type !== 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const totalCost = fuelCost + tollCost + otherCosts;
+      const profit = (expense.trip.revenue || 0) - totalCost;
+      const profitMargin = expense.trip.revenue > 0 ? (profit / expense.trip.revenue) * 100 : 0;
+
+      await prisma.trip.update({
+        where: { id: expense.tripId },
+        data: {
+          fuelCost,
+          tollCost,
+          otherCosts,
+          totalCost,
+          profit,
+          profitMargin,
+        },
+      });
+    }
 
     res.status(204).send();
   } catch (error: any) {
