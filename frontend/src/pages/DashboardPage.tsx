@@ -232,7 +232,7 @@ export default function DashboardPage() {
                 >
                   <td className="py-3 px-4">
                     <div>
-                      <p className="font-medium text-gray-800">{truck.truck.plate}</p>
+                      <p className="font-medium text-gray-800 uppercase">{truck.truck.plate}</p>
                       <p className="text-sm text-gray-600">
                         {truck.truck.brand} {truck.truck.model}
                       </p>
