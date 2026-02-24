@@ -469,7 +469,7 @@ const TripDetailPage: React.FC = () => {
             <CardContent className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm md:text-base text-gray-600">Placa:</span>
-                <span className="font-medium text-sm md:text-base">{trip.truck.plate}</span>
+                <span className="font-medium text-sm md:text-base uppercase">{trip.truck.plate}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm md:text-base text-gray-600">Modelo:</span>
@@ -497,7 +497,7 @@ const TripDetailPage: React.FC = () => {
               <CardContent className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm md:text-base text-gray-600">Placa:</span>
-                  <span className="font-medium text-sm md:text-base">{trip.trailer.plate}</span>
+                  <span className="font-medium text-sm md:text-base uppercase">{trip.trailer.plate}</span>
                 </div>
                 {(trip.trailer.brand || trip.trailer.model) && (
                   <div className="flex justify-between">
