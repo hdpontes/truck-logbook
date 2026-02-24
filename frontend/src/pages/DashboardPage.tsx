@@ -24,7 +24,7 @@ export default function DashboardPage() {
     queryKey: ['truck-performance'],
     queryFn: async () => {
       const response = await dashboardAPI.getTruckPerformance();
-      return response.performance;
+      return response;
     },
   });
 
@@ -142,31 +142,36 @@ export default function DashboardPage() {
         <h3 className="text-xl font-semibold text-gray-800 mb-4">
           Performance dos Caminhões
         </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
-                  Caminhão
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                  Viagens
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                  Receita
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                  Lucro
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                  Margem
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
-                  KM
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+        {!performance || performance.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">
+            Nenhum dado de performance disponível. Complete algumas viagens para ver os dados aqui.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
+                    Caminhão
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
+                    Viagens
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
+                    Receita
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
+                    Lucro
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
+                    Margem
+                  </th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-600">
+                    KM
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
               {performance?.map((truck: any) => (
                 <tr key={truck.truck.id} className="border-b hover:bg-gray-50">
                   <td className="py-3 px-4">
@@ -178,41 +183,42 @@ export default function DashboardPage() {
                     </div>
                   </td>
                   <td className="text-right py-3 px-4 text-gray-800">
-                    {truck.metrics.totalTrips}
+                    {truck.trips}
                   </td>
                   <td className="text-right py-3 px-4 text-gray-800">
-                    {formatCurrency(truck.metrics.totalRevenue)}
+                    {formatCurrency(truck.totalRevenue)}
                   </td>
                   <td className="text-right py-3 px-4">
                     <span
                       className={
-                        truck.metrics.totalProfit > 0
+                        truck.totalProfit > 0
                           ? 'text-green-600 font-medium'
                           : 'text-red-600 font-medium'
                       }
                     >
-                      {formatCurrency(truck.metrics.totalProfit)}
+                      {formatCurrency(truck.totalProfit)}
                     </span>
                   </td>
                   <td className="text-right py-3 px-4">
                     <span
                       className={
-                        truck.metrics.avgProfitMargin > 10
+                        truck.avgProfitMargin > 10
                           ? 'text-green-600'
                           : 'text-yellow-600'
                       }
                     >
-                      {truck.metrics.avgProfitMargin.toFixed(1)}%
+                      {truck.avgProfitMargin.toFixed(1)}%
                     </span>
                   </td>
                   <td className="text-right py-3 px-4 text-gray-800">
-                    {truck.metrics.totalDistance.toFixed(0)}
+                    {truck.totalDistance.toFixed(0)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );
