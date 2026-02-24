@@ -134,7 +134,55 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    res.json(trip);
+    // Calcular tempos dos trechos
+    let timeInTransit = 0; // Tempo em trânsito (trechos NORMAL)
+    let timeLoading = 0;    // Tempo carregando
+    let timeUnloading = 0;  // Tempo descarregando
+    let totalDistance = 0;  // Distância total percorrida
+
+    for (const leg of trip.legs) {
+      if (leg.startTime) {
+        const endTime = leg.endTime || new Date();
+        const duration = endTime.getTime() - leg.startTime.getTime();
+        
+        if (leg.type === 'NORMAL' || leg.type === 'REPOSICIONAMENTO') {
+          timeInTransit += duration;
+        } else if (leg.type === 'AGUARDANDO') {
+          if (leg.waitingType === 'LOADING') {
+            timeLoading += duration;
+          } else if (leg.waitingType === 'UNLOADING') {
+            timeUnloading += duration;
+          }
+        }
+      }
+
+      // Somar distâncias dos trechos completados
+      if (leg.status === 'COMPLETED' && leg.distance) {
+        totalDistance += leg.distance;
+      }
+    }
+
+    // Converter milissegundos para horas e minutos
+    const msToHoursMinutes = (ms: number) => {
+      const hours = Math.floor(ms / (1000 * 60 * 60));
+      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      return { hours, minutes };
+    };
+
+    const tripWithCalculations = {
+      ...trip,
+      calculations: {
+        timeInTransit: msToHoursMinutes(timeInTransit),
+        timeLoading: msToHoursMinutes(timeLoading),
+        timeUnloading: msToHoursMinutes(timeUnloading),
+        totalDistance,
+        timeInTransitMs: timeInTransit,
+        timeLoadingMs: timeLoading,
+        timeUnloadingMs: timeUnloading,
+      },
+    };
+
+    res.json(tripWithCalculations);
   } catch (error) {
     console.error('Error fetching trip:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -201,67 +249,6 @@ router.post('/', async (req, res) => {
 
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
-    }
-
-    // Validação 2: Verificar intervalo mínimo de 3h entre início de viagens (caminhão)
-    const MINIMUM_INTERVAL_HOURS = 3;
-    const MINIMUM_INTERVAL_MS = MINIMUM_INTERVAL_HOURS * 60 * 60 * 1000;
-
-    const truckTrips = await prisma.trip.findMany({
-      where: {
-        truckId,
-        status: {
-          in: ['PLANNED', 'IN_PROGRESS', 'DELAYED'],
-        },
-      },
-      orderBy: {
-        startDate: 'asc',
-      },
-    });
-
-    for (const existingTrip of truckTrips) {
-      const existingStartTime = existingTrip.startDate.getTime();
-      const newStartTime = tripStartDate.getTime();
-
-      // Calcular intervalo entre o início da viagem existente e o início da nova
-      const intervalMs = Math.abs(newStartTime - existingStartTime);
-
-      // Se o intervalo for menor que 3 horas, bloquear
-      if (intervalMs < MINIMUM_INTERVAL_MS) {
-        const intervaloHoras = (intervalMs / (60 * 60 * 1000)).toFixed(1);
-        return res.status(400).json({ 
-          message: `Intervalo insuficiente: apenas ${intervaloHoras}h entre o início das viagens. É necessário um intervalo mínimo de ${MINIMUM_INTERVAL_HOURS}h entre o início de uma viagem e o início da próxima para o mesmo caminhão.` 
-        });
-      }
-    }
-
-    // Validação 3: Verificar intervalo mínimo de 3h entre início de viagens (motorista)
-    const driverTrips = await prisma.trip.findMany({
-      where: {
-        driverId,
-        status: {
-          in: ['PLANNED', 'IN_PROGRESS', 'DELAYED'],
-        },
-      },
-      orderBy: {
-        startDate: 'asc',
-      },
-    });
-
-    for (const existingTrip of driverTrips) {
-      const existingStartTime = existingTrip.startDate.getTime();
-      const newStartTime = tripStartDate.getTime();
-
-      // Calcular intervalo entre o início da viagem existente e o início da nova
-      const intervalMs = Math.abs(newStartTime - existingStartTime);
-
-      // Se o intervalo for menor que 3 horas, bloquear
-      if (intervalMs < MINIMUM_INTERVAL_MS) {
-        const intervaloHoras = (intervalMs / (60 * 60 * 1000)).toFixed(1);
-        return res.status(400).json({ 
-          message: `Intervalo insuficiente: apenas ${intervaloHoras}h entre o início das viagens. É necessário um intervalo mínimo de ${MINIMUM_INTERVAL_HOURS}h entre o início de uma viagem e o início da próxima para o mesmo motorista.` 
-        });
-      }
     }
 
     const trip = await prisma.trip.create({
@@ -735,9 +722,9 @@ router.post('/:id/resume', async (req, res) => {
       where: { id },
       include: {
         legs: {
-          where: { status: 'PAUSED' },
-          orderBy: { legNumber: 'desc' },
+          orderBy: { legNumber: 'asc' },
         },
+        truck: true,
       },
     });
 
@@ -751,7 +738,7 @@ router.post('/:id/resume', async (req, res) => {
       });
     }
 
-    const pausedLeg = trip.legs[0];
+    const pausedLeg = trip.legs.find(leg => leg.status === 'PAUSED');
     if (!pausedLeg) {
       return res.status(400).json({ message: 'No paused leg found' });
     }
@@ -760,16 +747,40 @@ router.post('/:id/resume', async (req, res) => {
       return res.status(400).json({ message: 'Can only resume waiting legs' });
     }
 
-    const finalMileage = currentMileage ? parseFloat(currentMileage) : pausedLeg.startMileage;
+    // Verificar se o caminhão participou de outras viagens desde o início da pausa
+    const otherTripsInPeriod = await prisma.tripLeg.findFirst({
+      where: {
+        truckId: trip.truckId,
+        tripId: { not: trip.id },
+        startTime: {
+          gte: pausedLeg.startTime,
+        },
+        status: { in: ['IN_PROGRESS', 'COMPLETED'] },
+      },
+    });
 
-    // Se forneceu km e é diferente do inicial, validar
+    // Se encontrou outras viagens E não forneceu km, pedir
+    if (otherTripsInPeriod && !currentMileage) {
+      return res.status(400).json({ 
+        message: 'O caminhão participou de outras viagens. Informe a quilometragem atual.',
+        requiresMileage: true,
+      });
+    }
+
+    // Determinar quilometragem final
+    let finalMileage: number;
+    
     if (currentMileage) {
+      finalMileage = parseFloat(currentMileage);
       const distance = finalMileage - pausedLeg.startMileage;
       if (distance < 0) {
         return res.status(400).json({ 
           message: 'A quilometragem atual deve ser maior ou igual à inicial' 
         });
       }
+    } else {
+      // Se não forneceu km e não tem outras viagens, usar km do início (caminhão ficou parado)
+      finalMileage = pausedLeg.startMileage;
     }
 
     const continueDescription = pausedLeg.waitingType === 'LOADING' 
@@ -806,8 +817,8 @@ router.post('/:id/resume', async (req, res) => {
       }),
     ];
 
-    // Atualizar quilometragem do caminhão apenas se forneceu valor diferente
-    if (currentMileage && finalMileage !== pausedLeg.startMileage) {
+    // Atualizar quilometragem do caminhão se mudou
+    if (finalMileage !== trip.truck.currentMileage) {
       transactionOperations.push(
         prisma.truck.update({
           where: { id: pausedLeg.truckId },
