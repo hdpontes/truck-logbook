@@ -73,6 +73,7 @@ export default function TripsPage() {
   const [tripToPause, setTripToPause] = useState<Trip | null>(null);
   const [pauseMileage, setPauseMileage] = useState('');
   const [pauseLocation, setPauseLocation] = useState('');
+  const [waitingType, setWaitingType] = useState<'LOADING' | 'UNLOADING'>('LOADING');
   
   // Estados para filtros avançados
   const [showFilters, setShowFilters] = useState(false);
@@ -303,10 +304,11 @@ export default function TripsPage() {
     }
   };
 
-  const handleOpenPauseModal = (trip: Trip) => {
+  const handleOpenPauseModal = (trip: Trip, type: 'LOADING' | 'UNLOADING') => {
     setTripToPause(trip);
     setPauseMileage('');
     setPauseLocation(trip.destination || '');
+    setWaitingType(type);
     setShowPauseModal(true);
   };
 
@@ -319,7 +321,7 @@ export default function TripsPage() {
     }
 
     if (!pauseLocation.trim()) {
-      toast.error('Informe o local onde o carreto ficará carregando');
+      toast.error('Informe o local onde o carreto ficará');
       return;
     }
 
@@ -327,13 +329,19 @@ export default function TripsPage() {
       await tripsAPI.pause(tripToPause.id, {
         currentMileage: parseFloat(pauseMileage),
         location: pauseLocation,
+        waitingType,
       });
       
-      toast.success('Carreto deixado para carregamento. Você pode iniciar outra viagem!');
+      const successMessage = waitingType === 'LOADING' 
+        ? 'Carreto deixado para carregamento. Você pode iniciar outra viagem!'
+        : 'Carreto deixado para descarregamento. Você pode iniciar outra viagem!';
+      
+      toast.success(successMessage);
       setShowPauseModal(false);
       setTripToPause(null);
       setPauseMileage('');
       setPauseLocation('');
+      setWaitingType('LOADING');
       fetchTrips();
     } catch (error: any) {
       console.error('Erro ao pausar viagem:', error);
@@ -737,11 +745,19 @@ export default function TripsPage() {
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleOpenPauseModal(trip)}
+                              onClick={() => handleOpenPauseModal(trip, 'LOADING')}
                               className="flex-1 min-w-[100px] text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white"
                             >
                               <Package className="w-3 h-3 mr-1" />
-                              Deixar Carreto
+                              Carreg.
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenPauseModal(trip, 'UNLOADING')}
+                              className="flex-1 min-w-[100px] text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                              <Package className="w-3 h-3 mr-1" />
+                              Descarreg.
                             </Button>
                             <Button
                               size="sm"
@@ -1072,7 +1088,9 @@ export default function TripsPage() {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-orange-600">Deixar Carreto Carregando</CardTitle>
+            <CardTitle className={waitingType === 'LOADING' ? 'text-orange-600' : 'text-purple-600'}>
+              {waitingType === 'LOADING' ? 'Deixar Carreto Carregando' : 'Deixar Carreto Descarregando'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -1092,7 +1110,7 @@ export default function TripsPage() {
               
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
                 <p className="text-xs text-yellow-800">
-                  <strong>💡 Atenção:</strong> Ao deixar o carreto carregando, você poderá iniciar outra viagem com o mesmo caminhão. O sistema criará automaticamente os trechos necessários.
+                  <strong>💡 Atenção:</strong> Ao deixar o carreto {waitingType === 'LOADING' ? 'carregando' : 'descarregando'}, você poderá iniciar outra viagem com o mesmo caminhão. O sistema criará automaticamente os trechos necessários.
                 </p>
               </div>
 
@@ -1107,7 +1125,7 @@ export default function TripsPage() {
                   placeholder="Ex: 50080"
                   min="0"
                   step="0.1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${waitingType === 'LOADING' ? 'focus:ring-orange-500' : 'focus:ring-purple-500'}`}
                   autoFocus
                 />
               </div>
@@ -1121,10 +1139,10 @@ export default function TripsPage() {
                   value={pauseLocation}
                   onChange={(e) => setPauseLocation(e.target.value)}
                   placeholder="Ex: Cliente X - Endereço"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 ${waitingType === 'LOADING' ? 'focus:ring-orange-500' : 'focus:ring-purple-500'}`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Informe onde o caminhão está deixando o carreto para carregamento
+                  Informe onde o caminhão está deixando o carreto para {waitingType === 'LOADING' ? 'carregamento' : 'descarregamento'}
                 </p>
               </div>
             </div>
@@ -1137,6 +1155,7 @@ export default function TripsPage() {
                   setTripToPause(null);
                   setPauseMileage('');
                   setPauseLocation('');
+                  setWaitingType('LOADING');
                 }}
               >
                 Cancelar
@@ -1144,10 +1163,10 @@ export default function TripsPage() {
               <Button
                 type="button"
                 onClick={handlePauseTrip}
-                className="bg-orange-600 hover:bg-orange-700 text-white"
+                className={waitingType === 'LOADING' ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}
               >
                 <Package className="w-4 h-4 mr-2" />
-                Deixar Carreto
+                {waitingType === 'LOADING' ? 'Deixar Carregando' : 'Deixar Descarregando'}
               </Button>
             </div>
           </CardContent>
