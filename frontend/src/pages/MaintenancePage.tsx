@@ -429,6 +429,13 @@ export default function MaintenancePage() {
                   type="date"
                   value={completionData.completedDate}
                   onChange={(e) => setCompletionData({ ...completionData, completedDate: e.target.value })}
+                  onClick={(e) => {
+                    try {
+                      (e.target as HTMLInputElement).showPicker?.();
+                    } catch (error) {
+                      // showPicker não suportado em alguns navegadores
+                    }
+                  }}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
