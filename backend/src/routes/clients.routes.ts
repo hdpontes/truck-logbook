@@ -152,6 +152,9 @@ router.post('/import/csv', async (req, res) => {
     }
 
     const clients = parseCSV(csvData);
+    
+    console.log('📊 CSV parsed:', clients.length, 'clients');
+    console.log('📋 Sample client:', clients[0]);
 
     if (!clients || clients.length === 0) {
       return res.status(400).json({ message: 'No valid data in CSV' });
@@ -166,7 +169,10 @@ router.post('/import/csv', async (req, res) => {
       try {
         const { name, cnpj, address, city, state, phone, email } = clientData;
 
+        console.log('🔍 Processing client:', { name, cnpj, city, state });
+
         if (!name || !cnpj || !address || !city || !state) {
+          console.log('❌ Missing required fields:', { name: !!name, cnpj: !!cnpj, address: !!address, city: !!city, state: !!state });
           results.errors.push({
             cnpj: cnpj || 'unknown',
             error: 'Name, CNPJ, address, city and state are required',
@@ -190,12 +196,14 @@ router.post('/import/csv', async (req, res) => {
         };
 
         if (existingClient) {
+          console.log('🔄 Updating existing client:', cnpj);
           // Atualizar cliente existente
           await prisma.client.update({
             where: { cnpj },
             data: clientPayload,
           });
         } else {
+          console.log('✨ Creating new client:', cnpj);
           // Criar novo cliente
           await prisma.client.create({
             data: clientPayload,
@@ -204,6 +212,7 @@ router.post('/import/csv', async (req, res) => {
 
         results.success++;
       } catch (error: any) {
+        console.error('❌ Error processing client:', error);
         results.errors.push({
           cnpj: clientData.cnpj || 'unknown',
           error: error.message || 'Unknown error',
@@ -211,6 +220,7 @@ router.post('/import/csv', async (req, res) => {
       }
     }
 
+    console.log('✅ Import finished:', results);
     res.json(results);
   } catch (error) {
     console.error('Error importing clients CSV:', error);
