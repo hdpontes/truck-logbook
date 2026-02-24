@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI, driversAPI, clientsAPI } from '@/lib/api';
-import { Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search, Clock } from 'lucide-react';
+import { tripsAPI, driversAPI, clientsAPI, expensesAPI } from '@/lib/api';
+import { Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search, Clock, Play, CheckCircle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -52,6 +52,21 @@ export default function TripsPage() {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [tripToRemind, setTripToRemind] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  
+  // Estados para modal de conclusão de viagem
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [tripToFinish, setTripToFinish] = useState<Trip | null>(null);
+  const [finalMileage, setFinalMileage] = useState('');
+  
+  // Estados para modal de despesa
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [tripForExpense, setTripForExpense] = useState<Trip | null>(null);
+  const [expenseData, setExpenseData] = useState({
+    type: 'FUEL' as 'FUEL' | 'TOLL' | 'MAINTENANCE' | 'OTHER',
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+  });
   
   // Estados para filtros avançados
   const [showFilters, setShowFilters] = useState(false);
@@ -192,6 +207,87 @@ export default function TripsPage() {
     return `${hours}h ${minutes}m`;
   };
 
+  const handleStartTrip = async (trip: Trip) => {
+    try {
+      await tripsAPI.start(trip.id);
+      toast.success('Viagem iniciada com sucesso!');
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao iniciar viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao iniciar viagem');
+    }
+  };
+
+  const handleOpenFinishModal = (trip: Trip) => {
+    setTripToFinish(trip);
+    setFinalMileage('');
+    setShowFinishModal(true);
+  };
+
+  const handleFinishTrip = async () => {
+    if (!tripToFinish) return;
+    
+    if (!finalMileage || parseFloat(finalMileage) <= 0) {
+      toast.error('Informe a quilometragem final do caminhão');
+      return;
+    }
+
+    try {
+      await tripsAPI.finish(tripToFinish.id, { endMileage: parseFloat(finalMileage) });
+      
+      toast.success('Viagem concluída com sucesso!');
+      setShowFinishModal(false);
+      setTripToFinish(null);
+      setFinalMileage('');
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao concluir viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao concluir viagem');
+    }
+  };
+
+  const handleOpenExpenseModal = (trip: Trip) => {
+    setTripForExpense(trip);
+    setExpenseData({
+      type: 'FUEL',
+      amount: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+    });
+    setShowExpenseModal(true);
+  };
+
+  const handleCreateExpense = async () => {
+    if (!tripForExpense) return;
+    
+    if (!expenseData.amount || parseFloat(expenseData.amount) <= 0) {
+      toast.error('Informe o valor da despesa');
+      return;
+    }
+
+    if (!expenseData.description.trim()) {
+      toast.error('Informe a descrição da despesa');
+      return;
+    }
+
+    try {
+      await expensesAPI.create({
+        ...expenseData,
+        amount: parseFloat(expenseData.amount),
+        truckId: tripForExpense.truck.id,
+        tripId: tripForExpense.id,
+      });
+      
+      toast.success('Despesa adicionada com sucesso!');
+      setShowExpenseModal(false);
+      setTripForExpense(null);
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao criar despesa:', error);
+      toast.error(error.response?.data?.message || 'Erro ao criar despesa');
+    }
+  };
+
   // Separate trips by status for Kanban columns
   const plannedTrips = trips.filter(trip => trip.status === 'PLANNED');
   const inProgressTrips = trips.filter(trip => trip.status === 'IN_PROGRESS');
@@ -209,7 +305,7 @@ export default function TripsPage() {
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens - Kanban</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens</h1>
         <div className="flex flex-col md:flex-row gap-2">
           <Button
             variant="outline"
@@ -419,6 +515,17 @@ export default function TripsPage() {
 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2 pt-2">
+                        {/* Botão Iniciar Viagem - Motorista */}
+                        {user?.role === 'DRIVER' && trip.driver.id === user.id && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartTrip(trip)}
+                            className="flex-1 min-w-[90px] text-xs h-8 bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            Iniciar
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -572,6 +679,28 @@ export default function TripsPage() {
 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2 pt-2">
+                        {/* Botões para Motorista da viagem */}
+                        {user?.role === 'DRIVER' && trip.driver.id === user.id && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenFinishModal(trip)}
+                              className="flex-1 min-w-[90px] text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Concluir
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenExpenseModal(trip)}
+                              className="flex-1 min-w-[90px] text-xs h-8"
+                            >
+                              <DollarSign className="w-3 h-3 mr-1" />
+                              Despesa
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -582,15 +711,26 @@ export default function TripsPage() {
                           Ver
                         </Button>
                         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendReminder(trip.id)}
-                            className="flex-1 min-w-[70px] text-xs h-8"
-                          >
-                            <MessageCircle className="w-3 h-3 mr-1" />
-                            Avisar
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenExpenseModal(trip)}
+                              className="flex-1 min-w-[90px] text-xs h-8"
+                            >
+                              <DollarSign className="w-3 h-3 mr-1" />
+                              Despesa
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendReminder(trip.id)}
+                              className="flex-1 min-w-[70px] text-xs h-8"
+                            >
+                              <MessageCircle className="w-3 h-3 mr-1" />
+                              Avisar
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -777,6 +917,167 @@ export default function TripsPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Enviar Lembrete
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Conclusão de Viagem */}
+    {showFinishModal && tripToFinish && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Concluir Viagem</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Viagem: <span className="font-medium">{tripToFinish.origin} → {tripToFinish.destination}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Caminhão: <span className="font-medium">{tripToFinish.truck.plate}</span>
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quilometragem Final do Caminhão *
+                </label>
+                <input
+                  type="number"
+                  value={finalMileage}
+                  onChange={(e) => setFinalMileage(e.target.value)}
+                  placeholder="Ex: 125500"
+                  min="0"
+                  step="0.1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Informe a quilometragem atual do caminhão ao finalizar a viagem
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowFinishModal(false);
+                  setTripToFinish(null);
+                  setFinalMileage('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleFinishTrip}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Concluir Viagem
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Adicionar Despesa */}
+    {showExpenseModal && tripForExpense && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Adicionar Despesa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Viagem: <span className="font-medium">{tripForExpense.origin} → {tripForExpense.destination}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Caminhão: <span className="font-medium">{tripForExpense.truck.plate}</span>
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Despesa *
+                </label>
+                <select
+                  value={expenseData.type}
+                  onChange={(e) => setExpenseData({ ...expenseData, type: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="FUEL">Combustível</option>
+                  <option value="TOLL">Pedágio</option>
+                  <option value="MAINTENANCE">Manutenção</option>
+                  <option value="OTHER">Outro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor (R$) *
+                </label>
+                <input
+                  type="number"
+                  value={expenseData.amount}
+                  onChange={(e) => setExpenseData({ ...expenseData, amount: e.target.value })}
+                  placeholder="Ex: 500.00"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descrição *
+                </label>
+                <textarea
+                  value={expenseData.description}
+                  onChange={(e) => setExpenseData({ ...expenseData, description: e.target.value })}
+                  placeholder="Descreva a despesa"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data *
+                </label>
+                <input
+                  type="date"
+                  value={expenseData.date}
+                  onChange={(e) => setExpenseData({ ...expenseData, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowExpenseModal(false);
+                  setTripForExpense(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCreateExpense}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                Adicionar Despesa
               </Button>
             </div>
           </CardContent>
