@@ -194,7 +194,7 @@ const TrucksPage: React.FC = () => {
                       {truck.status === 'IN_TRANSIT' ? 'Em Viagem' : truck.status === 'MAINTENANCE' ? 'Manutenção' : 'Garagem'}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {truck.capacity}t | {truck.avgConsumption}km/L
+                      {truck.capacity || '-'}t | {truck.avgConsumption || '-'}km/L
                     </span>
                   </div>
                   
