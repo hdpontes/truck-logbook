@@ -283,7 +283,7 @@ export default function MaintenancePage() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Caminhão</p>
-                      <p className="font-medium">{maintenance.truck.plate}</p>
+                      <p className="font-medium uppercase">{maintenance.truck.plate}</p>
                       <p className="text-sm text-gray-500">{maintenance.truck.model}</p>
                     </div>
                     {maintenance.scheduledMileage && (
