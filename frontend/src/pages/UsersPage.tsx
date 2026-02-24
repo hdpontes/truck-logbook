@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Edit, Trash2 } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Download, Upload } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuthStore } from '@/store/auth';
 import axios from 'axios';
+import { driversAPI } from '@/lib/api';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -28,6 +30,7 @@ export default function UsersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     login: '',
@@ -152,6 +155,33 @@ export default function UsersPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await driversAPI.exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'usuarios.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar CSV');
+    }
+  };
+
+  const handleImportCSV = async (csvData: string) => {
+    try {
+      const result = await driversAPI.importCSV(csvData);
+      await fetchUsers();
+      return result;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erro ao importar CSV');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -182,10 +212,20 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Gerenciar Usuários</h1>
-        <Button onClick={() => { resetForm(); setShowModal(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Usuário
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={() => { resetForm(); setShowModal(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Usuário
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -374,6 +414,14 @@ export default function UsersPage() {
           </Card>
         </div>
       )}
+
+      {/* Modal de Import CSV */}
+      <ImportCSVModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        title="Importar Usuários CSV"
+      />
     </div>
   );
 }
