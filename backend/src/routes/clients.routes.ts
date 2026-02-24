@@ -187,11 +187,11 @@ router.post('/import/csv', async (req, res) => {
 
         const clientPayload = {
           name,
-          cnpj,
+          cnpj: String(cnpj),
           address,
           city,
           state,
-          phone: phone || null,
+          phone: phone ? String(phone) : null,
           email: email || null,
         };
 
