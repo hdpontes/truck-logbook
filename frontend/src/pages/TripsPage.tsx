@@ -739,6 +739,15 @@ export default function TripsPage() {
                               <MessageCircle className="w-3 h-3 mr-1" />
                               Avisar
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(trip.id)}
+                              className="flex-1 min-w-[70px] text-xs h-8 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Excluir
+                            </Button>
                           </>
                         )}
                       </div>
@@ -853,6 +862,17 @@ export default function TripsPage() {
                           <Eye className="w-3 h-3 mr-1" />
                           Ver
                         </Button>
+                        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(trip.id)}
+                            className="flex-1 min-w-[70px] text-xs h-8 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Excluir
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
