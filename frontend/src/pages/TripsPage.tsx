@@ -207,30 +207,32 @@ export default function TripsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens</h1>
-        {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-          <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Viagem
-          </Button>
-        )}
-      </div>
-
-      {/* Filtros avançados */}
-      <Card>
-        <CardContent className="p-4">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens - Kanban</h1>
+        <div className="flex flex-col md:flex-row gap-2">
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
             className="w-full md:w-auto"
           >
             <Filter className="mr-2 h-4 w-4" />
-            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros Avançados'}
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </Button>
+          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+            <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Viagem
+            </Button>
+          )}
+        </div>
+      </div>
 
-          {showFilters && (
-            <div className="mt-4 space-y-4">
+      {/* Filtros avançados */}
+      {showFilters && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Código da Viagem</label>
@@ -317,9 +319,9 @@ export default function TripsPage() {
                 </Button>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Kanban Board - 3 Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
