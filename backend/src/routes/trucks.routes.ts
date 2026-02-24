@@ -396,21 +396,25 @@ router.post('/import/csv', async (req, res) => {
 
     for (const truckData of trucks) {
       try {
+        // Converter campos string
+        const plate = String(truckData.plate);
+        const chassisNum = truckData.chassisNum ? String(truckData.chassisNum) : null;
+
         // Verificar se já existe (por placa)
         const existing = await prisma.truck.findUnique({
-          where: { plate: truckData.plate },
+          where: { plate },
         });
 
         if (existing) {
           // Atualizar
           await prisma.truck.update({
-            where: { plate: String(truckData.plate) },
+            where: { plate },
             data: {
               model: truckData.model,
               brand: truckData.brand,
               year: parseInt(truckData.year),
               color: truckData.color || null,
-              chassisNum: truckData.chassisNum ? String(truckData.chassisNum) : null,
+              chassisNum,
               capacity: truckData.capacity ? parseFloat(truckData.capacity) : null,
               avgConsumption: truckData.avgConsumption ? parseFloat(truckData.avgConsumption) : null,
               currentMileage: truckData.currentMileage ? parseFloat(truckData.currentMileage) : null,
@@ -422,12 +426,12 @@ router.post('/import/csv', async (req, res) => {
           // Criar novo
           await prisma.truck.create({
             data: {
-              plate: String(truckData.plate),
+              plate,
               model: truckData.model,
               brand: truckData.brand,
               year: parseInt(truckData.year),
               color: truckData.color || null,
-              chassisNum: truckData.chassisNum ? String(truckData.chassisNum) : null,
+              chassisNum,
               capacity: truckData.capacity ? parseFloat(truckData.capacity) : null,
               avgConsumption: truckData.avgConsumption ? parseFloat(truckData.avgConsumption) : null,
               currentMileage: truckData.currentMileage ? parseFloat(truckData.currentMileage) : null,
