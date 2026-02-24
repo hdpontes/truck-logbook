@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
+import { convertToCSV, parseCSV } from '../utils/csv';
 
 const router = Router();
 
@@ -208,6 +209,109 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Trailer deactivated successfully' });
   } catch (error) {
     console.error('Error deleting trailer:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/trailers/export/csv - Exportar todas as carretas para CSV
+router.get('/export/csv', async (req, res) => {
+  try {
+    const trailers = await prisma.trailer.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const csvData = trailers.map(trailer => ({
+      id: trailer.id,
+      plate: trailer.plate,
+      model: trailer.model || '',
+      brand: trailer.brand || '',
+      year: trailer.year || '',
+      capacity: trailer.capacity || '',
+      active: trailer.active,
+    }));
+
+    const csv = convertToCSV(csvData);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=carretas.csv');
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting trailers CSV:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/trailers/import/csv - Importar carretas do CSV
+router.post('/import/csv', async (req, res) => {
+  try {
+    const { csvData } = req.body;
+
+    if (!csvData) {
+      return res.status(400).json({ message: 'CSV data is required' });
+    }
+
+    const trailers = parseCSV(csvData);
+
+    if (!trailers || trailers.length === 0) {
+      return res.status(400).json({ message: 'No valid data in CSV' });
+    }
+
+    const results = {
+      success: 0,
+      errors: [] as Array<{ plate: string; error: string }>,
+    };
+
+    for (const trailerData of trailers) {
+      try {
+        const { plate, model, brand, year, capacity, active } = trailerData;
+
+        if (!plate) {
+          results.errors.push({
+            plate: 'unknown',
+            error: 'Plate is required',
+          });
+          continue;
+        }
+
+        // Verificar se a carreta já existe
+        const existingTrailer = await prisma.trailer.findUnique({
+          where: { plate: plate.toUpperCase() },
+        });
+
+        const trailerPayload = {
+          plate: plate.toUpperCase(),
+          model: model || null,
+          brand: brand || null,
+          year: year ? parseInt(year) : null,
+          capacity: capacity ? parseFloat(capacity) : null,
+          active: active !== false, // Default to true if not specified
+        };
+
+        if (existingTrailer) {
+          // Atualizar carreta existente
+          await prisma.trailer.update({
+            where: { plate: plate.toUpperCase() },
+            data: trailerPayload,
+          });
+        } else {
+          // Criar nova carreta
+          await prisma.trailer.create({
+            data: trailerPayload,
+          });
+        }
+
+        results.success++;
+      } catch (error: any) {
+        results.errors.push({
+          plate: trailerData.plate || 'unknown',
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error importing trailers CSV:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
