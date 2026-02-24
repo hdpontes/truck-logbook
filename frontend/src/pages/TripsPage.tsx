@@ -59,6 +59,7 @@ export default function TripsPage() {
   const [endDateFilter, setEndDateFilter] = useState('');
   const [clientFilter, setClientFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
+  const [tripCodeFilter, setTripCodeFilter] = useState('');
   
   // Dados para dropdowns
   const [clients, setClients] = useState<any[]>([]);
@@ -99,6 +100,13 @@ export default function TripsPage() {
       let filteredData = data;
       if (user?.role === 'DRIVER') {
         filteredData = data.filter((trip: Trip) => trip.driver.id === user.id);
+      }
+      
+      // Filtrar por código se especificado
+      if (tripCodeFilter) {
+        filteredData = filteredData.filter((trip: Trip) => 
+          trip.tripCode?.toLowerCase().includes(tripCodeFilter.toLowerCase())
+        );
       }
       
       // Ordenar: IN_PROGRESS primeiro, depois por data mais próxima (crescente)
@@ -256,6 +264,22 @@ export default function TripsPage() {
             <div className="mt-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
+                  <label className="block text-sm font-medium mb-2">Código da Viagem</label>
+                  <input
+                    type="text"
+                    list="trip-codes"
+                    value={tripCodeFilter}
+                    onChange={(e) => setTripCodeFilter(e.target.value)}
+                    placeholder="Digite ou selecione"
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                  <datalist id="trip-codes">
+                    {[...new Set(trips.map(t => t.tripCode).filter(Boolean))].map((code) => (
+                      <option key={code} value={code} />
+                    ))}
+                  </datalist>
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-2">Data Início</label>
                   <input
                     type="date"
@@ -312,6 +336,7 @@ export default function TripsPage() {
                 <Button
                   variant="outline"
                   onClick={() => {
+                    setTripCodeFilter('');
                     setStartDateFilter('');
                     setEndDateFilter('');
                     setClientFilter('');
