@@ -85,6 +85,9 @@ const TripDetailPage: React.FC = () => {
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [trailers, setTrailers] = useState<any[]>([]);
   const [selectedTrailerId, setSelectedTrailerId] = useState('');
+  // Send message modal (for in-progress trips)
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState('');
 
   // Handler para iniciar viagem com verificação de carreta
   const handleStartTripWithTrailer = async () => {
@@ -227,6 +230,30 @@ const TripDetailPage: React.FC = () => {
     } catch (error: any) {
       console.error('Erro ao enviar lembrete:', error);
       toast.error(error.response?.data?.message || 'Erro ao enviar lembrete');
+    }
+  };
+
+  const handleOpenMessageModal = () => {
+    setMessageText('');
+    setShowMessageModal(true);
+  };
+
+  const confirmSendMessage = async () => {
+    if (!id) return;
+    if (!messageText.trim()) {
+      toast.error('Digite a mensagem para enviar');
+      return;
+    }
+    try {
+      await tripsAPI.sendMessage(id, messageText.trim());
+      toast.success('Mensagem enviada com sucesso ao motorista!');
+      fetchTripDetails(id);
+    } catch (error: any) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao enviar mensagem');
+    } finally {
+      setShowMessageModal(false);
+      setMessageText('');
     }
   };
 
@@ -404,7 +431,7 @@ const TripDetailPage: React.FC = () => {
                             return;
                           }
                           try {
-                            await tripsAPI.start(id);
+                            await tripsAPI.start(id, { trailerId: selectedTrailerId });
                             fetchTripDetails(id);
                           } catch (error) {
                             toast.error('Erro ao iniciar viagem');
@@ -426,10 +453,17 @@ const TripDetailPage: React.FC = () => {
           </Button>
         )}
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-          <Button onClick={handleSendReminder} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
-            <MessageCircle className="mr-2 h-4 w-4" />
-            Enviar Lembrete
-          </Button>
+          trip.status === 'IN_PROGRESS' ? (
+            <Button onClick={handleOpenMessageModal} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Enviar Mensagem
+            </Button>
+          ) : (
+            <Button onClick={handleSendReminder} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Enviar Lembrete
+            </Button>
+          )
         )}
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && 
          (trip.status === 'PLANNED' || trip.status === 'DELAYED') && (
@@ -509,6 +543,46 @@ const TripDetailPage: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* Modal de Enviar Mensagem (Trip Detail) */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-blue-600">Enviar Mensagem</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 mb-4">Digite a mensagem que será enviada ao motorista:</p>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+              <div className="flex justify-end gap-4 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowMessageModal(false);
+                    setMessageText('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmSendMessage}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Enviar Mensagem
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Trip Information */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
