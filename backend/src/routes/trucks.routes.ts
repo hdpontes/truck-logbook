@@ -162,11 +162,11 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/trucks - Criar novo caminhão
 router.post('/', async (req, res) => {
+
   try {
-    const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, currentMileage, status } = req.body;
+    const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, currentMileage, status, noCapacity } = req.body;
 
     if (!plate || !model || !brand || !year) {
-        const { noCapacity } = req.body;
       return res.status(400).json({ 
         message: 'Plate, model, brand and year are required' 
       });
@@ -184,7 +184,7 @@ router.post('/', async (req, res) => {
         avgConsumption: avgConsumption ? parseFloat(avgConsumption) : null,
         currentMileage: currentMileage ? parseFloat(currentMileage) : 0,
         status: status || 'GARAGE',
-          noCapacity: !!noCapacity,
+        noCapacity: !!noCapacity,
       },
     });
 
