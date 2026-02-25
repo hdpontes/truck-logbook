@@ -19,6 +19,7 @@ export default function TruckFormPage() {
     year: new Date().getFullYear(),
     color: '#FFFFFF',
     capacity: '',
+    noCapacity: false,
     avgConsumption: '',
     currentMileage: '',
     status: 'GARAGE' as 'GARAGE' | 'IN_TRANSIT' | 'MAINTENANCE',
@@ -42,6 +43,7 @@ export default function TruckFormPage() {
         year: truck.year,
         color: truck.color || '#FFFFFF',
         capacity: truck.capacity ? truck.capacity.toString() : '',
+        noCapacity: truck.noCapacity || false,
         avgConsumption: truck.avgConsumption ? truck.avgConsumption.toString() : '',
         currentMileage: truck.currentMileage ? truck.currentMileage.toString() : '',
         status: truck.status || 'GARAGE',
@@ -68,6 +70,7 @@ export default function TruckFormPage() {
         year: parseInt(formData.year.toString()),
         color: formData.color,
         capacity: formData.capacity ? parseFloat(formData.capacity) : null,
+        noCapacity: formData.noCapacity,
         avgConsumption: formData.avgConsumption ? parseFloat(formData.avgConsumption) : null,
         currentMileage: formData.currentMileage ? parseFloat(formData.currentMileage) : 0,
         status: formData.status,
@@ -232,19 +235,28 @@ export default function TruckFormPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Capacidade (ton) *
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  Capacidade (ton)
+                  <input
+                    type="checkbox"
+                    name="noCapacity"
+                    checked={formData.noCapacity}
+                    onChange={handleChange}
+                    className="ml-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="text-xs text-gray-500">Sem capacidade</span>
                 </label>
                 <input
                   type="number"
                   name="capacity"
                   value={formData.capacity}
                   onChange={handleChange}
-                  required
                   min="0"
                   step="0.1"
                   placeholder="Ex: 25"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={formData.noCapacity}
+                  required={!formData.noCapacity}
                 />
               </div>
 
