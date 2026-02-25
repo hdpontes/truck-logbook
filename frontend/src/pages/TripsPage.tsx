@@ -677,6 +677,14 @@ export default function TripsPage() {
                         </span>
                       </div>
 
+                      {/* Distance */}
+                      {trip.distance > 0 && (
+                        <div className="text-xs">
+                          <span className="text-gray-500">Distância:</span>
+                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                        </div>
+                      )}
+
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                         <div className="grid grid-cols-3 gap-2 pt-2 border-t text-xs">
@@ -846,6 +854,22 @@ export default function TripsPage() {
                           })}
                         </span>
                       </div>
+
+                      {/* Distance */}
+                      {trip.distance > 0 && (
+                        <div className="text-xs">
+                          <span className="text-gray-500">Distância:</span>
+                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                        </div>
+                      )}
+
+                      {/* Distance */}
+                      {trip.distance > 0 && (
+                        <div className="text-xs">
+                          <span className="text-gray-500">Distância:</span>
+                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                        </div>
+                      )}
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
@@ -1073,6 +1097,22 @@ export default function TripsPage() {
                           }) : 'N/A'}
                         </span>
                       </div>
+
+                      {/* Distance */}
+                      {trip.distance > 0 && (
+                        <div className="text-xs">
+                          <span className="text-gray-500">Distância:</span>
+                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                        </div>
+                      )}
+
+                      {/* Distance */}
+                      {trip.distance > 0 && (
+                        <div className="text-xs">
+                          <span className="text-gray-500">Distância:</span>
+                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                        </div>
+                      )}
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
