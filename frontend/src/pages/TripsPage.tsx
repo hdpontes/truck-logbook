@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI, driversAPI, clientsAPI, expensesAPI } from '@/lib/api';
+import { tripsAPI, driversAPI, clientsAPI, expensesAPI, trailersAPI } from '@/lib/api';
 import { Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -97,6 +97,9 @@ export default function TripsPage() {
   // Dados para dropdowns
   const [clients, setClients] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [trailers, setTrailers] = useState<any[]>([]);
+  const [selectedTrailerId, setSelectedTrailerId] = useState<string>('');
+  const [tripToStart, setTripToStart] = useState<Trip | null>(null);
 
   // Update current time every minute for elapsed time calculation
   useEffect(() => {
@@ -287,9 +290,40 @@ export default function TripsPage() {
   };
 
   const handleStartTrip = async (trip: Trip) => {
+    // Buscar info do caminhão para saber se é sem capacidade
     try {
+      const truck = await trucksAPI.getById(trip.truck.id);
+      if (truck.noCapacity) {
+        // Buscar carretas disponíveis
+        const trailersList = await trailersAPI.getAll();
+        setTrailers(trailersList);
+        setTripToStart(trip);
+        setShowTrailerModal(true);
+        setSelectedTrailerId('');
+        return;
+      }
+      // Caminhão com capacidade: inicia direto
       await tripsAPI.start(trip.id);
       toast.success('Viagem iniciada com sucesso!');
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao iniciar viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao iniciar viagem');
+    }
+  };
+
+  const handleConfirmTrailer = async () => {
+    if (!selectedTrailerId) {
+      toast.error('Selecione uma carreta para iniciar a viagem');
+      return;
+    }
+    if (!tripToStart) return;
+    try {
+      await tripsAPI.start(tripToStart.id, { trailerId: selectedTrailerId });
+      toast.success('Viagem iniciada com sucesso!');
+      setShowTrailerModal(false);
+      setTripToStart(null);
+      setSelectedTrailerId('');
       fetchTrips();
     } catch (error: any) {
       console.error('Erro ao iniciar viagem:', error);
@@ -468,6 +502,14 @@ export default function TripsPage() {
       console.error('Erro ao continuar viagem:', error);
       toast.error(error.response?.data?.message || 'Erro ao continuar viagem');
     }
+  };
+
+  const handleOpenTrailerModal = () => {
+    setShowTrailerModal(true);
+  };
+
+  const handleCloseTrailerModal = () => {
+    setShowTrailerModal(false);
   };
 
   // Separate trips by status for Kanban columns
@@ -1544,6 +1586,48 @@ export default function TripsPage() {
               >
                 <DollarSign className="w-4 h-4 mr-2" />
                 Adicionar Despesa
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Seleção de Carreta ao Iniciar Viagem */}
+    {showTrailerModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Selecione a Carreta</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Carreta disponível *
+                </label>
+                <select
+                  value={selectedTrailerId}
+                  onChange={e => setSelectedTrailerId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecione uma carreta</option>
+                  {trailers.map((trailer: any) => (
+                    <option key={trailer.id} value={trailer.id}>
+                      {trailer.plate} {trailer.brand && trailer.model ? `- ${trailer.brand} ${trailer.model}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              {/* O botão Cancelar só aparece se não for obrigatório selecionar carreta (exemplo: uso futuro). Para o fluxo atual, não exibe. */}
+              {/* <Button variant="outline" onClick={() => setShowTrailerModal(false)}>
+                Cancelar
+              </Button> */}
+              <Button onClick={handleConfirmTrailer}>
+                <Play className="w-4 h-4 mr-2" />
+                Iniciar Viagem
               </Button>
             </div>
           </CardContent>
