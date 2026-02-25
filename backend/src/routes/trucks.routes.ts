@@ -166,6 +166,7 @@ router.post('/', async (req, res) => {
     const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, currentMileage, status } = req.body;
 
     if (!plate || !model || !brand || !year) {
+        const { noCapacity } = req.body;
       return res.status(400).json({ 
         message: 'Plate, model, brand and year are required' 
       });
@@ -183,6 +184,7 @@ router.post('/', async (req, res) => {
         avgConsumption: avgConsumption ? parseFloat(avgConsumption) : null,
         currentMileage: currentMileage ? parseFloat(currentMileage) : 0,
         status: status || 'GARAGE',
+          noCapacity: !!noCapacity,
       },
     });
 
@@ -206,6 +208,7 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { plate, model, brand, year, color, chassisNum, capacity, avgConsumption, currentMileage, status, active } = req.body;
 
+      const { noCapacity } = req.body;
     const truck = await prisma.truck.update({
       where: { id },
       data: {
@@ -219,6 +222,7 @@ router.put('/:id', async (req, res) => {
         ...(avgConsumption && { avgConsumption: parseFloat(avgConsumption) }),
         ...(currentMileage !== undefined && { currentMileage: parseFloat(currentMileage) }),
         ...(status && { status }),
+          ...(noCapacity !== undefined && { noCapacity: !!noCapacity }),
         ...(active !== undefined && { active }),
       },
     });
