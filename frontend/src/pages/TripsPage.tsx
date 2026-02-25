@@ -1591,10 +1591,32 @@ export default function TripsPage() {
 
     {/* Modal de Seleção de Carreta ao Iniciar Viagem */}
     {showTrailerModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        onClick={() => {
+          setShowTrailerModal(false);
+          setTripToStart(null);
+          setSelectedTrailerId('');
+        }}
+      >
+        <Card
+          className="w-full max-w-md"
+          onClick={e => e.stopPropagation()} // Impede fechar ao clicar dentro do Card
+        >
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-blue-600">Selecione a Carreta</CardTitle>
+            <button
+              type="button"
+              className="text-gray-400 hover:text-gray-700 text-xl font-bold focus:outline-none"
+              onClick={() => {
+                setShowTrailerModal(false);
+                setTripToStart(null);
+                setSelectedTrailerId('');
+              }}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -1617,10 +1639,6 @@ export default function TripsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-4 mt-6">
-              {/* O botão Cancelar só aparece se não for obrigatório selecionar carreta (exemplo: uso futuro). Para o fluxo atual, não exibe. */}
-              {/* <Button variant="outline" onClick={() => setShowTrailerModal(false)}>
-                Cancelar
-              </Button> */}
               <Button onClick={handleConfirmTrailer}>
                 <Play className="w-4 h-4 mr-2" />
                 Iniciar Viagem
