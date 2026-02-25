@@ -321,7 +321,7 @@ export default function TripsPage() {
     }
     if (!tripToStart) return;
     try {
-      await tripsAPI.start(tripToStart.id, { trailerId: selectedTrailerId });
+      await tripsAPI.start(tripToStart.id);
       toast.success('Viagem iniciada com sucesso!');
       setShowTrailerModal(false);
       setTripToStart(null);
