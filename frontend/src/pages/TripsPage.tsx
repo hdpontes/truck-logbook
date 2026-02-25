@@ -1056,7 +1056,7 @@ export default function TripsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleSendReminder(trip.id)}
+                              onClick={() => handleOpenMessageModal(trip.id)}
                               className="flex-1 min-w-[70px] text-xs h-8"
                             >
                               <MessageCircle className="w-3 h-3 mr-1" />
