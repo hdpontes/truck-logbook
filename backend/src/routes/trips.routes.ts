@@ -1392,6 +1392,69 @@ router.post('/:id/send-reminder', async (req, res) => {
   }
 });
 
+// POST /api/trips/:id/send-message - Enviar mensagem customizada ao motorista via webhook
+router.post('/:id/send-message', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+    const user = (req as any).user;
+
+    // Apenas ADMIN e MANAGER podem enviar mensagens deste tipo
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({ message: 'Apenas administradores e gerentes podem enviar mensagens' });
+    }
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ message: 'Mensagem inválida' });
+    }
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        driver: true,
+      },
+    });
+
+    if (!trip) return res.status(404).json({ message: 'Trip not found' });
+
+    // Enviar webhook com o evento trip.message
+    await sendWebhook('trip.message', {
+      trip: {
+        id: trip.id,
+        origin: trip.origin,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        status: trip.status,
+        revenue: trip.revenue,
+      },
+      truck: {
+        id: trip.truck.id,
+        plate: trip.truck.plate,
+        model: trip.truck.model,
+        brand: trip.truck.brand,
+      },
+      driver: {
+        id: trip.driver.id,
+        name: trip.driver.name,
+        email: trip.driver.email,
+        phone: trip.driver.phone,
+      },
+      message: message.trim(),
+      sentBy: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      },
+    });
+
+    res.json({ message: 'Mensagem enviada com sucesso' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // POST /api/trips/check-delayed - Verificar e atualizar viagens em atraso
 router.post('/check-delayed', async (req, res) => {
   try {
