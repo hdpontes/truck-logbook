@@ -280,13 +280,18 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
 
     const profit = totalIncome - totalExpense;
 
+    // Contar transações: viagens + despesas avulsas (despesas de viagens não contam separadamente)
+    const transactionCount = reportItems.filter(item => 
+      item.type === 'INCOME' || (item.type === 'EXPENSE' && !item.tripId)
+    ).length;
+
     res.json({
       items: reportItems,
       summary: {
         totalIncome,
         totalExpense,
         profit,
-        itemCount: reportItems.length,
+        itemCount: transactionCount,
       },
     });
   } catch (error) {
