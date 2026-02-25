@@ -51,6 +51,7 @@ model Truck {
   color       String?
   chassisNum  String?     @unique
   capacity    Float?      // Capacidade em toneladas
+  noCapacity  Boolean     @default(false) // Sem capacidade própria
   avgConsumption Float?   @default(0) // Consumo médio km/l
   currentMileage Float?   @default(0) // Quilometragem atual do caminhão
   status      TruckStatus @default(GARAGE)
