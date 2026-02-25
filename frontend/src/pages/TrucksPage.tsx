@@ -4,6 +4,7 @@ import { trucksAPI } from '@/lib/api';
 import { Truck, Plus, Edit, Trash2, MapPin, AlertTriangle, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
 import { ImportCSVModal } from '@/components/ImportCSVModal';
 
 interface TruckData {
@@ -29,6 +30,7 @@ interface TruckData {
 
 const TrucksPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [trucks, setTrucks] = useState<TruckData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -239,7 +241,12 @@ const TrucksPage: React.FC = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => navigate(`/trucks/${truck.id}`)}
+                    onClick={() => {
+                      try {
+                        console.debug('[TrucksPage] View details click', { target: `/trucks/${truck.id}`, userRole: user?.role, userId: user?.id });
+                      } catch (e) {}
+                      navigate(`/trucks/${truck.id}`);
+                    }}
                   >
                     Ver Detalhes
                   </Button>
