@@ -65,7 +65,6 @@ export default function TripFormPage() {
   const [searchParams] = useSearchParams();
   const toast = useToast();
   const [trucks, setTrucks] = useState<Truck[]>([]);
-  const [trailers, setTrailers] = useState<Trailer[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [origins, setOrigins] = useState<Location[]>([]);
