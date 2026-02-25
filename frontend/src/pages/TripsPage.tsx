@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI, driversAPI, clientsAPI, expensesAPI, trailersAPI } from '@/lib/api';
+import { tripsAPI, driversAPI, clientsAPI, expensesAPI, trailersAPI, trucksAPI } from '@/lib/api';
 import { Plus, Eye, Edit, Trash2, MapPin, MessageCircle, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -100,6 +100,8 @@ export default function TripsPage() {
   const [trailers, setTrailers] = useState<any[]>([]);
   const [selectedTrailerId, setSelectedTrailerId] = useState<string>('');
   const [tripToStart, setTripToStart] = useState<Trip | null>(null);
+  // Modal de carreta ao iniciar viagem
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   // Update current time every minute for elapsed time calculation
   useEffect(() => {
@@ -504,13 +506,7 @@ export default function TripsPage() {
     }
   };
 
-  const handleOpenTrailerModal = () => {
-    setShowTrailerModal(true);
-  };
-
-  const handleCloseTrailerModal = () => {
-    setShowTrailerModal(false);
-  };
+  // Removidas funções handleOpenTrailerModal e handleCloseTrailerModal pois não são usadas
 
   // Separate trips by status for Kanban columns
   const plannedTrips = trips.filter(trip => trip.status === 'PLANNED');
