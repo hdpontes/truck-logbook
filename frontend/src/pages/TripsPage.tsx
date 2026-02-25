@@ -211,10 +211,7 @@ export default function TripsPage() {
     }
   };
 
-  const handleSendReminder = async (id: string) => {
-    setTripToRemind(id);
-    setShowReminderModal(true);
-  };
+  
 
   const handleOpenMessageModal = async (id: string) => {
     setTripToMessage(id);
