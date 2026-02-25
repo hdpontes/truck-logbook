@@ -62,7 +62,7 @@ export const tripsAPI = {
   create: (data: any) => api.post('/trips', data).then(res => res.data),
   update: (id: string, data: any) => api.put(`/trips/${id}`, data).then(res => res.data),
   delete: (id: string) => api.delete(`/trips/${id}`).then(res => res.data),
-  start: (id: string) => api.post(`/trips/${id}/start`).then(res => res.data),
+  start: (id: string, data?: any) => api.post(`/trips/${id}/start`, data).then(res => res.data),
   finish: (id: string, data?: any) => api.post(`/trips/${id}/finish`, data).then(res => res.data),
   pause: (id: string, data: { currentMileage: number; location: string; waitingType: 'LOADING' | 'UNLOADING' }) => api.post(`/trips/${id}/pause`, data).then(res => res.data),
   resume: (id: string, data?: { currentMileage?: number }) => api.post(`/trips/${id}/resume`, data).then(res => res.data),
