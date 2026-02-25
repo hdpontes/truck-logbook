@@ -57,6 +57,10 @@ export default function TripsPage() {
   const [tripToDelete, setTripToDelete] = useState<string | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [tripToRemind, setTripToRemind] = useState<string | null>(null);
+  // Send message modal (for in-progress trips)
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [tripToMessage, setTripToMessage] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState('');
   const [currentTime, setCurrentTime] = useState(Date.now());
   
   // Estados para modal de conclusão de viagem
@@ -210,6 +214,32 @@ export default function TripsPage() {
   const handleSendReminder = async (id: string) => {
     setTripToRemind(id);
     setShowReminderModal(true);
+  };
+
+  const handleOpenMessageModal = async (id: string) => {
+    setTripToMessage(id);
+    setMessageText('');
+    setShowMessageModal(true);
+  };
+
+  const confirmSendMessage = async () => {
+    if (!tripToMessage) return;
+    if (!messageText.trim()) {
+      toast.error('Digite a mensagem para enviar');
+      return;
+    }
+    try {
+      await tripsAPI.sendMessage(tripToMessage, messageText.trim());
+      toast.success('Mensagem enviada com sucesso ao motorista!');
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao enviar mensagem');
+    } finally {
+      setShowMessageModal(false);
+      setTripToMessage(null);
+      setMessageText('');
+    }
   };
 
   const confirmSendReminder = async () => {
@@ -784,7 +814,7 @@ export default function TripsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleSendReminder(trip.id)}
+                              onClick={() => handleOpenMessageModal(trip.id)}
                               className="flex-1 min-w-[70px] text-xs h-8"
                             >
                               <MessageCircle className="w-3 h-3 mr-1" />
@@ -1250,6 +1280,47 @@ export default function TripsPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Enviar Lembrete
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Enviar Mensagem (para viagens em andamento) */}
+    {showMessageModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Enviar Mensagem</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-700 mb-4">Digite a mensagem que será enviada ao motorista:</p>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+            <div className="flex justify-end gap-4 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowMessageModal(false);
+                  setTripToMessage(null);
+                  setMessageText('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmSendMessage}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Enviar Mensagem
               </Button>
             </div>
           </CardContent>
