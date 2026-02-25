@@ -75,7 +75,6 @@ export default function TripFormPage() {
   const [formData, setFormData] = useState({
     tripCode: '',
     truckId: '',
-    trailerId: '',
     driverId: '',
     clientId: '',
     origin: '',
@@ -158,7 +157,7 @@ export default function TripFormPage() {
       const tripData = {
         tripCode: formData.tripCode || null,
         truckId: formData.truckId,
-        trailerId: formData.trailerId || null,
+        // trailerId removido do envio de dados
         driverId: formData.driverId,
         clientId: formData.clientId,
         origin: formData.origin,
@@ -238,27 +237,7 @@ export default function TripFormPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Carreta
-                </label>
-                <select
-                  name="trailerId"
-                  value={formData.trailerId}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Nenhuma carreta</option>
-                  {trailers.map((trailer) => (
-                    <option key={trailer.id} value={trailer.id}>
-                      {trailer.plate} {trailer.brand && trailer.model ? `- ${trailer.brand} ${trailer.model}` : ''}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Selecione a carreta que será utilizada nesta viagem (opcional)
-                </p>
-              </div>
+              {/* Seleção de carreta removida. Agora será feita apenas no início da viagem, se necessário. */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
