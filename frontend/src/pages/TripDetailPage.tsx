@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, expensesAPI, trailersAPI, trucksAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -78,6 +78,7 @@ interface Expense {
 const TripDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const toast = useToast();
   // Modal de carreta
@@ -113,6 +114,7 @@ const TripDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (id) {
+      console.debug('[TripDetailPage] mounted with id=', id, ' pathname=', location.pathname);
       fetchTripDetails(id);
     }
   }, [id]);
@@ -158,6 +160,25 @@ const TripDetailPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // If this component rendered on a /trucks/:id URL by mistake, redirect to truck detail when no trip found
+  function NotFoundRedirect() {
+    useEffect(() => {
+      // If path looks like /trucks/:id, redirect to truck detail
+      const m = location.pathname.match(/^\/trucks\/([^/]+)/);
+      if (m && m[1]) {
+        navigate(`/trucks/${m[1]}`);
+      }
+    }, [location.pathname, navigate]);
+
+    return (
+      <div className="text-center py-8">
+        <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">Viagem não encontrada</h3>
+        <p className="mt-1 text-sm text-gray-500">Redirecionando...</p>
+      </div>
+    );
+  }
 
   // Substitui handleStartTrip por handleStartTripWithTrailer
 
@@ -266,19 +287,7 @@ const TripDetailPage: React.FC = () => {
 
   if (!trip) {
     return (
-      <div className="text-center py-8">
-        <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Viagem não encontrada</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          A viagem que você procura não existe.
-        </p>
-        <div className="mt-6">
-          <Button onClick={() => navigate('/trips')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Viagens
-          </Button>
-        </div>
-      </div>
+      <NotFoundRedirect />
     );
   }
 
