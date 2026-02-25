@@ -341,34 +341,48 @@ router.post('/:id/start', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    // Verificar se o caminhão já tem uma viagem ativa
-    const activeTripOnSameTruck = await prisma.tripLeg.findFirst({
+    // Verificar se o caminhão já tem uma viagem ativa (trecho IN_PROGRESS)
+    const otherInProgressLeg = await prisma.tripLeg.findFirst({
       where: {
         truckId: trip.truckId,
         status: 'IN_PROGRESS',
         tripId: { not: trip.id },
       },
-      include: {
-        trip: true,
-      },
+      include: { trip: true },
     });
 
-    // Se tem viagem ativa, verificar se ela está pausada (aguardando carregamento)
-    if (activeTripOnSameTruck) {
-      const activeTrip = activeTripOnSameTruck.trip;
-      const hasActiveLeg = await prisma.tripLeg.findFirst({
-        where: {
-          tripId: activeTrip.id,
-          status: 'IN_PROGRESS',
-        },
+    if (otherInProgressLeg) {
+      const otherTrip = otherInProgressLeg.trip;
+      return res.status(400).json({
+        message: `Este caminhão já está em viagem (${otherTrip.origin} → ${otherTrip.destination})`,
       });
+    }
 
-      // Se a viagem ativa tem um trecho EM ANDAMENTO (não pausado), não pode iniciar
-      if (hasActiveLeg) {
-        return res.status(400).json({ 
-          message: `Este caminhão já está em viagem (${activeTrip.origin} → ${activeTrip.destination})` 
+    // Verificar se existe uma viagem pausada aguardando descarregamento (UNLOADING)
+    const otherPausedUnloadingLeg = await prisma.tripLeg.findFirst({
+      where: {
+        truckId: trip.truckId,
+        status: 'PAUSED',
+        waitingType: 'UNLOADING',
+        tripId: { not: trip.id },
+      },
+      include: { trip: true },
+    });
+
+    // Se existir uma viagem pausada por descarregamento:
+    if (otherPausedUnloadingLeg) {
+      // Se o caminhão for sem capacidade (noCapacity), permitimos iniciar nova viagem (será criado reposicionamento sem carreta)
+      if (!trip.truck.noCapacity) {
+        const otherTrip = otherPausedUnloadingLeg.trip;
+        return res.status(400).json({
+          message: `O caminhão desta viagem (${trip.truck.plate}) tem a carreta acoplada e existe uma viagem em andamento (${otherTrip.origin} → ${otherTrip.destination}). Conclua essa viagem antes de iniciar uma nova.`,
         });
       }
+      // Caso seja sem capacidade, haverá reposicionamento a partir do trecho pausado (lógica abaixo usa pausedLeg)
+      // Vamos buscar o pausedLeg para usar no reposicionamento
+      // (usado abaixo na criação do trecho de reposicionamento)
+      // Reuse otherPausedUnloadingLeg as paused source
+      // We'll set a variable that the code below will pick up if needed
     }
 
     if (trip.status !== 'PLANNED' && trip.status !== 'DELAYED') {
@@ -390,8 +404,8 @@ router.post('/:id/start', async (req, res) => {
     // Pegar quilometragem atual do caminhão
     const startMileage = trip.truck.currentMileage || 0;
 
-    // Verificar se precisa criar trecho de reposicionamento
-    const needsRepositioning = activeTripOnSameTruck !== null;
+    // Verificar se precisa criar trecho de reposicionamento (existe outra viagem pausada por descarregamento)
+    const needsRepositioning = !!otherPausedUnloadingLeg;
     let legNumber = 1;
     let actualStartMileage = startMileage;
 
@@ -401,7 +415,7 @@ router.post('/:id/start', async (req, res) => {
     if (needsRepositioning) {
       const pausedLeg = await prisma.tripLeg.findFirst({
         where: {
-          tripId: activeTripOnSameTruck.tripId,
+          tripId: otherPausedUnloadingLeg!.tripId,
           status: 'PAUSED',
         },
         orderBy: { legNumber: 'desc' },
