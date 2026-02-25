@@ -1,7 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { tripsAPI, expensesAPI } from '@/lib/api';
+import { tripsAPI, expensesAPI, trailersAPI, trucksAPI } from '@/lib/api';
+  // Modal de carreta
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [trailers, setTrailers] = useState<any[]>([]);
+  const [selectedTrailerId, setSelectedTrailerId] = useState('');
+  // Handler para iniciar viagem com carreta
+  const handleStartTripWithTrailer = async () => {
+    if (!id || !trip) return;
+    const truck = await trucksAPI.getById(trip.truck.id);
+    if (truck.noCapacity) {
+      const trailersList = await trailersAPI.getAll();
+      setTrailers(trailersList);
+      setShowTrailerModal(true);
+      setSelectedTrailerId('');
+      return;
+    }
+    try {
+      await tripsAPI.start(id);
+      fetchTripDetails(id);
+    } catch (error) {
+      toast.error('Erro ao iniciar viagem');
+    }
+  };
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
 import {
@@ -134,16 +156,7 @@ const TripDetailPage: React.FC = () => {
     }
   };
 
-  const handleStartTrip = async () => {
-    if (!id) return;
-    try {
-      await tripsAPI.start(id);
-      fetchTripDetails(id);
-    } catch (error) {
-      console.error('Erro ao iniciar viagem:', error);
-      toast.error('Erro ao iniciar viagem');
-    }
-  };
+  // Substitui handleStartTrip por handleStartTripWithTrailer
 
   const handleFinishTrip = async () => {
     if (!id || !trip) return;
@@ -325,11 +338,82 @@ const TripDetailPage: React.FC = () => {
       {/* Action Buttons */}
       <div className="flex flex-col md:flex-row gap-2 md:gap-2 md:flex-wrap">
         {(trip.status === 'PLANNED' || trip.status === 'DELAYED') && user?.id === trip.driver.id && (
-          <Button onClick={handleStartTrip} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
+          <Button onClick={handleStartTripWithTrailer} className="w-full md:w-auto bg-green-600 hover:bg-green-700 touch-manipulation">
             <Play className="mr-2 h-4 w-4" />
             Iniciar Viagem
           </Button>
         )}
+            {/* Modal de Seleção de Carreta ao Iniciar Viagem */}
+            {showTrailerModal && (
+              <div
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                onClick={() => {
+                  setShowTrailerModal(false);
+                  setSelectedTrailerId('');
+                }}
+              >
+                <Card
+                  className="w-full max-w-md"
+                  onClick={e => e.stopPropagation()} // Impede fechar ao clicar dentro do Card
+                >
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-blue-600">Selecione a Carreta</CardTitle>
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-gray-700 text-xl font-bold focus:outline-none"
+                      onClick={() => {
+                        setShowTrailerModal(false);
+                        setSelectedTrailerId('');
+                      }}
+                      aria-label="Fechar"
+                    >
+                      ×
+                    </button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Carreta disponível *
+                        </label>
+                        <select
+                          value={selectedTrailerId}
+                          onChange={e => setSelectedTrailerId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Selecione uma carreta</option>
+                          {trailers.map((trailer: any) => (
+                            <option key={trailer.id} value={trailer.id}>
+                              {trailer.plate} {trailer.brand && trailer.model ? `- ${trailer.brand} ${trailer.model}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-4 mt-6">
+                      <Button
+                        onClick={async () => {
+                          if (!selectedTrailerId) {
+                            toast.error('Selecione uma carreta para iniciar a viagem');
+                            return;
+                          }
+                          setShowTrailerModal(false);
+                          try {
+                            await tripsAPI.start(id);
+                            fetchTripDetails(id);
+                          } catch (error) {
+                            toast.error('Erro ao iniciar viagem');
+                          }
+                        }}
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Iniciar Viagem
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
         {trip.status === 'IN_PROGRESS' && user?.id === trip.driver.id && (
           <Button onClick={handleFinishTrip} className="w-full md:w-auto bg-red-600 hover:bg-red-700 touch-manipulation">
             <StopCircle className="mr-2 h-4 w-4" />
