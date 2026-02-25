@@ -16,12 +16,6 @@ interface Truck {
   brand: string;
 }
 
-interface Trailer {
-  id: string;
-  plate: string;
-  model?: string;
-  brand?: string;
-}
 
 interface Driver {
   id: string;
@@ -113,7 +107,6 @@ export default function TripFormPage() {
       setTrucks(trucksData.filter((truck: any) => 
         truck.active === true && truck.status !== 'MAINTENANCE'
       ));
-      setTrailers(trailersData);
       setDrivers(driversData);
       setClients(clientsData.filter((c: Client) => c.active !== false));
       
