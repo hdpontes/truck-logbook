@@ -665,25 +665,26 @@ export default function TripsPage() {
                         </div>
                       </div>
 
-                      <div className="text-xs">
-                        <span className="text-gray-500">Início:</span>
-                        <span className="font-medium ml-1">
-                          {new Date(trip.startDate).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-
-                      {/* Distance */}
-                      {trip.distance > 0 && (
-                        <div className="text-xs">
-                          <span className="text-gray-500">Distância:</span>
-                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                      {/* Date and Distance in same line */}
+                      <div className="flex items-center gap-3 text-xs flex-wrap">
+                        <div>
+                          <span className="text-gray-500">Início:</span>
+                          <span className="font-medium ml-1">
+                            {new Date(trip.startDate).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
                         </div>
-                      )}
+                        {trip.distance > 0 && (
+                          <div>
+                            <span className="text-gray-500">Distância:</span>
+                            <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
@@ -843,33 +844,26 @@ export default function TripsPage() {
                         </div>
                       </div>
 
-                      <div className="text-xs">
-                        <span className="text-gray-500">Início:</span>
-                        <span className="font-medium ml-1">
-                          {new Date(trip.startDate).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
+                      {/* Date and Distance in same line */}
+                      <div className="flex items-center gap-3 text-xs flex-wrap">
+                        <div>
+                          <span className="text-gray-500">Início:</span>
+                          <span className="font-medium ml-1">
+                            {new Date(trip.startDate).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        {trip.distance > 0 && (
+                          <div>
+                            <span className="text-gray-500">Distância:</span>
+                            <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Distance */}
-                      {trip.distance > 0 && (
-                        <div className="text-xs">
-                          <span className="text-gray-500">Distância:</span>
-                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
-                        </div>
-                      )}
-
-                      {/* Distance */}
-                      {trip.distance > 0 && (
-                        <div className="text-xs">
-                          <span className="text-gray-500">Distância:</span>
-                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
-                        </div>
-                      )}
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
@@ -1086,33 +1080,26 @@ export default function TripsPage() {
                         </div>
                       </div>
 
-                      <div className="text-xs">
-                        <span className="text-gray-500">Concluída em:</span>
-                        <span className="font-medium ml-1">
-                          {trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }) : 'N/A'}
-                        </span>
+                      {/* Date and Distance in same line */}
+                      <div className="flex items-center gap-3 text-xs flex-wrap">
+                        <div>
+                          <span className="text-gray-500">Concluída em:</span>
+                          <span className="font-medium ml-1">
+                            {trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'N/A'}
+                          </span>
+                        </div>
+                        {trip.distance > 0 && (
+                          <div>
+                            <span className="text-gray-500">Distância:</span>
+                            <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                          </div>
+                        )}
                       </div>
-
-                      {/* Distance */}
-                      {trip.distance > 0 && (
-                        <div className="text-xs">
-                          <span className="text-gray-500">Distância:</span>
-                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
-                        </div>
-                      )}
-
-                      {/* Distance */}
-                      {trip.distance > 0 && (
-                        <div className="text-xs">
-                          <span className="text-gray-500">Distância:</span>
-                          <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
-                        </div>
-                      )}
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
