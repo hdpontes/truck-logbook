@@ -2,28 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, expensesAPI, trailersAPI, trucksAPI } from '@/lib/api';
-  // Modal de carreta
-  const [showTrailerModal, setShowTrailerModal] = useState(false);
-  const [trailers, setTrailers] = useState<any[]>([]);
-  const [selectedTrailerId, setSelectedTrailerId] = useState('');
-  // Handler para iniciar viagem com carreta
-  const handleStartTripWithTrailer = async () => {
-    if (!id || !trip) return;
-    const truck = await trucksAPI.getById(trip.truck.id);
-    if (truck.noCapacity) {
-      const trailersList = await trailersAPI.getAll();
-      setTrailers(trailersList);
-      setShowTrailerModal(true);
-      setSelectedTrailerId('');
-      return;
-    }
-    try {
-      await tripsAPI.start(id);
-      fetchTripDetails(id);
-    } catch (error) {
-      toast.error('Erro ao iniciar viagem');
-    }
-  };
 import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
 import {
@@ -103,6 +81,29 @@ const TripDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const toast = useToast();
+  // Modal de carreta
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [trailers, setTrailers] = useState<any[]>([]);
+  const [selectedTrailerId, setSelectedTrailerId] = useState('');
+
+  // Handler para iniciar viagem com verificação de carreta
+  const handleStartTripWithTrailer = async () => {
+    if (!id || !trip) return;
+    try {
+      const truck = await trucksAPI.getById(trip.truck.id);
+      if (truck.noCapacity) {
+        const trailersList = await trailersAPI.getAll();
+        setTrailers(trailersList);
+        setShowTrailerModal(true);
+        setSelectedTrailerId('');
+        return;
+      }
+      await tripsAPI.start(id);
+      fetchTripDetails(id);
+    } catch (error) {
+      toast.error('Erro ao iniciar viagem');
+    }
+  };
   const [trip, setTrip] = useState<TripData | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -398,6 +399,10 @@ const TripDetailPage: React.FC = () => {
                             return;
                           }
                           setShowTrailerModal(false);
+                          if (!id) {
+                            toast.error('ID da viagem inválido');
+                            return;
+                          }
                           try {
                             await tripsAPI.start(id);
                             fetchTripDetails(id);
@@ -429,7 +434,7 @@ const TripDetailPage: React.FC = () => {
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && 
          (trip.status === 'PLANNED' || trip.status === 'DELAYED') && (
           <Button 
-            onClick={() => navigate(`/trips/${id}/edit`)}
+            onClick={() => id && navigate(`/trips/${id}/edit`)}
             variant="outline"
             className="w-full md:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 touch-manipulation"
           >
