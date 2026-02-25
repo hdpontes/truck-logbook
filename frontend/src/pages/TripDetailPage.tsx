@@ -104,7 +104,8 @@ const TripDetailPage: React.FC = () => {
       await tripsAPI.start(id);
       fetchTripDetails(id);
     } catch (error) {
-      toast.error('Erro ao iniciar viagem');
+      const err: any = error;
+      toast.error(err.response?.data?.message || 'Erro ao iniciar viagem');
     }
   };
   const [trip, setTrip] = useState<TripData | null>(null);
@@ -163,19 +164,25 @@ const TripDetailPage: React.FC = () => {
 
   // If this component rendered on a /trucks/:id URL by mistake, redirect to truck detail when no trip found
   function NotFoundRedirect() {
-    useEffect(() => {
-      // If path looks like /trucks/:id, redirect to truck detail
-      const m = location.pathname.match(/^\/trucks\/([^/]+)/);
-      if (m && m[1]) {
-        navigate(`/trucks/${m[1]}`);
-      }
-    }, [location.pathname, navigate]);
+    // Don't auto-redirect; provide action so user can choose where to go.
+    const m = location.pathname.match(/^\/trucks\/([^/]+)/);
+    const truckIdFromPath = m && m[1] ? m[1] : null;
 
     return (
       <div className="text-center py-8">
         <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-2 text-sm font-medium text-gray-900">Viagem não encontrada</h3>
-        <p className="mt-1 text-sm text-gray-500">Redirecionando...</p>
+        <p className="mt-1 text-sm text-gray-500">Caso queria ver o caminhão ou retornar à lista de viagens, escolha abaixo.</p>
+        <div className="mt-4 flex items-center justify-center gap-3">
+          {truckIdFromPath ? (
+            <Button onClick={() => navigate(`/trucks/${truckIdFromPath}`)}>
+              Ver Detalhes do Caminhão
+            </Button>
+          ) : null}
+          <Button variant="outline" onClick={() => navigate('/trips')}>
+            Voltar para Viagens
+          </Button>
+        </div>
       </div>
     );
   }
@@ -442,7 +449,8 @@ const TripDetailPage: React.FC = () => {
                             await tripsAPI.start(id, { trailerId: selectedTrailerId });
                             fetchTripDetails(id);
                           } catch (error) {
-                            toast.error('Erro ao iniciar viagem');
+                            const err: any = error;
+                            toast.error(err.response?.data?.message || 'Erro ao iniciar viagem');
                           }
                         }}
                       >
