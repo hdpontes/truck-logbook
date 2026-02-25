@@ -842,25 +842,21 @@ export default function TripsPage() {
                           <span className="text-gray-500">Cliente:</span>
                           <p className="font-medium truncate">{trip.client?.name || 'N/A'}</p>
                         </div>
-                      </div>
-
-                      {/* Date and Distance in same line */}
-                      <div className="flex items-center gap-3 text-xs flex-wrap">
                         <div>
                           <span className="text-gray-500">Início:</span>
-                          <span className="font-medium ml-1">
+                          <p className="font-medium">
                             {new Date(trip.startDate).toLocaleString('pt-BR', {
                               day: '2-digit',
                               month: '2-digit',
                               hour: '2-digit',
                               minute: '2-digit'
                             })}
-                          </span>
+                          </p>
                         </div>
                         {trip.distance > 0 && (
                           <div>
                             <span className="text-gray-500">Distância:</span>
-                            <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                            <p className="font-medium">{trip.distance.toFixed(0)} km</p>
                           </div>
                         )}
                       </div>
@@ -1078,25 +1074,21 @@ export default function TripsPage() {
                           <span className="text-gray-500">Cliente:</span>
                           <p className="font-medium truncate">{trip.client?.name || 'N/A'}</p>
                         </div>
-                      </div>
-
-                      {/* Date and Distance in same line */}
-                      <div className="flex items-center gap-3 text-xs flex-wrap">
                         <div>
                           <span className="text-gray-500">Concluída em:</span>
-                          <span className="font-medium ml-1">
+                          <p className="font-medium">
                             {trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR', {
                               day: '2-digit',
                               month: '2-digit',
                               hour: '2-digit',
                               minute: '2-digit'
                             }) : 'N/A'}
-                          </span>
+                          </p>
                         </div>
                         {trip.distance > 0 && (
                           <div>
                             <span className="text-gray-500">Distância:</span>
-                            <span className="font-medium ml-1">{trip.distance.toFixed(0)} km</span>
+                            <p className="font-medium">{trip.distance.toFixed(0)} km</p>
                           </div>
                         )}
                       </div>
