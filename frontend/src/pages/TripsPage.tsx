@@ -679,11 +679,17 @@ export default function TripsPage() {
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t text-xs">
                           <div>
                             <span className="text-gray-500">Receita:</span>
                             <p className="font-medium text-green-600">
                               {formatCurrency(trip.revenue)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Custos:</span>
+                            <p className="font-medium text-red-600">
+                              {formatCurrency(trip.totalCost)}
                             </p>
                           </div>
                           <div>
@@ -843,11 +849,17 @@ export default function TripsPage() {
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t text-xs">
                           <div>
                             <span className="text-gray-500">Receita:</span>
                             <p className="font-medium text-green-600">
                               {formatCurrency(trip.revenue)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Custos:</span>
+                            <p className="font-medium text-red-600">
+                              {formatCurrency(trip.totalCost)}
                             </p>
                           </div>
                           <div>
@@ -1064,11 +1076,17 @@ export default function TripsPage() {
 
                       {/* Financial Data */}
                       {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t text-xs">
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t text-xs">
                           <div>
                             <span className="text-gray-500">Receita:</span>
                             <p className="font-medium text-green-600">
                               {formatCurrency(trip.revenue)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Custos:</span>
+                            <p className="font-medium text-red-600">
+                              {formatCurrency(trip.totalCost)}
                             </p>
                           </div>
                           <div>
