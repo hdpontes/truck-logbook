@@ -263,16 +263,20 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       .filter((item) => item.type === 'INCOME')
       .reduce((sum, item) => sum + item.amount, 0);
 
-    // Calcular total de custos: despesas + custos das viagens
-    const expensesTotal = reportItems
-      .filter((item) => item.type === 'EXPENSE')
+    // Calcular total de custos: 
+    // - Despesas avulsas (sem tripId - não associadas a viagens)
+    // - Custos totais das viagens (que já incluem as despesas associadas)
+    const expensesWithoutTrip = reportItems
+      .filter((item) => item.type === 'EXPENSE' && !item.tripId)
       .reduce((sum, item) => sum + item.amount, 0);
     
     const tripCostsTotal = reportItems
       .filter((item) => item.type === 'INCOME' && item.cost)
       .reduce((sum, item) => sum + (item.cost || 0), 0);
     
-    const totalExpense = expensesTotal + tripCostsTotal;
+    // CORREÇÃO: Somar apenas despesas avulsas + custos das viagens
+    // (despesas com tripId já estão incluídas nos custos das viagens)
+    const totalExpense = expensesWithoutTrip + tripCostsTotal;
 
     const profit = totalIncome - totalExpense;
 
