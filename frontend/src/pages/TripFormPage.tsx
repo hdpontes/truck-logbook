@@ -93,7 +93,7 @@ export default function TripFormPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const [trucksData, trailersData, driversData, clientsData, locationsData] = await Promise.all([
+      const [trucksData, , driversData, clientsData, locationsData] = await Promise.all([
         trucksAPI.getAll(),
         trailersAPI.getAll(),
         driversAPI.getAll(),
