@@ -542,6 +542,29 @@ export default function TripsPage() {
 
   // On mobile, for drivers we want the in-progress column to appear first
   const driverHasInProgress = !!(user && user.role === 'DRIVER' && inProgressTrips.some(t => t.driver.id === user.id));
+  // Sorted arrays: for drivers, ensure their in-progress trip and next planned trip appear first
+  const sortedInProgress = [...inProgressTrips].sort((a, b) => {
+    if (!user) return 0;
+    const aIsDriver = a.driver.id === user.id;
+    const bIsDriver = b.driver.id === user.id;
+    if (aIsDriver && !bIsDriver) return -1;
+    if (!aIsDriver && bIsDriver) return 1;
+    return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+  });
+
+  const sortedPlanned = [...plannedTrips].sort((a, b) => {
+    if (!user) return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+    const aIsDriver = a.driver.id === user.id;
+    const bIsDriver = b.driver.id === user.id;
+    if (aIsDriver && !bIsDriver) return -1;
+    if (!aIsDriver && bIsDriver) return 1;
+    return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+  });
+
+  const sortedCompleted = [...completedTrips].sort((a, b) => {
+    // most recent completed first
+    return (new Date(b.endDate || 0).getTime()) - (new Date(a.endDate || 0).getTime());
+  });
 
   if (loading) {
     return (
@@ -687,7 +710,7 @@ export default function TripsPage() {
                 </CardContent>
               </Card>
             ) : (
-              plannedTrips.map((trip) => {
+              sortedPlanned.map((trip) => {
                 const start = new Date(trip.startDate).getTime();
                 const overdue = (trip.status === 'DELAYED') || (start < currentTime && trip.status === 'PLANNED');
                 return (
@@ -871,7 +894,7 @@ export default function TripsPage() {
                 </CardContent>
               </Card>
             ) : (
-              inProgressTrips.map((trip) => (
+              sortedInProgress.map((trip) => (
                 <Card key={trip.id} className="hover:shadow-lg transition-shadow bg-white">
                   <CardContent className="p-5">
                     <div className="space-y-3">
@@ -1099,7 +1122,7 @@ export default function TripsPage() {
         </div>
 
         {/* Column 3: COMPLETED (Concluídas) - Green */}
-        <div className="bg-green-50 rounded-lg p-4 min-h-[600px]">
+        <div className={`${driverHasInProgress ? 'order-3 lg:order-none' : ''} bg-green-50 rounded-lg p-4 min-h-[600px]`}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-lg">Concluídas</h3>
             <span className="text-sm bg-white px-2 py-1 rounded-full">
@@ -1114,7 +1137,7 @@ export default function TripsPage() {
                 </CardContent>
               </Card>
             ) : (
-              completedTrips.map((trip) => (
+              sortedCompleted.map((trip) => (
                 <Card key={trip.id} className="hover:shadow-lg transition-shadow bg-white">
                   <CardContent className="p-5">
                     <div className="space-y-3">
