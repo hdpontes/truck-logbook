@@ -540,6 +540,9 @@ export default function TripsPage() {
   const inProgressTrips = trips.filter(trip => trip.status === 'IN_PROGRESS');
   const completedTrips = trips.filter(trip => trip.status === 'COMPLETED');
 
+  // On mobile, for drivers we want the in-progress column to appear first
+  const driverHasInProgress = !!(user && user.role === 'DRIVER' && inProgressTrips.some(t => t.driver.id === user.id));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -669,7 +672,7 @@ export default function TripsPage() {
       {/* Kanban Board - 3 Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Column 1: PLANNED (Agendadas) - Blue */}
-        <div className="bg-blue-50 rounded-lg p-4 min-h-[600px]">
+        <div className={`${driverHasInProgress ? 'order-2 lg:order-none' : ''} bg-blue-50 rounded-lg p-4 min-h-[600px]`}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-lg">Agendadas</h3>
             <span className="text-sm bg-white px-2 py-1 rounded-full">
@@ -853,7 +856,7 @@ export default function TripsPage() {
         </div>
 
         {/* Column 2: IN_PROGRESS (Em Andamento) - Yellow */}
-        <div className="bg-yellow-50 rounded-lg p-4 min-h-[600px]">
+        <div className={`${driverHasInProgress ? 'order-1 lg:order-none' : ''} bg-yellow-50 rounded-lg p-4 min-h-[600px]`}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-semibold text-lg">Em Andamento</h3>
             <span className="text-sm bg-white px-2 py-1 rounded-full">
