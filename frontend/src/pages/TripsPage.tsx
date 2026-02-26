@@ -536,7 +536,7 @@ export default function TripsPage() {
   // Removidas funções handleOpenTrailerModal e handleCloseTrailerModal pois não são usadas
 
   // Separate trips by status for Kanban columns
-  const plannedTrips = trips.filter(trip => trip.status === 'PLANNED');
+  const plannedTrips = trips.filter(trip => trip.status === 'PLANNED' || trip.status === 'DELAYED');
   const inProgressTrips = trips.filter(trip => trip.status === 'IN_PROGRESS');
   const completedTrips = trips.filter(trip => trip.status === 'COMPLETED');
 
@@ -703,9 +703,15 @@ export default function TripsPage() {
                             )}
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 bg-blue-100 text-blue-800">
-                          Agendada
-                        </span>
+                        {(() => {
+                          const start = new Date(trip.startDate).getTime();
+                          const overdue = (trip.status === 'DELAYED') || (start < currentTime && trip.status === 'PLANNED');
+                          return (
+                            <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 ${overdue ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                              {overdue ? 'Atrasada' : 'Agendada'}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Trip Details */}
