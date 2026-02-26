@@ -551,7 +551,7 @@ export default function TripsPage() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Viagens</h1>
         <div className="flex flex-col md:flex-row gap-2">
           <Button
