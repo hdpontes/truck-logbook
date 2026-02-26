@@ -846,6 +846,7 @@ export default function TripsPage() {
                     </div>
                   </CardContent>
                 </Card>
+                );
               })
             )}
           </div>
