@@ -54,7 +54,7 @@ export default function Layout() {
       
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto p-3 md:p-6">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 bg-white">
           <Outlet />
         </main>
       </div>
