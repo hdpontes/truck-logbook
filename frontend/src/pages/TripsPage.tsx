@@ -684,8 +684,11 @@ export default function TripsPage() {
                 </CardContent>
               </Card>
             ) : (
-              plannedTrips.map((trip) => (
-                <Card key={trip.id} className="hover:shadow-lg transition-shadow bg-white">
+              plannedTrips.map((trip) => {
+                const start = new Date(trip.startDate).getTime();
+                const overdue = (trip.status === 'DELAYED') || (start < currentTime && trip.status === 'PLANNED');
+                return (
+                <Card key={trip.id} className={`hover:shadow-lg transition-shadow ${overdue ? 'bg-red-50 border border-red-100' : 'bg-white'}`}>
                   <CardContent className="p-5">
                     <div className="space-y-3">
                       {/* Header */}
@@ -843,7 +846,7 @@ export default function TripsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+              })
             )}
           </div>
         </div>
