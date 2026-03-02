@@ -16,7 +16,9 @@ import settingsRoutes from './routes/settings.routes';
 import reportsRoutes from './routes/reports.routes';
 import billingRoutes from './routes/billing.routes';
 import externalRoutes from './routes/external.routes';
+import receivablesRoutes from './routes/receivables.routes';
 import { startMonthlyCronJob } from './jobs/monthly-report.job';
+import { startReceivablesNotificationJob } from './jobs/receivables-notification.job';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;  // ✅ FIX: Convert to Number
@@ -67,6 +69,7 @@ app.use('/api/locations', locationsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/receivables', receivablesRoutes);
 app.use('/api/external', externalRoutes);
 console.log('✅ All routes mounted successfully');
 
@@ -111,6 +114,7 @@ app.listen(PORT, '0.0.0.0', () => {
   
   // Iniciar cron jobs
   startMonthlyCronJob();
+  startReceivablesNotificationJob();
 });
 
 export default app;
