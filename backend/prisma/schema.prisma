@@ -435,6 +435,8 @@ model Receivable {
   notificationSent Boolean          @default(false) // Se já enviou notificação
   lastNotificationDate DateTime?    // Data da última notificação
   
+  payments        ReceivablePayment[] // Histórico de pagamentos
+  
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -443,6 +445,26 @@ model Receivable {
   @@index([dueDate])
   @@index([recurringGroupId])
   @@map("receivables")
+}
+
+model ReceivablePayment {
+  id              String   @id @default(uuid())
+  receivableId    String
+  receivable      Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  
+  amount          Float    // Valor pago neste pagamento
+  paymentMethod   String   // PIX, Dinheiro, Transferência, Cartão, Boleto, etc
+  paymentDate     DateTime @default(now()) // Data do pagamento
+  receiptPath     String?  // Caminho do arquivo de comprovante
+  receiptFileName String?  // Nome original do arquivo
+  notes           String?  // Observações sobre o pagamento
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([receivableId])
+  @@index([paymentDate])
+  @@map("receivable_payments")
 }
 
 enum ReceivableStatus {
