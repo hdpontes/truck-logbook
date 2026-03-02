@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2, Download, FileText } from 'lucide-react';
+import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2, Download, FileText, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import api from '@/lib/api';
@@ -49,9 +49,12 @@ export default function ReceivablesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterClient, setFilterClient] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [receiptsModal, setReceiptsModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
@@ -76,7 +79,7 @@ export default function ReceivablesPage() {
   useEffect(() => {
     fetchReceivables();
     fetchClients();
-  }, [filterStatus, filterClient]);
+  }, []);
 
   const fetchReceivables = async () => {
     try {
@@ -84,6 +87,8 @@ export default function ReceivablesPage() {
       const params: any = {};
       if (filterStatus) params.status = filterStatus;
       if (filterClient) params.clientId = filterClient;
+      if (startDateFilter) params.startDate = startDateFilter;
+      if (endDateFilter) params.endDate = endDateFilter;
       
       const response = await api.get('/receivables', { params });
       setReceivables(response.data);
@@ -349,15 +354,25 @@ export default function ReceivablesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Recebimentos</h1>
           <p className="text-gray-600 mt-1">Gerencie recebimentos avulsos e recorrentes</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Recebimento
-        </Button>
+        <div className="flex flex-col md:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full md:w-auto"
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)} className="w-full md:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Recebimento
+          </Button>
+        </div>
       </div>
 
       {/* Formulário */}
@@ -499,54 +514,98 @@ export default function ReceivablesPage() {
       )}
 
       {/* Filtros */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por descrição, tipo ou cliente..."
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md"
-              />
+      {showFilters && (
+        <Card className="p-4">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar por descrição, tipo ou cliente..."
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Todos</option>
+                  <option value="PENDING">Pendente</option>
+                  <option value="PARTIALLY_PAID">Pago Parcialmente</option>
+                  <option value="PAID">Pago</option>
+                  <option value="OVERDUE">Atrasado</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <select
+                  value={filterClient}
+                  onChange={(e) => setFilterClient(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Todos</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+                <input
+                  type="date"
+                  value={startDateFilter}
+                  onChange={(e) => setStartDateFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+                <input
+                  type="date"
+                  value={endDateFilter}
+                  onChange={(e) => setEndDateFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={fetchReceivables}>
+                <Search className="mr-2 h-4 w-4" />
+                Aplicar Filtros
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFilterStatus('');
+                  setFilterClient('');
+                  setSearchTerm('');
+                  setStartDateFilter('');
+                  setEndDateFilter('');
+                  fetchReceivables();
+                }}
+              >
+                Limpar Filtros
+              </Button>
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Todos</option>
-              <option value="PENDING">Pendente</option>
-              <option value="PARTIALLY_PAID">Pago Parcialmente</option>
-              <option value="PAID">Pago</option>
-              <option value="OVERDUE">Atrasado</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-            <select
-              value={filterClient}
-              onChange={(e) => setFilterClient(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Todos</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Lista de Recebimentos */}
       {filteredReceivables.length === 0 ? (
