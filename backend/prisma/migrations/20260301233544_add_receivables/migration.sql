@@ -1,8 +1,13 @@
--- CreateEnum
-CREATE TYPE "ReceivableStatus" AS ENUM ('PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE');
+-- CreateEnum (apenas se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ReceivableStatus') THEN
+        CREATE TYPE "ReceivableStatus" AS ENUM ('PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE');
+    END IF;
+END $$;
 
--- CreateTable
-CREATE TABLE "receivables" (
+-- CreateTable (apenas se não existir)
+CREATE TABLE IF NOT EXISTS "receivables" (
     "id" TEXT NOT NULL,
     "clientId" TEXT,
     "type" TEXT NOT NULL,
@@ -26,17 +31,26 @@ CREATE TABLE "receivables" (
     CONSTRAINT "receivables_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "receivables_clientId_idx" ON "receivables"("clientId");
+-- CreateIndex (apenas se não existir)
+CREATE INDEX IF NOT EXISTS "receivables_clientId_idx" ON "receivables"("clientId");
 
 -- CreateIndex
-CREATE INDEX "receivables_status_idx" ON "receivables"("status");
+CREATE INDEX IF NOT EXISTS "receivables_status_idx" ON "receivables"("status");
 
 -- CreateIndex
-CREATE INDEX "receivables_dueDate_idx" ON "receivables"("dueDate");
+CREATE INDEX IF NOT EXISTS "receivables_dueDate_idx" ON "receivables"("dueDate");
 
 -- CreateIndex
-CREATE INDEX "receivables_recurringGroupId_idx" ON "receivables"("recurringGroupId");
+CREATE INDEX IF NOT EXISTS "receivables_recurringGroupId_idx" ON "receivables"("recurringGroupId");
 
--- AddForeignKey
-ALTER TABLE "receivables" ADD CONSTRAINT "receivables_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- AddForeignKey (apenas se não existir)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'receivables_clientId_fkey'
+    ) THEN
+        ALTER TABLE "receivables" ADD CONSTRAINT "receivables_clientId_fkey" 
+            FOREIGN KEY ("clientId") REFERENCES "clients"("id") 
+            ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
