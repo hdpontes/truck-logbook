@@ -372,8 +372,9 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  trips     Trip[]
-  expenses  Expense[]
+  trips       Trip[]
+  expenses    Expense[]
+  receivables Receivable[]
 
   @@map("clients")
 }
@@ -406,4 +407,47 @@ model Settings {
   updatedAt      DateTime @updatedAt
 
   @@map("settings")
+}
+
+model Receivable {
+  id              String            @id @default(uuid())
+  clientId        String?
+  client          Client?           @relation(fields: [clientId], references: [id])
+  
+  type            String            // Tipo: Aluguel, Empréstimo, Serviço, etc
+  description     String
+  amount          Float             // Valor total da parcela
+  paidAmount      Float             @default(0) // Valor já pago
+  remainingAmount Float             @default(0) // Valor restante a pagar
+  
+  phoneNumber     String?           // Número de telefone do cliente
+  dueDate         DateTime          // Data de vencimento
+  paymentDate     DateTime?         // Data do pagamento
+  
+  status          ReceivableStatus  @default(PENDING)
+  
+  // Para recebimentos recorrentes
+  isRecurring     Boolean           @default(false)
+  installmentNumber Int?            // Número da parcela (1, 2, 3...)
+  totalInstallments Int?            // Total de parcelas
+  recurringGroupId String?          // ID do grupo de recorrência
+  
+  notificationSent Boolean          @default(false) // Se já enviou notificação
+  lastNotificationDate DateTime?    // Data da última notificação
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([recurringGroupId])
+  @@map("receivables")
+}
+
+enum ReceivableStatus {
+  PENDING           // Pendente
+  PARTIALLY_PAID    // Paga parcialmente
+  PAID              // Paga
+  OVERDUE           // Atrasada
 }
