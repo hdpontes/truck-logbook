@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import api from '@/lib/api';
@@ -36,10 +36,12 @@ export default function ReceivablesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterClient, setFilterClient] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [paymentAmount, setPaymentAmount] = useState('');
   const { success, error } = useToast();
 
@@ -58,7 +60,7 @@ export default function ReceivablesPage() {
   useEffect(() => {
     fetchReceivables();
     fetchClients();
-  }, []);
+  }, [filterStatus, filterClient]);
 
   const fetchReceivables = async () => {
     try {
@@ -94,24 +96,40 @@ export default function ReceivablesPage() {
       return;
     }
 
-    if (formData.isRecurring && parseInt(formData.totalInstallments) < 2) {
+    if (!editingId && formData.isRecurring && parseInt(formData.totalInstallments) < 2) {
       error('Para recebimentos recorrentes, informe no mínimo 2 parcelas');
       return;
     }
 
     try {
-      await api.post('/receivables', {
-        ...formData,
-        amount: parseFloat(formData.amount),
-        totalInstallments: formData.isRecurring ? parseInt(formData.totalInstallments) : undefined,
-        clientId: formData.clientId || undefined
-      });
+      if (editingId) {
+        // Modo edição - apenas atualiza o recebimento
+        await api.put(`/receivables/${editingId}`, {
+          type: formData.type,
+          description: formData.description,
+          amount: parseFloat(formData.amount),
+          phoneNumber: formData.phoneNumber,
+          dueDate: formData.dueDate,
+          clientId: formData.clientId || undefined
+        });
 
-      success(
-        formData.isRecurring 
-          ? `${formData.totalInstallments} parcelas criadas com sucesso!` 
-          : 'Recebimento criado com sucesso!'
-      );
+        success('Recebimento atualizado com sucesso!');
+        setEditingId(null);
+      } else {
+        // Modo criação - pode ser recorrente
+        await api.post('/receivables', {
+          ...formData,
+          amount: parseFloat(formData.amount),
+          totalInstallments: formData.isRecurring ? parseInt(formData.totalInstallments) : undefined,
+          clientId: formData.clientId || undefined
+        });
+
+        success(
+          formData.isRecurring 
+            ? `${formData.totalInstallments} parcelas criadas com sucesso!` 
+            : 'Recebimento criado com sucesso!'
+        );
+      }
       
       setShowForm(false);
       setFormData({
@@ -126,8 +144,8 @@ export default function ReceivablesPage() {
       });
       fetchReceivables();
     } catch (err: any) {
-      console.error('Erro ao criar recebimento:', err);
-      error(err.response?.data?.message || 'Erro ao criar recebimento');
+      console.error('Erro ao salvar recebimento:', err);
+      error(err.response?.data?.message || 'Erro ao salvar recebimento');
     }
   };
 
@@ -156,6 +174,67 @@ export default function ReceivablesPage() {
       console.error('Erro ao registrar pagamento:', err);
       error(err.response?.data?.message || 'Erro ao registrar pagamento');
     }
+  };
+
+  const handleEdit = (receivable: Receivable) => {
+    if (receivable.status === 'PAID') {
+      error('Não é possível editar um recebimento já pago');
+      return;
+    }
+    
+    setEditingId(receivable.id);
+    setFormData({
+      clientId: receivable.clientId || '',
+      type: receivable.type,
+      description: receivable.description,
+      amount: receivable.amount.toString(),
+      phoneNumber: receivable.phoneNumber || '',
+      dueDate: receivable.dueDate.split('T')[0],
+      isRecurring: false,
+      totalInstallments: '1'
+    });
+    setShowForm(true);
+  };
+
+  const handleDeleteClick = (receivable: Receivable) => {
+    setDeleteModal({ show: true, receivable });
+  };
+
+  const confirmDelete = async (deleteAll: boolean) => {
+    if (!deleteModal.receivable) return;
+
+    try {
+      if (deleteAll && deleteModal.receivable.recurringGroupId) {
+        // Excluir todas as parcelas do grupo
+        await api.delete(`/receivables/group/${deleteModal.receivable.recurringGroupId}`);
+        success('Todas as parcelas foram excluídas com sucesso!');
+      } else {
+        // Excluir apenas esta parcela
+        await api.delete(`/receivables/${deleteModal.receivable.id}`);
+        success('Recebimento excluído com sucesso!');
+      }
+
+      setDeleteModal({ show: false });
+      fetchReceivables();
+    } catch (err: any) {
+      console.error('Erro ao excluir:', err);
+      error(err.response?.data?.message || 'Erro ao excluir recebimento');
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData({
+      clientId: '',
+      type: '',
+      description: '',
+      amount: '',
+      phoneNumber: '',
+      dueDate: '',
+      isRecurring: false,
+      totalInstallments: '1'
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -225,7 +304,9 @@ export default function ReceivablesPage() {
       {/* Formulário */}
       {showForm && (
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Novo Recebimento</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {editingId ? 'Editar Recebimento' : 'Novo Recebimento'}
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -322,9 +403,10 @@ export default function ReceivablesPage() {
                   checked={formData.isRecurring}
                   onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
                   className="h-4 w-4"
+                  disabled={!!editingId}
                 />
                 <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700">
-                  Pagamento Recorrente
+                  Pagamento Recorrente {editingId && '(não editável)'}
                 </label>
               </div>
 
@@ -347,9 +429,9 @@ export default function ReceivablesPage() {
 
             <div className="flex gap-2 pt-4">
               <Button type="submit">
-                Criar Recebimento{formData.isRecurring && 's'}
+                {editingId ? 'Salvar Alterações' : `Criar Recebimento${formData.isRecurring ? 's' : ''}`}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button type="button" variant="outline" onClick={handleCancelForm}>
                 Cancelar
               </Button>
             </div>
@@ -358,96 +440,123 @@ export default function ReceivablesPage() {
       )}
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Buscar por descrição, tipo ou cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
-          />
+      <Card className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por descrição, tipo ou cliente..."
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Todos</option>
+              <option value="PENDING">Pendente</option>
+              <option value="PARTIALLY_PAID">Pago Parcialmente</option>
+              <option value="PAID">Pago</option>
+              <option value="OVERDUE">Atrasado</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+            <select
+              value={filterClient}
+              onChange={(e) => setFilterClient(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Todos</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        
-        <div className="flex gap-2">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="">Todos os Status</option>
-            <option value="PENDING">Pendente</option>
-            <option value="PARTIALLY_PAID">Pago Parcialmente</option>
-            <option value="OVERDUE">Atrasado</option>
-            <option value="PAID">Pago</option>
-          </select>
-        </div>
-        
-        <div className="flex gap-2">
-          <select
-            value={filterClient}
-            onChange={(e) => setFilterClient(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="">Todos os Clientes</option>
-            {clients.map(client => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      </Card>
 
       {/* Lista de Recebimentos */}
-      <div className="grid gap-4">
-        {filteredReceivables.length === 0 ? (
-          <Card className="p-8 text-center text-gray-500">
-            Nenhum recebimento encontrado
-          </Card>
-        ) : (
-          filteredReceivables.map((receivable) => (
-            <Card key={receivable.id} className={`p-6 ${getCardColor(receivable.status)}`}>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {filteredReceivables.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-gray-500">Nenhum recebimento encontrado</p>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {filteredReceivables.map((receivable) => (
+            <Card key={receivable.id} className={`p-4 ${getCardColor(receivable.status)}`}>
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {receivable.description}
-                    </h3>
+                  <div className="flex items-center gap-2 mb-2">
                     {getStatusBadge(receivable.status)}
-                  </div>
-                  
-                  <div className="space-y-1 text-sm text-gray-600">
-                    <p><strong>Tipo:</strong> {receivable.type}</p>
-                    {receivable.client && (
-                      <p><strong>Cliente:</strong> {receivable.client.name}</p>
-                    )}
                     {receivable.isRecurring && (
-                      <p><strong>Parcela:</strong> {receivable.installmentNumber}/{receivable.totalInstallments}</p>
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        Parcela {receivable.installmentNumber}/{receivable.totalInstallments}
+                      </span>
                     )}
-                    <p><strong>Vencimento:</strong> {formatDate(receivable.dueDate)}</p>
+                  </div>
+
+                  <h3 className="font-semibold text-lg">{receivable.type}</h3>
+                  <p className="text-gray-600 text-sm mb-2">{receivable.description}</p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    {receivable.client && (
+                      <div>
+                        <span className="text-gray-500">Cliente:</span>
+                        <p className="font-medium">{receivable.client.name}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <span className="text-gray-500">Valor Total:</span>
+                      <p className="font-medium">{formatCurrency(receivable.amount)}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-gray-500">Valor Pago:</span>
+                      <p className="font-medium text-green-600">{formatCurrency(receivable.paidAmount)}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-gray-500">Restante:</span>
+                      <p className="font-medium text-red-600">{formatCurrency(receivable.remainingAmount)}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-gray-500">Vencimento:</span>
+                      <p className="font-medium">{formatDate(receivable.dueDate)}</p>
+                    </div>
+
                     {receivable.paymentDate && (
-                      <p><strong>Pago em:</strong> {formatDate(receivable.paymentDate)}</p>
+                      <div>
+                        <span className="text-gray-500">Data Pagamento:</span>
+                        <p className="font-medium">{formatDate(receivable.paymentDate)}</p>
+                      </div>
+                    )}
+
+                    {receivable.phoneNumber && (
+                      <div>
+                        <span className="text-gray-500">Telefone:</span>
+                        <p className="font-medium">{receivable.phoneNumber}</p>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Valor Total</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(receivable.amount)}
-                    </p>
-                  </div>
-                  
-                  {receivable.paidAmount > 0 && (
-                    <div className="text-right">
-                      <p className="text-sm text-green-600">Pago: {formatCurrency(receivable.paidAmount)}</p>
-                      <p className="text-sm text-red-600">Restante: {formatCurrency(receivable.remainingAmount)}</p>
-                    </div>
-                  )}
-
+                <div className="flex flex-col gap-2 ml-4">
                   {receivable.status !== 'PAID' && (
                     <Button
                       size="sm"
@@ -460,60 +569,145 @@ export default function ReceivablesPage() {
                       Concluir Pagamento
                     </Button>
                   )}
+
+                  {receivable.status !== 'PAID' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(receivable)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDeleteClick(receivable)}
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-300"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Excluir
+                  </Button>
                 </div>
               </div>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal de Pagamento */}
       {paymentModal.show && paymentModal.receivable && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <Card className="p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold mb-4">Registrar Pagamento</h2>
+            <h3 className="text-lg font-semibold mb-4">Registrar Pagamento</h3>
             
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600">{paymentModal.receivable.description}</p>
-                <p className="text-lg font-semibold mt-2">
-                  Valor Restante: {formatCurrency(paymentModal.receivable.remainingAmount)}
-                </p>
-              </div>
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <p className="text-sm text-gray-600">Recebimento:</p>
+              <p className="font-medium">{paymentModal.receivable.description}</p>
+              <p className="text-sm text-gray-600 mt-2">Valor Restante:</p>
+              <p className="font-semibold text-lg">{formatCurrency(paymentModal.receivable.remainingAmount)}</p>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Valor Recebido *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  autoFocus
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Se o valor for menor que o restante, a parcela ficará como "Paga Parcialmente"
-                </p>
-              </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Valor Recebido *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Informe o valor total para pagamento completo ou um valor menor para pagamento parcial
+              </p>
+            </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handlePayment} className="flex-1">
-                  Confirmar Pagamento
+            <div className="flex gap-2">
+              <Button onClick={handlePayment} className="flex-1">
+                Confirmar Pagamento
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPaymentModal({ show: false });
+                  setPaymentAmount('');
+                }}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {deleteModal.show && deleteModal.receivable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-red-600">Confirmar Exclusão</h3>
+            
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <p className="font-medium">{deleteModal.receivable.description}</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Valor: {formatCurrency(deleteModal.receivable.amount)}
+              </p>
+              {deleteModal.receivable.isRecurring && (
+                <p className="text-sm text-blue-600 mt-1">
+                  Parcela {deleteModal.receivable.installmentNumber}/{deleteModal.receivable.totalInstallments} de um recebimento recorrente
+                </p>
+              )}
+            </div>
+
+            {deleteModal.receivable.recurringGroupId ? (
+              <div className="space-y-2 mb-4">
+                <p className="text-sm text-gray-700 mb-3">
+                  Este é um recebimento recorrente. O que deseja excluir?
+                </p>
+                <Button 
+                  onClick={() => confirmDelete(false)}
+                  variant="outline"
+                  className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  Excluir apenas esta parcela
+                </Button>
+                <Button 
+                  onClick={() => confirmDelete(true)}
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  Excluir todas as parcelas do grupo
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setPaymentModal({ show: false });
-                    setPaymentAmount('');
-                  }}
+                  onClick={() => setDeleteModal({ show: false })}
+                  className="w-full"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => confirmDelete(false)}
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                >
+                  Confirmar Exclusão
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteModal({ show: false })}
                   className="flex-1"
                 >
                   Cancelar
                 </Button>
               </div>
-            </div>
+            )}
           </Card>
         </div>
       )}
