@@ -31,5 +31,5 @@ RUN mkdir -p /app/uploads/receipts
 
 EXPOSE 4000
 
-# Executar migrations e iniciar servidor
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+# Executar migrations e iniciar servidor (ignora erros de migration)
+CMD ["sh", "-c", "npx prisma migrate deploy || true && npm start"]
