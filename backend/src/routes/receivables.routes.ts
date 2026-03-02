@@ -229,13 +229,13 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-// POST /api/receivables/:id/pay - Registrar pagamento
-router.post('/:id/pay', authenticate, async (req: AuthRequest, res) => {
+// POST /api/receivables/:id/payment - Registrar pagamento
+router.post('/:id/payment', authenticate, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { amountPaid } = req.body;
+    const { paidAmount } = req.body;
 
-    if (!amountPaid || amountPaid <= 0) {
+    if (!paidAmount || paidAmount <= 0) {
       return res.status(400).json({
         message: 'O valor pago deve ser maior que zero',
       });
@@ -255,7 +255,7 @@ router.post('/:id/pay', authenticate, async (req: AuthRequest, res) => {
       });
     }
 
-    const newPaidAmount = receivable.paidAmount + parseFloat(amountPaid);
+    const newPaidAmount = receivable.paidAmount + parseFloat(paidAmount);
     const newRemainingAmount = receivable.amount - newPaidAmount;
 
     let newStatus = receivable.status;
