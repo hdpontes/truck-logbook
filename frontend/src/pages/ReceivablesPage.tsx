@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Filter, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import api from '@/lib/api';
@@ -36,8 +36,14 @@ export default function ReceivablesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterClient, setFilterClient] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [paymentAmount, setPaymentAmount] = useState('');
   const { success, error } = useToast();
@@ -57,12 +63,17 @@ export default function ReceivablesPage() {
   useEffect(() => {
     fetchReceivables();
     fetchClients();
-  }, [filterStatus]);
+  }, []);
 
   const fetchReceivables = async () => {
     try {
       setLoading(true);
-      const params = filterStatus ? { status: filterStatus } : {};
+      const params: any = {};
+      if (filterStatus) params.status = filterStatus;
+      if (filterClient) params.clientId = filterClient;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      
       const response = await api.get('/receivables', { params });
       setReceivables(response.data);
     } catch (err) {
