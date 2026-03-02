@@ -263,11 +263,11 @@ router.post('/:id/pay', authenticate, async (req: AuthRequest, res) => {
 
     if (newRemainingAmount <= 0) {
       // Pagamento completo
-      newStatus = 'PAID';
+      newStatus = 'PAID' as any;
       paymentDate = new Date();
     } else if (newPaidAmount > 0) {
       // Pagamento parcial
-      newStatus = 'PARTIALLY_PAID';
+      newStatus = 'PARTIALLY_PAID' as any;
     }
 
     const updatedReceivable = await prisma.receivable.update({
@@ -387,7 +387,7 @@ router.post('/:id/send-notification', authenticate, async (req: AuthRequest, res
     }
 
     // Webhook URL (deve ser configurada nas variáveis de ambiente)
-    const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL || config.WHATSAPP_WEBHOOK_URL;
+    const webhookUrl = config.N8N_WEBHOOK_URL;
 
     if (!webhookUrl) {
       return res.status(400).json({
