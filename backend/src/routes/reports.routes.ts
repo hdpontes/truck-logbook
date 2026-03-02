@@ -132,6 +132,47 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       });
     }
 
+    // Buscar recebimentos pagos (INCOME)
+    if (!type || type === 'INCOME') {
+      const receivablesFilter: any = {
+        status: {
+          in: ['PAID', 'PARTIALLY_PAID'], // Apenas recebimentos pagos contam como receita
+        },
+      };
+
+      // Filtrar por data de pagamento
+      if (Object.keys(dateFilter).length > 0 && receivablesFilter.status) {
+        receivablesFilter.paymentDate = dateFilter;
+      }
+
+      if (clientId) {
+        receivablesFilter.clientId = clientId as string;
+      }
+
+      const receivables = await prisma.receivable.findMany({
+        where: receivablesFilter,
+        include: {
+          client: {
+            select: { id: true, name: true },
+          },
+        },
+        orderBy: { paymentDate: 'desc' },
+      });
+
+      receivables.forEach((receivable) => {
+        reportItems.push({
+          id: receivable.id,
+          type: 'INCOME',
+          date: receivable.paymentDate!.toISOString(),
+          description: receivable.description,
+          category: receivable.type,
+          amount: receivable.paidAmount, // Usar o valor pago, não o valor total
+          isTrip: false,
+          client: receivable.client || undefined,
+        });
+      });
+    }
+
     // Buscar despesas (EXPENSE)
     if (!type || type === 'EXPENSE') {
       const expensesFilter: any = {};
