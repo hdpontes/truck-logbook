@@ -43,6 +43,9 @@ export default function ReceivablesPage() {
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const { success, error } = useToast();
 
   // Form state
@@ -155,6 +158,11 @@ export default function ReceivablesPage() {
       return;
     }
 
+    if (!paymentMethod) {
+      error('Selecione a forma de pagamento');
+      return;
+    }
+
     const amount = parseFloat(paymentAmount);
     if (amount <= 0) {
       error('Valor inválido');
@@ -162,17 +170,32 @@ export default function ReceivablesPage() {
     }
 
     try {
-      await api.post(`/receivables/${paymentModal.receivable.id}/payment`, {
-        paidAmount: amount
+      const formData = new FormData();
+      formData.append('paidAmount', amount.toString());
+      formData.append('paymentMethod', paymentMethod);
+      if (paymentNotes) {
+        formData.append('notes', paymentNotes);
+      }
+      if (receiptFile) {
+        formData.append('receipt', receiptFile);
+      }
+
+      await api.post(`/receivables/${paymentModal.receivable.id}/payment`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       success('Pagamento registrado com sucesso!');
       setPaymentModal({ show: false });
       setPaymentAmount('');
+      setPaymentMethod('');
+      setPaymentNotes('');
+      setReceiptFile(null);
       fetchReceivables();
     } catch (err: any) {
       console.error('Erro ao registrar pagamento:', err);
-      error(err.response?.data?.message || 'Erro ao registrar pagamento');
+      error(err.response?.data?.message || 'Erro ao processar pagamento');
     }
   };
 
@@ -628,6 +651,52 @@ export default function ReceivablesPage() {
               </p>
             </div>
 
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Forma de Pagamento *
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Selecione a forma de pagamento</option>
+                <option value="PIX">PIX</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Boleto">Boleto</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Transferência">Transferência Bancária</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Comprovante (Opcional)
+              </label>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Formatos aceitos: JPEG, PNG, PDF (máx. 10MB)
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Observações (Opcional)
+              </label>
+              <textarea
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder="Observações sobre o pagamento..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                rows={2}
+              />
+            </div>
+
             <div className="flex gap-2">
               <Button onClick={handlePayment} className="flex-1">
                 Confirmar Pagamento
@@ -637,6 +706,9 @@ export default function ReceivablesPage() {
                 onClick={() => {
                   setPaymentModal({ show: false });
                   setPaymentAmount('');
+                  setPaymentMethod('');
+                  setPaymentNotes('');
+                  setReceiptFile(null);
                 }}
                 className="flex-1"
               >
