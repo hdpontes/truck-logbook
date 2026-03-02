@@ -701,6 +701,10 @@ const ReportsPage: React.FC = () => {
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                                     Viagem
                                   </span>
+                                ) : item.type === 'INCOME' ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    {item.category || 'Receita'}
+                                  </span>
                                 ) : (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
                                     {item.expenseType === 'FUEL' && 'Combustível'}
