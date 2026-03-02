@@ -15,7 +15,8 @@ import {
   Clock,
   X,
   FileText,
-  CreditCard
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ const getMenuItems = (userRole: string) => {
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
+      { icon: DollarSign, label: 'Recebimentos', path: '/receivables' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: UserCog, label: 'Usuários', path: '/users' },
     ];
@@ -59,6 +61,7 @@ const getMenuItems = (userRole: string) => {
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
       { icon: FileText, label: 'Relatórios', path: '/reports' },
+      { icon: DollarSign, label: 'Recebimentos', path: '/receivables' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: UserCog, label: 'Usuários', path: '/users' },
     ];
