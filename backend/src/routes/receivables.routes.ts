@@ -3,9 +3,46 @@ import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import axios from 'axios';
 import { config } from '../config';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// Configurar multer para upload de arquivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../../uploads/receipts');
+    // Criar diretório se não existir
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `receipt-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Apenas imagens (JPEG, PNG) e PDFs são permitidos!'));
+    }
+  }
+});
 
 // GET /api/receivables - Listar todos os recebimentos com filtros
 router.get('/', authenticate, async (req: AuthRequest, res) => {
@@ -40,6 +77,11 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       where,
       include: {
         client: true,
+        payments: {
+          orderBy: {
+            paymentDate: 'desc',
+          },
+        },
       },
       orderBy: {
         dueDate: 'asc',
@@ -82,6 +124,11 @@ router.get('/:id', authenticate, async (req: AuthRequest, res) => {
       where: { id },
       include: {
         client: true,
+        payments: {
+          orderBy: {
+            paymentDate: 'desc',
+          },
+        },
       },
     });
 
@@ -139,6 +186,7 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
         },
         include: {
           client: true,
+          payments: true,
         },
       });
 
@@ -171,6 +219,7 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
         },
         include: {
           client: true,
+          payments: true,
         },
       });
 
@@ -219,6 +268,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
       },
       include: {
         client: true,
+        payments: true,
       },
     });
 
@@ -229,15 +279,21 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-// POST /api/receivables/:id/payment - Registrar pagamento
-router.post('/:id/payment', authenticate, async (req: AuthRequest, res) => {
+// POST /api/receivables/:id/payment - Registrar pagamento com upload de comprovante
+router.post('/:id/payment', authenticate, upload.single('receipt'), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { paidAmount } = req.body;
+    const { paidAmount, paymentMethod, notes } = req.body;
 
     if (!paidAmount || paidAmount <= 0) {
       return res.status(400).json({
         message: 'O valor pago deve ser maior que zero',
+      });
+    }
+
+    if (!paymentMethod) {
+      return res.status(400).json({
+        message: 'A forma de pagamento é obrigatória',
       });
     }
 
@@ -255,7 +311,8 @@ router.post('/:id/payment', authenticate, async (req: AuthRequest, res) => {
       });
     }
 
-    const newPaidAmount = receivable.paidAmount + parseFloat(paidAmount);
+    const amount = parseFloat(paidAmount);
+    const newPaidAmount = receivable.paidAmount + amount;
     const newRemainingAmount = receivable.amount - newPaidAmount;
 
     let newStatus = receivable.status;
@@ -270,6 +327,20 @@ router.post('/:id/payment', authenticate, async (req: AuthRequest, res) => {
       newStatus = 'PARTIALLY_PAID' as any;
     }
 
+    // Criar registro de pagamento
+    const payment = await prisma.receivablePayment.create({
+      data: {
+        receivableId: id,
+        amount: amount,
+        paymentMethod: paymentMethod,
+        paymentDate: new Date(),
+        receiptPath: req.file ? req.file.path : null,
+        receiptFileName: req.file ? req.file.originalname : null,
+        notes: notes || null,
+      },
+    });
+
+    // Atualizar recebimento
     const updatedReceivable = await prisma.receivable.update({
       where: { id },
       data: {
@@ -280,13 +351,72 @@ router.post('/:id/payment', authenticate, async (req: AuthRequest, res) => {
       },
       include: {
         client: true,
+        payments: {
+          orderBy: {
+            paymentDate: 'desc',
+          },
+        },
       },
     });
 
-    res.json(updatedReceivable);
+    res.json({
+      receivable: updatedReceivable,
+      payment: payment,
+    });
   } catch (error) {
     console.error('Error processing payment:', error);
     res.status(500).json({ message: 'Erro ao processar pagamento' });
+  }
+});
+
+// GET /api/receivables/:id/payments - Listar todos os pagamentos de um recebimento
+router.get('/:id/payments', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const payments = await prisma.receivablePayment.findMany({
+      where: {
+        receivableId: id,
+      },
+      orderBy: {
+        paymentDate: 'desc',
+      },
+    });
+
+    res.json(payments);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ message: 'Erro ao buscar pagamentos' });
+  }
+});
+
+// GET /api/receivables/payments/:paymentId/receipt - Download do comprovante
+router.get('/payments/:paymentId/receipt', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    const payment = await prisma.receivablePayment.findUnique({
+      where: { id: paymentId },
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+
+    if (!payment.receiptPath) {
+      return res.status(404).json({ message: 'Comprovante não encontrado' });
+    }
+
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(payment.receiptPath)) {
+      return res.status(404).json({ message: 'Arquivo de comprovante não encontrado' });
+    }
+
+    // Enviar arquivo para download
+    res.download(payment.receiptPath, payment.receiptFileName || 'comprovante');
+  } catch (error) {
+    console.error('Error downloading receipt:', error);
+    res.status(500).json({ message: 'Erro ao baixar comprovante' });
   }
 });
 
@@ -297,12 +427,23 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res) => {
 
     const receivable = await prisma.receivable.findUnique({
       where: { id },
+      include: {
+        payments: true,
+      },
     });
 
     if (!receivable) {
       return res.status(404).json({ message: 'Recebimento não encontrado' });
     }
 
+    // Deletar arquivos de comprovantes
+    for (const payment of receivable.payments) {
+      if (payment.receiptPath && fs.existsSync(payment.receiptPath)) {
+        fs.unlinkSync(payment.receiptPath);
+      }
+    }
+
+    // Deletar recebimento (cascade delete para payments)
     await prisma.receivable.delete({
       where: { id },
     });
@@ -319,6 +460,26 @@ router.delete('/group/:recurringGroupId', authenticate, async (req: AuthRequest,
   try {
     const { recurringGroupId } = req.params;
 
+    // Buscar todos os recebimentos do grupo com seus pagamentos
+    const receivables = await prisma.receivable.findMany({
+      where: {
+        recurringGroupId,
+      },
+      include: {
+        payments: true,
+      },
+    });
+
+    // Deletar arquivos de comprovantes
+    for (const receivable of receivables) {
+      for (const payment of receivable.payments) {
+        if (payment.receiptPath && fs.existsSync(payment.receiptPath)) {
+          fs.unlinkSync(payment.receiptPath);
+        }
+      }
+    }
+
+    // Deletar recebimentos (cascade delete para payments)
     const result = await prisma.receivable.deleteMany({
       where: {
         recurringGroupId,
