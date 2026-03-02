@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import api from '@/lib/api';
@@ -10,6 +10,17 @@ interface Client {
   name: string;
   cnpj: string;
   phone?: string;
+}
+
+interface ReceivablePayment {
+  id: string;
+  receivableId: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDate: string;
+  receiptPath?: string;
+  receiptFileName?: string;
+  notes?: string;
 }
 
 interface Receivable {
@@ -29,6 +40,7 @@ interface Receivable {
   installmentNumber?: number;
   totalInstallments?: number;
   recurringGroupId?: string;
+  payments?: ReceivablePayment[];
 }
 
 export default function ReceivablesPage() {
@@ -42,6 +54,7 @@ export default function ReceivablesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
+  const [receiptsModal, setReceiptsModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -242,6 +255,29 @@ export default function ReceivablesPage() {
     } catch (err: any) {
       console.error('Erro ao excluir:', err);
       error(err.response?.data?.message || 'Erro ao excluir recebimento');
+    }
+  };
+
+  const handleDownloadReceipt = async (paymentId: string, fileName?: string) => {
+    try {
+      const response = await api.get(`/receivables/payments/${paymentId}/receipt`, {
+        responseType: 'blob',
+      });
+
+      // Criar URL temporária para download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || 'comprovante');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      success('Comprovante baixado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao baixar comprovante:', err);
+      error('Erro ao baixar comprovante');
     }
   };
 
@@ -613,6 +649,18 @@ export default function ReceivablesPage() {
                     <Trash2 className="h-4 w-4 mr-1" />
                     Excluir
                   </Button>
+
+                  {receivable.payments && receivable.payments.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setReceiptsModal({ show: true, receivable })}
+                      className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-blue-300"
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Ver Comprovantes ({receivable.payments.length})
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -780,6 +828,105 @@ export default function ReceivablesPage() {
                 </Button>
               </div>
             )}
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Comprovantes */}
+      {receiptsModal.show && receiptsModal.receivable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Histórico de Pagamentos</h3>
+            
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <p className="font-medium">{receiptsModal.receivable.description}</p>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                <div>
+                  <span className="text-gray-600">Valor Total:</span>
+                  <span className="font-medium ml-2">{formatCurrency(receiptsModal.receivable.amount)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Valor Pago:</span>
+                  <span className="font-medium text-green-600 ml-2">{formatCurrency(receiptsModal.receivable.paidAmount)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Valor Restante:</span>
+                  <span className="font-medium text-red-600 ml-2">{formatCurrency(receiptsModal.receivable.remainingAmount)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Status:</span>
+                  <span className="ml-2">{getStatusBadge(receiptsModal.receivable.status)}</span>
+                </div>
+              </div>
+            </div>
+
+            {receiptsModal.receivable.payments && receiptsModal.receivable.payments.length > 0 ? (
+              <div className="space-y-3">
+                {receiptsModal.receivable.payments.map((payment) => (
+                  <Card key={payment.id} className="p-4 border-l-4 border-l-blue-500">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="font-medium">Pagamento Recebido</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-600">Valor:</span>
+                            <p className="font-semibold text-green-600">{formatCurrency(payment.amount)}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Forma de Pagamento:</span>
+                            <p className="font-medium">{payment.paymentMethod}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Data:</span>
+                            <p className="font-medium">{formatDate(payment.paymentDate)}</p>
+                          </div>
+                          {payment.receiptFileName && (
+                            <div>
+                              <span className="text-gray-600">Comprovante:</span>
+                              <p className="font-medium text-blue-600">{payment.receiptFileName}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {payment.notes && (
+                          <div className="mt-2 text-sm">
+                            <span className="text-gray-600">Observações:</span>
+                            <p className="text-gray-700 italic">{payment.notes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {payment.receiptPath && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadReceipt(payment.id, payment.receiptFileName)}
+                          className="ml-4 text-blue-600 hover:bg-blue-50 border-blue-300"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Baixar
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">Nenhum pagamento registrado ainda</p>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setReceiptsModal({ show: false })}
+              >
+                Fechar
+              </Button>
+            </div>
           </Card>
         </div>
       )}
