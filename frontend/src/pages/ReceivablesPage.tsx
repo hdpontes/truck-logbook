@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import api from '@/lib/api';
@@ -40,7 +40,7 @@ export default function ReceivablesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [paymentAmount, setPaymentAmount] = useState('');
-  const { showToast } = useToast();
+  const { success, error } = useToast();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -65,9 +65,9 @@ export default function ReceivablesPage() {
       const params = filterStatus ? { status: filterStatus } : {};
       const response = await api.get('/receivables', { params });
       setReceivables(response.data);
-    } catch (error) {
-      console.error('Erro ao buscar recebimentos:', error);
-      showToast('Erro ao carregar recebimentos', 'error');
+    } catch (err) {
+      console.error('Erro ao buscar recebimentos:', err);
+      error('Erro ao carregar recebimentos');
     } finally {
       setLoading(false);
     }
@@ -86,12 +86,12 @@ export default function ReceivablesPage() {
     e.preventDefault();
     
     if (!formData.type || !formData.description || !formData.amount || !formData.dueDate) {
-      showToast('Preencha todos os campos obrigatórios', 'error');
+      error('Preencha todos os campos obrigatórios');
       return;
     }
 
     if (formData.isRecurring && parseInt(formData.totalInstallments) < 2) {
-      showToast('Para recebimentos recorrentes, informe no mínimo 2 parcelas', 'error');
+      error('Para recebimentos recorrentes, informe no mínimo 2 parcelas');
       return;
     }
 
@@ -103,11 +103,10 @@ export default function ReceivablesPage() {
         clientId: formData.clientId || undefined
       });
 
-      showToast(
+      success(
         formData.isRecurring 
           ? `${formData.totalInstallments} parcelas criadas com sucesso!` 
-          : 'Recebimento criado com sucesso!',
-        'success'
+          : 'Recebimento criado com sucesso!'
       );
       
       setShowForm(false);
@@ -122,21 +121,21 @@ export default function ReceivablesPage() {
         totalInstallments: '1'
       });
       fetchReceivables();
-    } catch (error: any) {
-      console.error('Erro ao criar recebimento:', error);
-      showToast(error.response?.data?.message || 'Erro ao criar recebimento', 'error');
+    } catch (err: any) {
+      console.error('Erro ao criar recebimento:', err);
+      error(err.response?.data?.message || 'Erro ao criar recebimento');
     }
   };
 
   const handlePayment = async () => {
     if (!paymentModal.receivable || !paymentAmount) {
-      showToast('Informe o valor recebido', 'error');
+      error('Informe o valor recebido');
       return;
     }
 
     const amount = parseFloat(paymentAmount);
     if (amount <= 0) {
-      showToast('Valor inválido', 'error');
+      error('Valor inválido');
       return;
     }
 
@@ -145,13 +144,13 @@ export default function ReceivablesPage() {
         paidAmount: amount
       });
 
-      showToast('Pagamento registrado com sucesso!', 'success');
+      success('Pagamento registrado com sucesso!');
       setPaymentModal({ show: false });
       setPaymentAmount('');
       fetchReceivables();
-    } catch (error: any) {
-      console.error('Erro ao registrar pagamento:', error);
-      showToast(error.response?.data?.message || 'Erro ao registrar pagamento', 'error');
+    } catch (err: any) {
+      console.error('Erro ao registrar pagamento:', err);
+      error(err.response?.data?.message || 'Erro ao registrar pagamento');
     }
   };
 
