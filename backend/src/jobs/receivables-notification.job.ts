@@ -43,7 +43,7 @@ export function startReceivablesNotificationJob() {
 
       console.log(`📋 Encontrados ${receivables.length} recebimentos para notificar`);
 
-      const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL || config.WHATSAPP_WEBHOOK_URL;
+      const webhookUrl = config.N8N_WEBHOOK_URL;
 
       if (!webhookUrl) {
         console.warn('⚠️ URL do webhook não configurada. Notificações não serão enviadas.');
