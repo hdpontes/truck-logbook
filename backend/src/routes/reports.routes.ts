@@ -140,9 +140,9 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
         },
       };
 
-      // Filtrar por data de pagamento
-      if (Object.keys(dateFilter).length > 0 && receivablesFilter.status) {
-        receivablesFilter.paymentDate = dateFilter;
+      // Filtrar por data de vencimento (não por paymentDate, pois pode ser null)
+      if (Object.keys(dateFilter).length > 0) {
+        receivablesFilter.dueDate = dateFilter;
       }
 
       if (clientId) {
@@ -160,16 +160,19 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       });
 
       receivables.forEach((receivable) => {
-        reportItems.push({
-          id: receivable.id,
-          type: 'INCOME',
-          date: (receivable.paymentDate || receivable.dueDate).toISOString(),
-          description: receivable.description,
-          category: receivable.type,
-          amount: receivable.paidAmount, // Usar o valor pago, não o valor total
-          isTrip: false,
-          client: receivable.client || undefined,
-        });
+        // Apenas incluir se tiver valor pago (paidAmount > 0)
+        if (receivable.paidAmount > 0) {
+          reportItems.push({
+            id: receivable.id,
+            type: 'INCOME',
+            date: (receivable.paymentDate || receivable.dueDate).toISOString(),
+            description: receivable.description,
+            category: receivable.type,
+            amount: receivable.paidAmount, // Usar o valor pago, não o valor total
+            isTrip: false,
+            client: receivable.client || undefined,
+          });
+        }
       });
     }
 
