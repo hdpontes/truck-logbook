@@ -26,6 +26,9 @@ RUN npx prisma generate
 # Compilar TypeScript
 RUN npm run build
 
+# Criar diretório para uploads
+RUN mkdir -p /app/uploads/receipts
+
 EXPOSE 4000
 
 # Executar migrations e iniciar servidor
