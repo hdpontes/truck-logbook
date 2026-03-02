@@ -744,10 +744,10 @@ const ReportsPage: React.FC = () => {
                                 {item.truck?.plate || '-'}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-green-700 hidden xl:table-cell">
-                                {item.revenue ? formatCurrency(item.revenue) : '-'}
+                                {item.type === 'INCOME' ? formatCurrency(item.amount) : (item.revenue ? formatCurrency(item.revenue) : '-')}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-red-700">
-                                {formatCurrency(item.cost || item.amount)}
+                                {item.type === 'EXPENSE' ? formatCurrency(item.amount) : (item.cost ? formatCurrency(item.cost) : '-')}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium text-blue-700 hidden lg:table-cell">
                                 {item.profit !== undefined && item.profit !== null ? formatCurrency(item.profit) : '-'}
