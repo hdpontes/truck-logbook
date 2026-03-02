@@ -156,14 +156,14 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
             select: { id: true, name: true },
           },
         },
-        orderBy: { paymentDate: 'desc' },
+        orderBy: { dueDate: 'desc' },
       });
 
       receivables.forEach((receivable) => {
         reportItems.push({
           id: receivable.id,
           type: 'INCOME',
-          date: receivable.paymentDate!.toISOString(),
+          date: (receivable.paymentDate || receivable.dueDate).toISOString(),
           description: receivable.description,
           category: receivable.type,
           amount: receivable.paidAmount, // Usar o valor pago, não o valor total
