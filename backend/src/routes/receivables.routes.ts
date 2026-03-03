@@ -158,9 +158,9 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
     } = req.body;
 
     // Validações
-    if (!type || !description || !amount || !dueDate) {
+    if (!type || !amount || !dueDate) {
       return res.status(400).json({
-        message: 'Campos obrigatórios: type, description, amount, dueDate',
+        message: 'Campos obrigatórios: type, amount, dueDate',
       });
     }
 
@@ -206,7 +206,7 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
         data: {
           clientId: clientId || null,
           type,
-          description: `${description} - Parcela ${i}/${totalInstallments}`,
+          description: description ? `${description} - Parcela ${i}/${totalInstallments}` : `Parcela ${i}/${totalInstallments}`,
           amount: parseFloat(amount),
           remainingAmount: parseFloat(amount),
           phoneNumber: phoneNumber || null,
