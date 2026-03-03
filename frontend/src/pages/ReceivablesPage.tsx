@@ -112,7 +112,7 @@ export default function ReceivablesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.type || !formData.description || !formData.amount || !formData.dueDate) {
+    if (!formData.type || !formData.amount || !formData.dueDate) {
       error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -421,27 +421,32 @@ export default function ReceivablesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo *
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  placeholder="Ex: Aluguel, Empréstimo, Serviço"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   required
-                />
+                >
+                  <option value="">Selecione o tipo</option>
+                  <option value="Aluguel">Aluguel</option>
+                  <option value="Empréstimo">Empréstimo</option>
+                  <option value="Prestação de Serviços">Prestação de Serviços</option>
+                  <option value="Venda a Prazo">Venda a Prazo</option>
+                  <option value="Mensalidade">Mensalidade</option>
+                  <option value="Outros">Outros</option>
+                </select>
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Descrição *
+                  Descrição (Opcional)
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descrição detalhada do recebimento"
+                  placeholder="Descrição detalhada do recebimento (opcional)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   rows={2}
-                  required
                 />
               </div>
 
