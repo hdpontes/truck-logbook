@@ -563,7 +563,7 @@ router.post('/:id/send-notification', authenticate, async (req: AuthRequest, res
       data: {
         phoneNumber: receivable.phoneNumber || receivable.client?.phone,
         name: receivable.client?.name || 'Cliente',
-        description: receivable.description,
+        description: receivable.description || receivable.type,
         receivableType: receivable.type,
         amount: receivable.remainingAmount,
         totalAmount: receivable.amount,
