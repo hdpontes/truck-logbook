@@ -415,7 +415,7 @@ model Receivable {
   client          Client?           @relation(fields: [clientId], references: [id])
   
   type            String            // Tipo: Aluguel, Empréstimo, Serviço, etc
-  description     String
+  description     String?           // Descrição (opcional)
   amount          Float             // Valor total da parcela
   paidAmount      Float             @default(0) // Valor já pago
   remainingAmount Float             @default(0) // Valor restante a pagar
