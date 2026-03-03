@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2, Download, FileText, Filter } from 'lucide-react';
+import { Plus, Search, DollarSign, AlertCircle, CheckCircle, Clock, Edit, Trash2, Download, FileText, Filter, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import api from '@/lib/api';
@@ -283,6 +283,22 @@ export default function ReceivablesPage() {
     } catch (err: any) {
       console.error('Erro ao baixar comprovante:', err);
       error('Erro ao baixar comprovante');
+    }
+  };
+
+  const handleSendWhatsAppNotification = async (receivable: Receivable) => {
+    if (!receivable.phoneNumber && !receivable.client?.phone) {
+      error('Nenhum número de telefone configurado para este recebimento');
+      return;
+    }
+
+    try {
+      await api.post(`/receivables/${receivable.id}/send-notification`);
+      success('Cobrança enviada via WhatsApp com sucesso!');
+      fetchReceivables(); // Atualizar lista
+    } catch (err: any) {
+      console.error('Erro ao enviar notificação:', err);
+      error(err.response?.data?.message || 'Erro ao enviar cobrança via WhatsApp');
     }
   };
 
@@ -685,6 +701,18 @@ export default function ReceivablesPage() {
                     >
                       <DollarSign className="h-4 w-4 mr-1" />
                       Concluir Pagamento
+                    </Button>
+                  )}
+
+                  {receivable.status !== 'PAID' && (receivable.phoneNumber || receivable.client?.phone) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSendWhatsAppNotification(receivable)}
+                      className="text-green-600 hover:bg-green-50 hover:text-green-700 border-green-300"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Enviar Cobrança
                     </Button>
                   )}
 
