@@ -558,13 +558,22 @@ router.post('/:id/send-notification', authenticate, async (req: AuthRequest, res
 
     // Preparar dados para envio
     const notificationData = {
-      phoneNumber: receivable.phoneNumber || receivable.client?.phone,
-      name: receivable.client?.name || 'Cliente',
-      description: receivable.description,
-      type: receivable.type,
-      amount: receivable.remainingAmount,
-      dueDate: receivable.dueDate.toISOString().split('T')[0],
-      status: receivable.status,
+      type: 'receivable.notification',
+      timestamp: new Date().toISOString(),
+      data: {
+        phoneNumber: receivable.phoneNumber || receivable.client?.phone,
+        name: receivable.client?.name || 'Cliente',
+        description: receivable.description,
+        receivableType: receivable.type,
+        amount: receivable.remainingAmount,
+        totalAmount: receivable.amount,
+        paidAmount: receivable.paidAmount,
+        dueDate: receivable.dueDate.toISOString().split('T')[0],
+        status: receivable.status,
+        isRecurring: receivable.isRecurring,
+        installmentNumber: receivable.installmentNumber,
+        totalInstallments: receivable.totalInstallments,
+      },
     };
 
     // Enviar webhook
