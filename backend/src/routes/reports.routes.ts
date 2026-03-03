@@ -166,7 +166,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
             id: receivable.id,
             type: 'INCOME',
             date: (receivable.paymentDate || receivable.dueDate).toISOString(),
-            description: receivable.description,
+            description: receivable.description || receivable.type,
             category: receivable.type,
             amount: receivable.paidAmount, // Usar o valor pago, não o valor total
             isTrip: false,
