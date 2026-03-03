@@ -710,9 +710,13 @@ const ReportsPage: React.FC = () => {
                                     {item.expenseType === 'FUEL' && 'Combustível'}
                                     {item.expenseType === 'TOLL' && 'Pedágio'}
                                     {item.expenseType === 'MAINTENANCE' && 'Manutenção'}
+                                    {item.expenseType === 'TIRE' && 'Pneus'}
                                     {item.expenseType === 'FOOD' && 'Alimentação'}
-                                    {item.expenseType === 'ACCOMMODATION' && 'Hospedagem'}
+                                    {item.expenseType === 'PARKING' && 'Estacionamento'}
+                                    {item.expenseType === 'INSURANCE' && 'Seguro'}
+                                    {item.expenseType === 'TAX' && 'Imposto'}
                                     {item.expenseType === 'SALARY' && 'Salário'}
+                                    {item.expenseType === 'OVERTIME' && 'Hora Extra'}
                                     {item.expenseType === 'OTHER' && 'Outro'}
                                     {!item.expenseType && 'Despesa'}
                                   </span>
@@ -932,9 +936,13 @@ const ReportsPage: React.FC = () => {
                                     {expense.type === 'FUEL' && 'Combustível'}
                                     {expense.type === 'TOLL' && 'Pedágio'}
                                     {expense.type === 'MAINTENANCE' && 'Manutenção'}
+                                    {expense.type === 'TIRE' && 'Pneus'}
                                     {expense.type === 'FOOD' && 'Alimentação'}
-                                    {expense.type === 'ACCOMMODATION' && 'Hospedagem'}
+                                    {expense.type === 'PARKING' && 'Estacionamento'}
+                                    {expense.type === 'INSURANCE' && 'Seguro'}
+                                    {expense.type === 'TAX' && 'Imposto'}
                                     {expense.type === 'SALARY' && 'Salário'}
+                                    {expense.type === 'OVERTIME' && 'Hora Extra'}
                                     {expense.type === 'OTHER' && 'Outro'}
                                   </span>
                                 </td>
