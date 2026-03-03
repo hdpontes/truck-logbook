@@ -59,7 +59,7 @@ export function startReceivablesNotificationJob() {
           const notificationData = {
             phoneNumber: receivable.phoneNumber || receivable.client?.phone,
             name: receivable.client?.name || 'Cliente',
-            description: receivable.description,
+            description: receivable.description || receivable.type,
             type: receivable.type,
             amount: receivable.remainingAmount,
             dueDate: receivable.dueDate.toISOString().split('T')[0],
@@ -87,7 +87,7 @@ export function startReceivablesNotificationJob() {
           });
 
           successCount++;
-          console.log(`✅ Notificação enviada para ${notificationData.name} - ${receivable.description}`);
+          console.log(`✅ Notificação enviada para ${notificationData.name} - ${receivable.description || receivable.type}`);
         } catch (error) {
           errorCount++;
           console.error(`❌ Erro ao enviar notificação para ${receivable.id}:`, error);
