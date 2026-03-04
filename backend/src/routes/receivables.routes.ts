@@ -1,6 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, AuthRequest, requireRole } from '../middleware/auth';
 import axios from 'axios';
 import { config } from '../config';
 import multer from 'multer';
@@ -608,6 +608,127 @@ router.post('/:id/send-notification', authenticate, async (req: AuthRequest, res
   } catch (error) {
     console.error('Error sending notification:', error);
     res.status(500).json({ message: 'Erro ao enviar notificação' });
+  }
+});
+
+// POST /api/receivables/test-job - Testar job de notificações manualmente (ADMIN ONLY)
+router.post('/test-job', authenticate, requireRole('ADMIN'), async (req: AuthRequest, res) => {
+  try {
+    console.log('🔔 Executando job de notificações MANUALMENTE...');
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Buscar recebimentos vencidos ou com vencimento hoje que precisam de notificação
+    const receivables = await prisma.receivable.findMany({
+      where: {
+        dueDate: {
+          lte: today,
+        },
+        status: {
+          in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'],
+        },
+        OR: [
+          { notificationSent: false },
+          {
+            lastNotificationDate: {
+              lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Mais de 24h desde última notificação
+            },
+          },
+        ],
+      },
+      include: {
+        client: true,
+      },
+    });
+
+    console.log(`📋 Encontrados ${receivables.length} recebimentos para notificar`);
+
+    const webhookUrl = config.N8N_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      return res.status(400).json({
+        message: 'URL do webhook não configurada',
+        receivablesFound: receivables.length,
+      });
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    const results = [];
+
+    for (const receivable of receivables) {
+      try {
+        // Preparar dados para envio no formato estruturado
+        const notificationData = {
+          type: 'receivable.due',
+          timestamp: new Date().toISOString(),
+          data: {
+            phoneNumber: receivable.phoneNumber || receivable.client?.phone,
+            name: receivable.client?.name || 'Cliente',
+            description: receivable.description || receivable.type,
+            receivableType: receivable.type,
+            amount: receivable.remainingAmount,
+            totalAmount: receivable.amount,
+            paidAmount: receivable.paidAmount,
+            dueDate: receivable.dueDate.toISOString().split('T')[0],
+            status: receivable.status,
+            isRecurring: receivable.isRecurring,
+            installmentNumber: receivable.installmentNumber,
+            totalInstallments: receivable.totalInstallments,
+          },
+        };
+
+        // Enviar webhook
+        await axios.post(webhookUrl, notificationData, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000,
+        });
+
+        // Atualizar registro de notificação
+        await prisma.receivable.update({
+          where: { id: receivable.id },
+          data: {
+            notificationSent: true,
+            lastNotificationDate: new Date(),
+          },
+        });
+
+        successCount++;
+        results.push({
+          id: receivable.id,
+          status: 'success',
+          message: `Notificação enviada para ${notificationData.data.name}`,
+        });
+        console.log(`✅ Notificação enviada para ${notificationData.data.name} - ${receivable.description || receivable.type}`);
+      } catch (error) {
+        errorCount++;
+        results.push({
+          id: receivable.id,
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Erro desconhecido',
+        });
+        console.error(`❌ Erro ao enviar notificação para ${receivable.id}:`, error);
+      }
+    }
+
+    console.log(`✅ Teste concluído: ${successCount} enviadas, ${errorCount} erros`);
+
+    res.json({
+      message: 'Teste do job executado',
+      receivablesFound: receivables.length,
+      successCount,
+      errorCount,
+      results,
+    });
+  } catch (error) {
+    console.error('❌ Erro ao executar teste do job:', error);
+    res.status(500).json({ 
+      message: 'Erro ao executar teste do job',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 });
 
