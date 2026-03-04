@@ -255,16 +255,48 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
       return res.status(404).json({ message: 'Recebimento não encontrado' });
     }
 
+    // Calcular novo status baseado na data de vencimento e pagamentos
+    let newStatus = status || receivable.status;
+    const newDueDate = dueDate ? new Date(dueDate) : receivable.dueDate;
+    const newAmount = amount !== undefined ? parseFloat(amount) : receivable.amount;
+    
+    // Recalcular status automaticamente se não for fornecido explicitamente
+    if (!status) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDateOnly = new Date(newDueDate);
+      dueDateOnly.setHours(0, 0, 0, 0);
+
+      // Se está totalmente pago
+      if (receivable.paidAmount >= newAmount) {
+        newStatus = 'PAID' as any;
+      }
+      // Se tem pagamento parcial
+      else if (receivable.paidAmount > 0) {
+        newStatus = 'PARTIALLY_PAID' as any;
+      }
+      // Se a data de vencimento é futura
+      else if (dueDateOnly >= today) {
+        newStatus = 'PENDING' as any;
+      }
+      // Se a data de vencimento já passou
+      else {
+        newStatus = 'OVERDUE' as any;
+      }
+    }
+
     const updatedReceivable = await prisma.receivable.update({
       where: { id },
       data: {
         clientId: clientId !== undefined ? clientId : receivable.clientId,
         type: type || receivable.type,
-        description: description || receivable.description,
-        amount: amount !== undefined ? parseFloat(amount) : receivable.amount,
+        description: description !== undefined ? description : receivable.description,
+        amount: newAmount,
         phoneNumber: phoneNumber !== undefined ? phoneNumber : receivable.phoneNumber,
-        dueDate: dueDate ? new Date(dueDate) : receivable.dueDate,
-        status: status || receivable.status,
+        dueDate: newDueDate,
+        status: newStatus,
+        // Atualizar remainingAmount se o amount mudou
+        remainingAmount: newAmount - receivable.paidAmount,
       },
       include: {
         client: true,
