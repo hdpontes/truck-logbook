@@ -85,6 +85,7 @@ export default function ReceivablesPage() {
     phoneNumber: '',
     dueDate: ''
   });
+  const [updateAllInstallments, setUpdateAllInstallments] = useState(false);
 
   useEffect(() => {
     fetchReceivables();
@@ -238,6 +239,7 @@ export default function ReceivablesPage() {
       phoneNumber: receivable.phoneNumber || '',
       dueDate: receivable.dueDate.split('T')[0]
     });
+    setUpdateAllInstallments(false); // Resetar opção
     setEditModal({ show: true, receivable });
   };
 
@@ -259,10 +261,15 @@ export default function ReceivablesPage() {
         amount: parseFloat(editFormData.amount),
         phoneNumber: editFormData.phoneNumber || null,
         dueDate: localDate.toISOString(),
-        clientId: editFormData.clientId || null
+        clientId: editFormData.clientId || null,
+        updateAllInstallments: updateAllInstallments
       });
 
-      success('Recebimento atualizado com sucesso!');
+      success(
+        updateAllInstallments && editModal.receivable.isRecurring
+          ? 'Todas as parcelas foram atualizadas com sucesso!'
+          : 'Recebimento atualizado com sucesso!'
+      );
       setEditModal({ show: false });
       fetchReceivables();
     } catch (err: any) {
@@ -1069,6 +1076,37 @@ export default function ReceivablesPage() {
                 </p>
               )}
             </div>
+
+            {editModal.receivable.isRecurring && editModal.receivable.recurringGroupId && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded">
+                <p className="text-sm font-medium text-amber-900 mb-2">Aplicar alterações em:</p>
+                <div className="space-y-2">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={!updateAllInstallments}
+                      onChange={() => setUpdateAllInstallments(false)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Apenas esta parcela ({editModal.receivable.installmentNumber}/{editModal.receivable.totalInstallments})</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={updateAllInstallments}
+                      onChange={() => setUpdateAllInstallments(true)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Todas as parcelas do grupo ({editModal.receivable.totalInstallments} parcelas)</span>
+                  </label>
+                </div>
+                {updateAllInstallments && (
+                  <p className="text-xs text-amber-700 mt-2">
+                    ⚠️ As alterações serão aplicadas em todas as {editModal.receivable.totalInstallments} parcelas. Para data de vencimento, o intervalo mensal será mantido.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
