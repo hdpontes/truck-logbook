@@ -28,7 +28,7 @@ interface Receivable {
   clientId?: string;
   client?: Client;
   type: string;
-  description: string;
+  description: string | null;
   amount: number;
   paidAmount: number;
   remainingAmount: number;
@@ -227,7 +227,7 @@ export default function ReceivablesPage() {
     setFormData({
       clientId: receivable.clientId || '',
       type: receivable.type,
-      description: receivable.description,
+      description: receivable.description || '',
       amount: receivable.amount.toString(),
       phoneNumber: receivable.phoneNumber || '',
       dueDate: receivable.dueDate.split('T')[0],
@@ -345,7 +345,7 @@ export default function ReceivablesPage() {
 
   const filteredReceivables = receivables.filter(rec => {
     const matchesSearch = 
-      rec.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (rec.description && rec.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       rec.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rec.client?.name.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -649,7 +649,9 @@ export default function ReceivablesPage() {
                   </div>
 
                   <h3 className="font-semibold text-lg">{receivable.type}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{receivable.description}</p>
+                  {receivable.description && (
+                    <p className="text-gray-600 text-sm mb-2">{receivable.description}</p>
+                  )}
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     {receivable.client && (
@@ -768,7 +770,7 @@ export default function ReceivablesPage() {
             
             <div className="mb-4 p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Recebimento:</p>
-              <p className="font-medium">{paymentModal.receivable.description}</p>
+              <p className="font-medium">{paymentModal.receivable.description || paymentModal.receivable.type}</p>
               <p className="text-sm text-gray-600 mt-2">Valor Restante:</p>
               <p className="font-semibold text-lg">{formatCurrency(paymentModal.receivable.remainingAmount)}</p>
             </div>
@@ -866,7 +868,7 @@ export default function ReceivablesPage() {
             <h3 className="text-lg font-semibold mb-4 text-red-600">Confirmar Exclusão</h3>
             
             <div className="mb-4 p-3 bg-gray-50 rounded">
-              <p className="font-medium">{deleteModal.receivable.description}</p>
+              <p className="font-medium">{deleteModal.receivable.description || deleteModal.receivable.type}</p>
               <p className="text-sm text-gray-600 mt-1">
                 Valor: {formatCurrency(deleteModal.receivable.amount)}
               </p>
@@ -931,7 +933,7 @@ export default function ReceivablesPage() {
             <h3 className="text-lg font-semibold mb-4">Histórico de Pagamentos</h3>
             
             <div className="mb-4 p-3 bg-gray-50 rounded">
-              <p className="font-medium">{receiptsModal.receivable.description}</p>
+              <p className="font-medium">{receiptsModal.receivable.description || receiptsModal.receivable.type}</p>
               <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
                 <div>
                   <span className="text-gray-600">Valor Total:</span>
