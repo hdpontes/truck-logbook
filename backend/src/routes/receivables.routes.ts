@@ -614,35 +614,86 @@ router.post('/:id/send-notification', authenticate, async (req: AuthRequest, res
 // POST /api/receivables/test-job - Testar job de notificações manualmente (ADMIN ONLY)
 router.post('/test-job', authenticate, requireRole('ADMIN'), async (req: AuthRequest, res) => {
   try {
+    const { force } = req.body; // force=true ignora verificação de notificação anterior
+    
     console.log('🔔 Executando job de notificações MANUALMENTE...');
+    console.log(`Force mode: ${force ? 'SIM' : 'NÃO'}`);
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // Buscar recebimentos vencidos ou com vencimento hoje que precisam de notificação
-    const receivables = await prisma.receivable.findMany({
-      where: {
-        dueDate: {
-          lte: today,
-        },
-        status: {
-          in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'],
-        },
-        OR: [
-          { notificationSent: false },
-          {
-            lastNotificationDate: {
-              lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Mais de 24h desde última notificação
-            },
-          },
-        ],
+    const where: any = {
+      dueDate: {
+        lte: today,
       },
+      status: {
+        in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'],
+      },
+    };
+
+    // Se não for force mode, adicionar verificação de notificação
+    if (!force) {
+      where.OR = [
+        { notificationSent: false },
+        {
+          lastNotificationDate: {
+            lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Mais de 24h desde última notificação
+          },
+        },
+      ];
+    }
+
+    const receivables = await prisma.receivable.findMany({
+      where,
       include: {
         client: true,
       },
     });
 
     console.log(`📋 Encontrados ${receivables.length} recebimentos para notificar`);
+
+    // Debug: Mostrar informações dos recebimentos encontrados
+    if (receivables.length === 0) {
+      // Buscar TODOS os recebimentos para debug
+      const allReceivables = await prisma.receivable.findMany({
+        where: {
+          status: {
+            in: ['PENDING', 'OVERDUE', 'PARTIALLY_PAID'],
+          },
+        },
+        select: {
+          id: true,
+          type: true,
+          dueDate: true,
+          status: true,
+          notificationSent: true,
+          lastNotificationDate: true,
+        },
+        take: 10,
+      });
+
+      console.log('📊 DEBUG - Mostrando até 10 recebimentos pendentes:');
+      allReceivables.forEach(r => {
+        const dueDate = new Date(r.dueDate);
+        const isOverdue = dueDate < today;
+        console.log(`  - ${r.type} | Vence: ${dueDate.toISOString().split('T')[0]} | Status: ${r.status} | Atrasado: ${isOverdue} | Notificado: ${r.notificationSent} | Última notif: ${r.lastNotificationDate?.toISOString() || 'Nunca'}`);
+      });
+
+      return res.json({
+        message: 'Nenhum recebimento encontrado para notificar',
+        receivablesFound: 0,
+        successCount: 0,
+        errorCount: 0,
+        results: [],
+        debug: {
+          today: today.toISOString(),
+          forceMode: force || false,
+          totalPendingReceivables: allReceivables.length,
+          sample: allReceivables,
+        },
+      });
+    }
 
     const webhookUrl = config.N8N_WEBHOOK_URL;
 
