@@ -245,6 +245,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
       phoneNumber,
       dueDate,
       status,
+      updateAllInstallments,
     } = req.body;
 
     const receivable = await prisma.receivable.findUnique({
@@ -255,6 +256,82 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
       return res.status(404).json({ message: 'Recebimento não encontrado' });
     }
 
+    // Se deve atualizar todas as parcelas do grupo recorrente
+    if (updateAllInstallments && receivable.recurringGroupId) {
+      // Buscar todas as parcelas do grupo
+      const allInstallments = await prisma.receivable.findMany({
+        where: { recurringGroupId: receivable.recurringGroupId },
+        orderBy: { installmentNumber: 'asc' },
+      });
+
+      // Se a data de vencimento foi alterada, calcular a diferença para aplicar nas outras parcelas
+      let dueDateDifference = 0;
+      if (dueDate) {
+        const oldDate = new Date(receivable.dueDate);
+        const newDate = new Date(dueDate);
+        dueDateDifference = newDate.getTime() - oldDate.getTime();
+      }
+
+      // Atualizar todas as parcelas
+      const updatePromises = allInstallments.map(async (installment) => {
+        const newAmount = amount !== undefined ? parseFloat(amount) : installment.amount;
+        let newDueDateForInstallment = installment.dueDate;
+
+        // Se a data foi alterada, aplicar a diferença
+        if (dueDate && dueDateDifference !== 0) {
+          const currentDate = new Date(installment.dueDate);
+          newDueDateForInstallment = new Date(currentDate.getTime() + dueDateDifference);
+        }
+
+        // Calcular novo status
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dueDateOnly = new Date(newDueDateForInstallment);
+        dueDateOnly.setHours(0, 0, 0, 0);
+
+        let newStatus = status || installment.status;
+        if (!status) {
+          if (installment.paidAmount >= newAmount) {
+            newStatus = 'PAID' as any;
+          } else if (installment.paidAmount > 0) {
+            newStatus = 'PARTIALLY_PAID' as any;
+          } else if (dueDateOnly >= today) {
+            newStatus = 'PENDING' as any;
+          } else {
+            newStatus = 'OVERDUE' as any;
+          }
+        }
+
+        return prisma.receivable.update({
+          where: { id: installment.id },
+          data: {
+            clientId: clientId !== undefined ? clientId : installment.clientId,
+            type: type || installment.type,
+            description: description !== undefined ? description : installment.description,
+            amount: newAmount,
+            phoneNumber: phoneNumber !== undefined ? phoneNumber : installment.phoneNumber,
+            dueDate: newDueDateForInstallment,
+            status: newStatus,
+            remainingAmount: newAmount - installment.paidAmount,
+          },
+        });
+      });
+
+      await Promise.all(updatePromises);
+
+      // Retornar o recebimento atualizado com as relações
+      const updatedReceivable = await prisma.receivable.findUnique({
+        where: { id },
+        include: {
+          client: true,
+          payments: true,
+        },
+      });
+
+      return res.json(updatedReceivable);
+    }
+
+    // Atualizar apenas esta parcela
     // Calcular novo status baseado na data de vencimento e pagamentos
     let newStatus = status || receivable.status;
     const newDueDate = dueDate ? new Date(dueDate) : receivable.dueDate;
