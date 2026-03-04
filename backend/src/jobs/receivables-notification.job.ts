@@ -55,18 +55,24 @@ export function startReceivablesNotificationJob() {
 
       for (const receivable of receivables) {
         try {
-          // Preparar dados para envio
+          // Preparar dados para envio no formato estruturado
           const notificationData = {
-            phoneNumber: receivable.phoneNumber || receivable.client?.phone,
-            name: receivable.client?.name || 'Cliente',
-            description: receivable.description || receivable.type,
-            type: receivable.type,
-            amount: receivable.remainingAmount,
-            dueDate: receivable.dueDate.toISOString().split('T')[0],
-            status: receivable.status,
-            installmentInfo: receivable.isRecurring 
-              ? `Parcela ${receivable.installmentNumber}/${receivable.totalInstallments}`
-              : null,
+            type: 'receivable.due',
+            timestamp: new Date().toISOString(),
+            data: {
+              phoneNumber: receivable.phoneNumber || receivable.client?.phone,
+              name: receivable.client?.name || 'Cliente',
+              description: receivable.description || receivable.type,
+              receivableType: receivable.type,
+              amount: receivable.remainingAmount,
+              totalAmount: receivable.amount,
+              paidAmount: receivable.paidAmount,
+              dueDate: receivable.dueDate.toISOString().split('T')[0],
+              status: receivable.status,
+              isRecurring: receivable.isRecurring,
+              installmentNumber: receivable.installmentNumber,
+              totalInstallments: receivable.totalInstallments,
+            },
           };
 
           // Enviar webhook
@@ -87,7 +93,7 @@ export function startReceivablesNotificationJob() {
           });
 
           successCount++;
-          console.log(`✅ Notificação enviada para ${notificationData.name} - ${receivable.description || receivable.type}`);
+          console.log(`✅ Notificação enviada para ${notificationData.data.name} - ${receivable.description || receivable.type}`);
         } catch (error) {
           errorCount++;
           console.error(`❌ Erro ao enviar notificação para ${receivable.id}:`, error);
