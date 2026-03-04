@@ -48,7 +48,6 @@ export default function ReceivablesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterClient, setFilterClient] = useState<string>('');
@@ -58,13 +57,14 @@ export default function ReceivablesPage() {
   const [paymentModal, setPaymentModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [receiptsModal, setReceiptsModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
+  const [editModal, setEditModal] = useState<{ show: boolean; receivable?: Receivable }>({ show: false });
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const { success, error } = useToast();
 
-  // Form state
+  // Form state (para criar novo)
   const [formData, setFormData] = useState({
     clientId: '',
     type: '',
@@ -74,6 +74,16 @@ export default function ReceivablesPage() {
     dueDate: '',
     isRecurring: false,
     totalInstallments: '1'
+  });
+
+  // Form state para edição no modal
+  const [editFormData, setEditFormData] = useState({
+    clientId: '',
+    type: '',
+    description: '',
+    amount: '',
+    phoneNumber: '',
+    dueDate: ''
   });
 
   useEffect(() => {
@@ -117,40 +127,25 @@ export default function ReceivablesPage() {
       return;
     }
 
-    if (!editingId && formData.isRecurring && parseInt(formData.totalInstallments) < 2) {
+    if (formData.isRecurring && parseInt(formData.totalInstallments) < 2) {
       error('Para recebimentos recorrentes, informe no mínimo 2 parcelas');
       return;
     }
 
     try {
-      if (editingId) {
-        // Modo edição - apenas atualiza o recebimento
-        await api.put(`/receivables/${editingId}`, {
-          type: formData.type,
-          description: formData.description,
-          amount: parseFloat(formData.amount),
-          phoneNumber: formData.phoneNumber,
-          dueDate: formData.dueDate,
-          clientId: formData.clientId || undefined
-        });
+      // Modo criação - pode ser recorrente
+      await api.post('/receivables', {
+        ...formData,
+        amount: parseFloat(formData.amount),
+        totalInstallments: formData.isRecurring ? parseInt(formData.totalInstallments) : undefined,
+        clientId: formData.clientId || undefined
+      });
 
-        success('Recebimento atualizado com sucesso!');
-        setEditingId(null);
-      } else {
-        // Modo criação - pode ser recorrente
-        await api.post('/receivables', {
-          ...formData,
-          amount: parseFloat(formData.amount),
-          totalInstallments: formData.isRecurring ? parseInt(formData.totalInstallments) : undefined,
-          clientId: formData.clientId || undefined
-        });
-
-        success(
-          formData.isRecurring 
-            ? `${formData.totalInstallments} parcelas criadas com sucesso!` 
-            : 'Recebimento criado com sucesso!'
-        );
-      }
+      success(
+        formData.isRecurring 
+          ? `${formData.totalInstallments} parcelas criadas com sucesso!` 
+          : 'Recebimento criado com sucesso!'
+      );
       
       setShowForm(false);
       setFormData({
@@ -223,18 +218,42 @@ export default function ReceivablesPage() {
       return;
     }
     
-    setEditingId(receivable.id);
-    setFormData({
+    setEditFormData({
       clientId: receivable.clientId || '',
       type: receivable.type,
       description: receivable.description || '',
       amount: receivable.amount.toString(),
       phoneNumber: receivable.phoneNumber || '',
-      dueDate: receivable.dueDate.split('T')[0],
-      isRecurring: false,
-      totalInstallments: '1'
+      dueDate: receivable.dueDate.split('T')[0]
     });
-    setShowForm(true);
+    setEditModal({ show: true, receivable });
+  };
+
+  const handleUpdateReceivable = async () => {
+    if (!editModal.receivable) return;
+
+    if (!editFormData.type || !editFormData.amount || !editFormData.dueDate) {
+      error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    try {
+      await api.put(`/receivables/${editModal.receivable.id}`, {
+        type: editFormData.type,
+        description: editFormData.description || null,
+        amount: parseFloat(editFormData.amount),
+        phoneNumber: editFormData.phoneNumber || null,
+        dueDate: editFormData.dueDate,
+        clientId: editFormData.clientId || null
+      });
+
+      success('Recebimento atualizado com sucesso!');
+      setEditModal({ show: false });
+      fetchReceivables();
+    } catch (err: any) {
+      console.error('Erro ao atualizar recebimento:', err);
+      error(err.response?.data?.message || 'Erro ao atualizar recebimento');
+    }
   };
 
   const handleDeleteClick = (receivable: Receivable) => {
@@ -304,7 +323,6 @@ export default function ReceivablesPage() {
 
   const handleCancelForm = () => {
     setShowForm(false);
-    setEditingId(null);
     setFormData({
       clientId: '',
       type: '',
@@ -394,9 +412,7 @@ export default function ReceivablesPage() {
       {/* Formulário */}
       {showForm && (
         <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? 'Editar Recebimento' : 'Novo Recebimento'}
-          </h2>
+          <h2 className="text-xl font-semibold mb-4">Novo Recebimento</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -498,10 +514,9 @@ export default function ReceivablesPage() {
                   checked={formData.isRecurring}
                   onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
                   className="h-4 w-4"
-                  disabled={!!editingId}
                 />
                 <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700">
-                  Pagamento Recorrente {editingId && '(não editável)'}
+                  Pagamento Recorrente
                 </label>
               </div>
 
@@ -524,7 +539,7 @@ export default function ReceivablesPage() {
 
             <div className="flex gap-2 pt-4">
               <Button type="submit">
-                {editingId ? 'Salvar Alterações' : `Criar Recebimento${formData.isRecurring ? 's' : ''}`}
+                {`Criar Recebimento${formData.isRecurring ? 's' : ''}`}
               </Button>
               <Button type="button" variant="outline" onClick={handleCancelForm}>
                 Cancelar
@@ -1019,6 +1034,131 @@ export default function ReceivablesPage() {
                 onClick={() => setReceiptsModal({ show: false })}
               >
                 Fechar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Edição */}
+      {editModal.show && editModal.receivable && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Editar Recebimento</h3>
+            
+            <div className="mb-4 p-3 bg-blue-50 rounded">
+              <p className="text-sm text-blue-600">Status: {editModal.receivable.status === 'PENDING' ? 'Pendente' : editModal.receivable.status === 'OVERDUE' ? 'Atrasado' : 'Pago Parcialmente'}</p>
+              {editModal.receivable.isRecurring && (
+                <p className="text-sm text-blue-600">
+                  Parcela {editModal.receivable.installmentNumber}/{editModal.receivable.totalInstallments}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cliente (Opcional)
+                </label>
+                <select
+                  value={editFormData.clientId}
+                  onChange={(e) => setEditFormData({ ...editFormData, clientId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Selecione um cliente</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo *
+                </label>
+                <select
+                  value={editFormData.type}
+                  onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                >
+                  <option value="">Selecione o tipo</option>
+                  <option value="Aluguel">Aluguel</option>
+                  <option value="Empréstimo">Empréstimo</option>
+                  <option value="Prestação de Serviços">Prestação de Serviços</option>
+                  <option value="Venda a Prazo">Venda a Prazo</option>
+                  <option value="Mensalidade">Mensalidade</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descrição (Opcional)
+                </label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  placeholder="Descrição detalhada do recebimento (opcional)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Valor *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editFormData.amount}
+                  onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefone
+                </label>
+                <input
+                  type="tel"
+                  value={editFormData.phoneNumber}
+                  onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data de Vencimento *
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.dueDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, dueDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button onClick={handleUpdateReceivable} className="flex-1">
+                Salvar Alterações
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setEditModal({ show: false })}
+                className="flex-1"
+              >
+                Cancelar
               </Button>
             </div>
           </Card>
