@@ -264,12 +264,16 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
         orderBy: { installmentNumber: 'asc' },
       });
 
-      // Se a data de vencimento foi alterada, calcular a diferença para aplicar nas outras parcelas
-      let dueDateDifference = 0;
+      // Se a data de vencimento foi alterada, extrair o novo dia do mês
+      let newDayOfMonth: number | null = null;
+      let isLastDayOfMonth = false;
       if (dueDate) {
-        const oldDate = new Date(receivable.dueDate);
         const newDate = new Date(dueDate);
-        dueDateDifference = newDate.getTime() - oldDate.getTime();
+        newDayOfMonth = newDate.getDate();
+        
+        // Verificar se é o último dia do mês
+        const lastDayOfNewMonth = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate();
+        isLastDayOfMonth = newDayOfMonth === lastDayOfNewMonth;
       }
 
       // Atualizar todas as parcelas
@@ -277,10 +281,22 @@ router.put('/:id', authenticate, async (req: AuthRequest, res) => {
         const newAmount = amount !== undefined ? parseFloat(amount) : installment.amount;
         let newDueDateForInstallment = installment.dueDate;
 
-        // Se a data foi alterada, aplicar a diferença
-        if (dueDate && dueDateDifference !== 0) {
-          const currentDate = new Date(installment.dueDate);
-          newDueDateForInstallment = new Date(currentDate.getTime() + dueDateDifference);
+        // Se a data foi alterada, aplicar o novo dia do mês mantendo o mês/ano da parcela
+        if (dueDate && newDayOfMonth !== null) {
+          const installmentDate = new Date(installment.dueDate);
+          const year = installmentDate.getFullYear();
+          const month = installmentDate.getMonth();
+          
+          if (isLastDayOfMonth) {
+            // Se for último dia, usar o último dia do mês da parcela
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            newDueDateForInstallment = new Date(year, month, lastDay);
+          } else {
+            // Usar o novo dia, mas se não existir naquele mês, usar o último dia
+            const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+            const dayToUse = Math.min(newDayOfMonth, lastDayOfMonth);
+            newDueDateForInstallment = new Date(year, month, dayToUse);
+          }
         }
 
         // Calcular novo status
