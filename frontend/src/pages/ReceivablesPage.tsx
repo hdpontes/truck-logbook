@@ -97,8 +97,16 @@ export default function ReceivablesPage() {
       const params: any = {};
       if (filterStatus) params.status = filterStatus;
       if (filterClient) params.clientId = filterClient;
-      if (startDateFilter) params.startDate = startDateFilter;
-      if (endDateFilter) params.endDate = endDateFilter;
+      
+      // Ajustar datas para evitar problema de timezone
+      if (startDateFilter) {
+        const localStartDate = new Date(startDateFilter + 'T00:00:00');
+        params.startDate = localStartDate.toISOString();
+      }
+      if (endDateFilter) {
+        const localEndDate = new Date(endDateFilter + 'T23:59:59');
+        params.endDate = localEndDate.toISOString();
+      }
       
       const response = await api.get('/receivables', { params });
       setReceivables(response.data);
@@ -133,10 +141,14 @@ export default function ReceivablesPage() {
     }
 
     try {
+      // Ajustar data para evitar problema de timezone
+      const localDate = new Date(formData.dueDate + 'T12:00:00');
+      
       // Modo criação - pode ser recorrente
       await api.post('/receivables', {
         ...formData,
         amount: parseFloat(formData.amount),
+        dueDate: localDate.toISOString(),
         totalInstallments: formData.isRecurring ? parseInt(formData.totalInstallments) : undefined,
         clientId: formData.clientId || undefined
       });
@@ -238,12 +250,15 @@ export default function ReceivablesPage() {
     }
 
     try {
+      // Ajustar data para evitar problema de timezone
+      const localDate = new Date(editFormData.dueDate + 'T12:00:00');
+      
       await api.put(`/receivables/${editModal.receivable.id}`, {
         type: editFormData.type,
         description: editFormData.description || null,
         amount: parseFloat(editFormData.amount),
         phoneNumber: editFormData.phoneNumber || null,
-        dueDate: editFormData.dueDate,
+        dueDate: localDate.toISOString(),
         clientId: editFormData.clientId || null
       });
 
