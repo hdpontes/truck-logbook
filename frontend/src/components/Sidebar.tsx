@@ -16,7 +16,8 @@ import {
   X,
   FileText,
   CreditCard,
-  DollarSign
+  DollarSign,
+  FileSearch
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ const getMenuItems = (userRole: string) => {
       { icon: DollarSign, label: 'Recebimentos', path: '/receivables' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: UserCog, label: 'Usuários', path: '/users' },
+      { icon: FileSearch, label: 'Logs de Auditoria', path: '/logs' },
     ];
   }
 
