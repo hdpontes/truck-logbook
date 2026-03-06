@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/store/auth';
-import { Bell, User, Menu, KeyRound, LogOut, ChevronDown, Settings } from 'lucide-react';
+import { Bell, User, Menu, KeyRound, LogOut, ChevronDown, Settings, FileSearch } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -121,6 +121,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   </button>
                 )}
                 
+                {user?.role === 'ADMIN' && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/logs');
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <FileSearch className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium">Logs de Auditoria</span>
+                  </button>
+                )}
+                
                 <div className="border-t border-gray-200 my-1"></div>
                 
                 <button
@@ -175,6 +188,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   >
                     <Settings className="w-5 h-5 text-gray-600" />
                     <span className="text-sm font-medium">Configurações</span>
+                  </button>
+                )}
+                
+                {user?.role === 'ADMIN' && (
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      navigate('/logs');
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <FileSearch className="w-5 h-5 text-purple-600" />
+                    <span className="text-sm font-medium">Logs de Auditoria</span>
                   </button>
                 )}
                 
