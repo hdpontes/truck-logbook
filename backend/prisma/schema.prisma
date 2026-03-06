@@ -473,3 +473,23 @@ enum ReceivableStatus {
   PAID              // Paga
   OVERDUE           // Atrasada
 }
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  // ID do usuário que fez a ação (null se for sistema)
+  userName    String   // Nome do usuário ou "Sistema"
+  userRole    String   // Role do usuário (ADMIN, MANAGER, DRIVER)
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc
+  entity      String   // Entidade afetada: User, Trip, Truck, Trailer, etc
+  entityId    String?  // ID da entidade afetada
+  details     String?  @db.Text // Detalhes da ação em JSON ou texto
+  ipAddress   String?  // IP do usuário
+  userAgent   String?  // User agent do navegador
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
