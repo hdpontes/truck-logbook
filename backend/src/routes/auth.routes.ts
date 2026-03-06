@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { prisma } from '../lib/prisma';
 import { config } from '../config';
+import { logAction, LogAction, LogEntity } from '../utils/logger';
 
 const router = Router();
 
@@ -85,6 +86,18 @@ router.post('/login', async (req: Request, res: Response) => {
     );
 
     console.log('✅ Login successful:', login);
+
+    // Registrar log de login
+    await logAction({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: LogAction.LOGIN,
+      entity: LogEntity.USER,
+      entityId: user.id,
+      details: { login: user.login },
+      req,
+    });
 
     res.json({
       token,
@@ -374,6 +387,18 @@ router.post('/change-password', async (req: Request, res: Response) => {
     });
 
     console.log('✅ Password changed successfully for:', user.login);
+
+    // Registrar log de mudança de senha
+    await logAction({
+      userId: user.id,
+      userName: user.name,
+      userRole: decoded.role,
+      action: LogAction.PASSWORD_CHANGE,
+      entity: LogEntity.USER,
+      entityId: user.id,
+      details: { login: user.login },
+      req,
+    });
 
     res.json({ 
       message: 'Senha alterada com sucesso!',
