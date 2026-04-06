@@ -298,6 +298,43 @@ router.post('/', async (req, res) => {
       },
     });
 
+    // Para viagens retroativas, calcular e criar automaticamente despesa de combustível
+    if (isRetroactive && distance && parseFloat(distance) > 0 && truck.avgConsumption && truck.avgConsumption > 0) {
+      // Buscar preço do diesel nas configurações
+      const settings = await prisma.settings.findFirst();
+      const dieselPrice = settings?.dieselPrice || 0;
+      
+      if (dieselPrice > 0) {
+        // Calcular litros consumidos = distância / km por litro
+        const litersConsumed = parseFloat(distance) / truck.avgConsumption;
+        // Calcular custo estimado
+        const estimatedFuelCost = litersConsumed * dieselPrice;
+        
+        // Criar despesa de combustível automaticamente
+        await prisma.expense.create({
+          data: {
+            truckId: trip.truckId,
+            tripId: trip.id,
+            type: 'FUEL',
+            description: `Combustível calculado automaticamente (${litersConsumed.toFixed(2)}L)`,
+            amount: estimatedFuelCost,
+            date: trip.startDate,
+          },
+        });
+
+        // Atualizar viagem com o custo de combustível
+        await prisma.trip.update({
+          where: { id: trip.id },
+          data: {
+            fuelCost: estimatedFuelCost,
+            totalCost: estimatedFuelCost,
+            profit: trip.revenue - estimatedFuelCost,
+            profitMargin: trip.revenue > 0 ? ((trip.revenue - estimatedFuelCost) / trip.revenue) * 100 : 0,
+          },
+        });
+      }
+    }
+
     // Enviar webhook de corrida agendada (apenas para viagens não retroativas)
     if (!isRetroactive) {
       await sendWebhook('trip.scheduled', {
