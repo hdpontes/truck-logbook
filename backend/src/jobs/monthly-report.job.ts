@@ -175,18 +175,9 @@ export async function sendMonthlyReportManually(year: number, month: number) {
       timestamp: new Date().toISOString(),
     };
 
-    if (config.N8N_WEBHOOK_URL) {
-      await axios.post(config.N8N_WEBHOOK_URL, webhookData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      console.log('✅ Relatório mensal enviado com sucesso!');
-      return { success: true, data: webhookData };
-    } else {
-      console.warn('⚠️  Webhook URL não configurada');
-      return { success: false, message: 'Webhook não configurado' };
-    }
+    await sendWebhook('monthly_report', webhookData);
+    console.log('✅ Relatório mensal enviado com sucesso!');
+    return { success: true, data: webhookData };
   } catch (error: any) {
     console.error('❌ Erro ao enviar relatório:', error.message);
     throw error;
