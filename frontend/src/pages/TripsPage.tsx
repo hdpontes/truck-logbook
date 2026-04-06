@@ -183,7 +183,7 @@ export default function TripsPage() {
       
       const data = await tripsAPI.getAll(params);
       
-      // Se for motorista, filtrar apenas suas viagens
+      // Se for motorista, filtrar apenas suas viagens (Manager e Admin veem todas)
       let filteredData = data;
       if (user?.role === 'DRIVER') {
         filteredData = data.filter((trip: Trip) => trip.driver.id === user.id);
@@ -960,8 +960,8 @@ export default function TripsPage() {
 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2 pt-2">
-                        {/* Botão Iniciar Viagem - Motorista */}
-                        {user?.role === 'DRIVER' && trip.driver.id === user.id && (
+                        {/* Botão Iniciar Viagem - Motorista e Manager */}
+                        {((user?.role === 'DRIVER' && trip.driver.id === user.id) || user?.role === 'MANAGER') && (
                           <Button
                             size="sm"
                             onClick={() => handleStartTrip(trip)}
@@ -1139,8 +1139,8 @@ export default function TripsPage() {
 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2 pt-2">
-                        {/* Botões para Motorista da viagem */}
-                        {user?.role === 'DRIVER' && trip.driver.id === user.id && (
+                        {/* Botões para Motorista da viagem e Manager */}
+                        {((user?.role === 'DRIVER' && trip.driver.id === user.id) || user?.role === 'MANAGER') && (
                           <>
                             {isTripPaused(trip) ? (
                               // Botão contextual quando estiver pausado
