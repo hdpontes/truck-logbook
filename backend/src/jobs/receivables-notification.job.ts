@@ -1,7 +1,6 @@
 import cron from 'node-cron';
 import { PrismaClient } from '@prisma/client';
-import axios from 'axios';
-import { config } from '../config';
+import { sendWebhook } from '../utils/webhook';
 
 const prisma = new PrismaClient();
 
@@ -43,13 +42,6 @@ export function startReceivablesNotificationJob() {
 
       console.log(`📋 Encontrados ${receivables.length} recebimentos para notificar`);
 
-      const webhookUrl = config.N8N_WEBHOOK_URL;
-
-      if (!webhookUrl) {
-        console.warn('⚠️ URL do webhook não configurada. Notificações não serão enviadas.');
-        return;
-      }
-
       let successCount = 0;
       let errorCount = 0;
 
@@ -76,12 +68,7 @@ export function startReceivablesNotificationJob() {
           };
 
           // Enviar webhook
-          await axios.post(webhookUrl, notificationData, {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            timeout: 10000,
-          });
+          await sendWebhook('receivable.due', notificationData.data);
 
           // Atualizar registro de notificação
           await prisma.receivable.update({
