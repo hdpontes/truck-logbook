@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { sendWebhook } from '../utils/webhook';
 import { convertToCSV, parseCSV } from '../utils/csv';
+import { config } from '../config';
 
 const router = Router();
 
