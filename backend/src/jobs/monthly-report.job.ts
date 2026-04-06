@@ -1,7 +1,6 @@
 import cron from 'node-cron';
-import axios from 'axios';
-import { config } from '../config';
 import { PrismaClient } from '@prisma/client';
+import { sendWebhook } from '../utils/webhook';
 
 const prisma = new PrismaClient();
 
@@ -96,17 +95,8 @@ export function startMonthlyCronJob() {
       };
 
       // Enviar para webhook do N8N
-      if (config.N8N_WEBHOOK_URL) {
-        await axios.post(config.N8N_WEBHOOK_URL, webhookData, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        console.log('✅ Relatório mensal enviado para webhook com sucesso!');
-        console.log(`📈 Resumo: Receita ${totalIncome.toFixed(2)} | Despesas ${totalExpense.toFixed(2)} | Lucro ${profit.toFixed(2)}`);
-      } else {
-        console.warn('⚠️  Webhook URL não configurada - relatório não enviado');
-      }
+      await sendWebhook('monthly_report', webhookData);
+      console.log(`📈 Resumo: Receita ${totalIncome.toFixed(2)} | Despesas ${totalExpense.toFixed(2)} | Lucro ${profit.toFixed(2)}`);
     } catch (error: any) {
       console.error('❌ Erro ao gerar e enviar relatório mensal:', error.message);
     }
