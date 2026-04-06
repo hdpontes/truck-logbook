@@ -2,31 +2,12 @@ import { Router, Request, Response } from 'express';
 import { UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import axios from 'axios';
 import { prisma } from '../lib/prisma';
 import { config } from '../config';
 import { logAction, LogAction, LogEntity } from '../utils/logger';
+import { sendWebhook } from '../utils/webhook';
 
 const router = Router();
-
-// Função auxiliar para enviar webhook
-async function sendWebhook(eventType: string, data: any) {
-  if (!config.N8N_WEBHOOK_URL) {
-    console.log('⚠️  N8N_WEBHOOK_URL not configured, skipping webhook');
-    return;
-  }
-
-  try {
-    await axios.post(config.N8N_WEBHOOK_URL, {
-      event: eventType,
-      timestamp: new Date().toISOString(),
-      data,
-    });
-    console.log(`✅ Webhook sent: ${eventType}`);
-  } catch (error) {
-    console.error(`❌ Error sending webhook ${eventType}:`, error);
-  }
-}
 
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
