@@ -839,9 +839,9 @@ router.post('/test-job', authenticate, requireRole('ADMIN'), async (req: AuthReq
         results.push({
           id: receivable.id,
           status: 'success',
-          message: `Notificação enviada para ${notificationData.data.name}`,
+          message: `Notificação enviada para ${notificationData.name}`,
         });
-        console.log(`✅ Notificação enviada para ${notificationData.data.name} - ${receivable.description || receivable.type}`);
+        console.log(`✅ Notificação enviada para ${notificationData.name} - ${receivable.description || receivable.type}`);
       } catch (error) {
         errorCount++;
         results.push({
