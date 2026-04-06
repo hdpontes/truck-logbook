@@ -569,7 +569,7 @@ export default function TripsPage() {
       ...retroactiveData,
       expenses: [
         ...retroactiveData.expenses,
-        { type: 'FUEL', amount: '', description: '' }
+        { type: 'TOLL', amount: '', description: '' }
       ]
     });
   };
@@ -632,7 +632,7 @@ export default function TripsPage() {
 
       const createdTrip = await tripsAPI.create(tripData);
 
-      // Adicionar despesas se houver
+      // Adicionar despesas adicionais se houver (combustível é calculado automaticamente)
       if (retroactiveData.expenses.length > 0) {
         for (const expense of retroactiveData.expenses) {
           if (expense.amount && parseFloat(expense.amount) > 0) {
@@ -645,13 +645,6 @@ export default function TripsPage() {
               date: startDateTime.toISOString().split('T')[0],
             });
           }
-        }
-        
-        // Recalcular custos e lucro da viagem após adicionar despesas
-        try {
-          await tripsAPI.update(createdTrip.id, {});
-        } catch (err) {
-          console.error('Erro ao recalcular custos:', err);
         }
       }
 
@@ -2051,6 +2044,9 @@ export default function TripsPage() {
                       placeholder="0"
                       required
                     />
+                    <p className="text-xs text-blue-600 mt-1">
+                      💡 O custo de combustível será calculado automaticamente baseado no consumo médio do caminhão
+                    </p>
                   </div>
 
                   <div>
@@ -2123,7 +2119,7 @@ export default function TripsPage() {
 
               {/* Despesas */}
               <div>
-                <div className="flex items-center justify-between mb-4 border-b pb-2">
+                <div className="flex items-center justify-between mb-2 border-b pb-2">
                   <h3 className="text-lg font-semibold text-gray-700">Despesas (Opcional)</h3>
                   <Button
                     type="button"
@@ -2135,6 +2131,9 @@ export default function TripsPage() {
                     Adicionar Despesa
                   </Button>
                 </div>
+                <p className="text-xs text-gray-600 mb-4 bg-blue-50 p-2 rounded">
+                  ℹ️ O custo de combustível já será calculado automaticamente. Adicione aqui apenas despesas extras como pedágio, alimentação, etc.
+                </p>
                 {retroactiveData.expenses.length === 0 ? (
                   <p className="text-sm text-gray-500 italic">Nenhuma despesa adicionada</p>
                 ) : (
@@ -2149,7 +2148,6 @@ export default function TripsPage() {
                               onChange={e => handleExpenseChange(index, 'type', e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md"
                             >
-                              <option value="FUEL">Combustível</option>
                               <option value="TOLL">Pedágio</option>
                               <option value="MAINTENANCE">Manutenção</option>
                               <option value="TIRE">Pneu</option>
