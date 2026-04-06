@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
+import { config } from '../config';
 
 const router = Router();
 
@@ -11,10 +12,14 @@ router.get('/', async (req, res) => {
     let settings = await prisma.settings.findFirst();
 
     if (!settings) {
+      // Migrar webhook URL da variável de ambiente na primeira vez
+      const webhookUrl = config.N8N_WEBHOOK_URL || null;
+      
       settings = await prisma.settings.create({
         data: {
           companyName: 'Truck Logbook',
           dieselPrice: 0,
+          webhookUrl,
         },
       });
     }
@@ -30,14 +35,14 @@ router.get('/', async (req, res) => {
 router.put('/', authenticate, async (req, res) => {
   try {
     const user = (req as any).user;
-    const { companyName, companyLogo, dieselPrice } = req.body;
+    const { companyName, companyLogo, dieselPrice, webhookUrl } = req.body;
 
     // Verificar permissões
-    if (companyName !== undefined || companyLogo !== undefined) {
-      // Apenas ADMIN pode alterar nome e logo da empresa
+    if (companyName !== undefined || companyLogo !== undefined || webhookUrl !== undefined) {
+      // Apenas ADMIN pode alterar nome, logo e webhook da empresa
       if (user.role !== 'ADMIN') {
         return res.status(403).json({
-          message: 'Apenas administradores podem alterar nome e logo da empresa',
+          message: 'Apenas administradores podem alterar essas configurações',
         });
       }
     }
@@ -60,6 +65,7 @@ router.put('/', authenticate, async (req, res) => {
           companyName: companyName || 'Truck Logbook',
           companyLogo: companyLogo || null,
           dieselPrice: dieselPrice || 0,
+          webhookUrl: webhookUrl || null,
         },
       });
     } else {
@@ -71,6 +77,10 @@ router.put('/', authenticate, async (req, res) => {
       
       if (companyLogo !== undefined && user.role === 'ADMIN') {
         updateData.companyLogo = companyLogo;
+      }
+      
+      if (webhookUrl !== undefined && user.role === 'ADMIN') {
+        updateData.webhookUrl = webhookUrl || null;
       }
       
       if (dieselPrice !== undefined && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
