@@ -1,8 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import axios from 'axios';
-import { config } from '../config';
+import { sendWebhook } from '../utils/webhook';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -397,21 +396,12 @@ router.post('/send-webhook', authenticate, async (req: AuthRequest, res) => {
     };
 
     // Enviar para webhook do N8N
-    if (config.N8N_WEBHOOK_URL) {
-      try {
-        await axios.post(config.N8N_WEBHOOK_URL, webhookData, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        console.log('Relatório enviado para webhook com sucesso');
-      } catch (webhookError: any) {
-        console.error('Erro ao enviar webhook:', webhookError.message);
-        return res.status(500).json({ message: 'Erro ao enviar para webhook' });
-      }
-    } else {
-      console.warn('Webhook URL não configurada');
-      return res.status(400).json({ message: 'Webhook não configurado' });
+    try {
+      await sendWebhook('financial.report', webhookData);
+      console.log('Relatório enviado para webhook com sucesso');
+    } catch (webhookError: any) {
+      console.error('Erro ao enviar webhook:', webhookError.message);
+      return res.status(500).json({ message: 'Erro ao enviar para webhook' });
     }
 
     res.json({ message: 'Relatório enviado com sucesso' });
