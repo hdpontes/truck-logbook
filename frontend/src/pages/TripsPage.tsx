@@ -646,6 +646,13 @@ export default function TripsPage() {
             });
           }
         }
+        
+        // Recalcular custos e lucro da viagem após adicionar despesas
+        try {
+          await tripsAPI.update(createdTrip.id, {});
+        } catch (err) {
+          console.error('Erro ao recalcular custos:', err);
+        }
       }
 
       toast.success('Viagem retroativa criada com sucesso!');
