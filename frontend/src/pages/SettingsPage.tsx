@@ -5,13 +5,14 @@ import { settingsAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useSettingsStore } from '@/store/settings';
 import { useToast } from '@/contexts/ToastContext';
-import { Settings, Save, Building2, DollarSign, Image } from 'lucide-react';
+import { Settings, Save, Building2, DollarSign, Image, Webhook } from 'lucide-react';
 
 interface SettingsData {
   id: string;
   companyName: string;
   companyLogo: string | null;
   dieselPrice: number;
+  webhookUrl: string | null;
 }
 
 export default function SettingsPage() {
@@ -25,6 +26,7 @@ export default function SettingsPage() {
     companyName: '',
     companyLogo: '',
     dieselPrice: '',
+    webhookUrl: '',
   });
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function SettingsPage() {
         companyName: data.companyName,
         companyLogo: data.companyLogo || '',
         dieselPrice: data.dieselPrice.toString(),
+        webhookUrl: data.webhookUrl || '',
       });
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -62,13 +65,16 @@ export default function SettingsPage() {
     try {
       const updateData: any = {};
 
-      // ADMIN pode atualizar nome e logo
+      // ADMIN pode atualizar nome, logo e webhook
       if (user?.role === 'ADMIN') {
         if (formData.companyName !== settings?.companyName) {
           updateData.companyName = formData.companyName;
         }
         if (formData.companyLogo !== settings?.companyLogo) {
           updateData.companyLogo = formData.companyLogo || null;
+        }
+        if (formData.webhookUrl !== settings?.webhookUrl) {
+          updateData.webhookUrl = formData.webhookUrl || null;
         }
       }
 
@@ -169,6 +175,50 @@ export default function SettingsPage() {
                     />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Webhook URL - Apenas ADMIN */}
+          {user?.role === 'ADMIN' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Webhook className="w-5 h-5" />
+                  Webhook N8N
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL do Webhook
+                  </label>
+                  <input
+                    type="url"
+                    name="webhookUrl"
+                    value={formData.webhookUrl}
+                    onChange={handleChange}
+                    placeholder="https://n8n.exemplo.com/webhook/..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL do webhook N8N para envio de notificações via WhatsApp
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                    📱 Notificações via WhatsApp:
+                  </h4>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• Novas viagens agendadas</li>
+                    <li>• Viagens concluídas</li>
+                    <li>• Viagens com baixo lucro</li>
+                    <li>• Lembretes de viagens próximas</li>
+                    <li>• Relatórios mensais automáticos</li>
+                    <li>• Recuperação de senha</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
           )}
