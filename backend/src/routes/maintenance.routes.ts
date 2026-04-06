@@ -1,29 +1,12 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
-import { config } from '../config';
-import axios from 'axios';
+import { sendWebhook } from '../utils/webhook';
 
 const router = Router();
 
 // Todas as rotas requerem autenticação
 router.use(authenticate);
-
-// Função auxiliar para enviar webhook
-async function sendWebhook(eventType: string, data: any) {
-  if (!config.N8N_WEBHOOK_URL) return;
-
-  try {
-    await axios.post(config.N8N_WEBHOOK_URL, {
-      event: eventType,
-      timestamp: new Date().toISOString(),
-      data,
-    });
-    console.log(`✅ Webhook sent: ${eventType}`);
-  } catch (error) {
-    console.error(`❌ Error sending webhook ${eventType}:`, error);
-  }
-}
 
 // GET /api/maintenance - Listar todas as manutenções
 router.get('/', async (req, res) => {
