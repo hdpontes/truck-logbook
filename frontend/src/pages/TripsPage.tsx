@@ -106,6 +106,30 @@ export default function TripsPage() {
   const [tripToStart, setTripToStart] = useState<Trip | null>(null);
   // Modal de carreta ao iniciar viagem
   const [showTrailerModal, setShowTrailerModal] = useState(false);
+  
+  // Estados para modal de viagem retroativa
+  const [showRetroactiveModal, setShowRetroactiveModal] = useState(false);
+  const [trucks, setTrucks] = useState<any[]>([]);
+  const [retroactiveData, setRetroactiveData] = useState({
+    truckId: '',
+    trailerId: '',
+    driverId: '',
+    clientId: '',
+    tripCode: '',
+    origin: '',
+    destination: '',
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    distance: '',
+    revenue: '',
+    expenses: [] as Array<{
+      type: string;
+      amount: string;
+      description: string;
+    }>
+  });
 
   // Update current time every minute for elapsed time calculation
   useEffect(() => {
@@ -131,13 +155,17 @@ export default function TripsPage() {
 
   const loadFiltersData = async () => {
     try {
-      const [clientsData, driversData] = await Promise.all([
+      const [clientsData, driversData, trailersData, trucksData] = await Promise.all([
         clientsAPI.getAll(),
         driversAPI.getAll(),
+        trailersAPI.getAll(),
+        trucksAPI.getAll(),
       ]);
       
       setClients(clientsData.filter((c: any) => c.active !== false));
       setDrivers(driversData.filter((d: any) => d.active !== false));
+      setTrailers(trailersData.filter((t: any) => t.active !== false));
+      setTrucks(trucksData.filter((t: any) => t.active !== false));
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
@@ -535,6 +563,116 @@ export default function TripsPage() {
 
   // Removidas funções handleOpenTrailerModal e handleCloseTrailerModal pois não são usadas
 
+  // Funções para viagem retroativa
+  const handleAddExpense = () => {
+    setRetroactiveData({
+      ...retroactiveData,
+      expenses: [
+        ...retroactiveData.expenses,
+        { type: 'FUEL', amount: '', description: '' }
+      ]
+    });
+  };
+
+  const handleRemoveExpense = (index: number) => {
+    setRetroactiveData({
+      ...retroactiveData,
+      expenses: retroactiveData.expenses.filter((_, i) => i !== index)
+    });
+  };
+
+  const handleExpenseChange = (index: number, field: string, value: string) => {
+    const newExpenses = [...retroactiveData.expenses];
+    newExpenses[index] = { ...newExpenses[index], [field]: value };
+    setRetroactiveData({ ...retroactiveData, expenses: newExpenses });
+  };
+
+  const handleSubmitRetroactive = async () => {
+    try {
+      // Validações
+      if (!retroactiveData.truckId || !retroactiveData.driverId || !retroactiveData.origin || 
+          !retroactiveData.destination || !retroactiveData.startDate || !retroactiveData.startTime ||
+          !retroactiveData.endDate || !retroactiveData.endTime || !retroactiveData.distance || 
+          !retroactiveData.revenue) {
+        toast.error('Preencha todos os campos obrigatórios');
+        return;
+      }
+
+      // Combinar data e hora
+      const startDateTime = new Date(`${retroactiveData.startDate}T${retroactiveData.startTime}`);
+      const endDateTime = new Date(`${retroactiveData.endDate}T${retroactiveData.endTime}`);
+
+      // Validar datas
+      if (endDateTime <= startDateTime) {
+        toast.error('A data de término deve ser posterior à data de início');
+        return;
+      }
+
+      if (endDateTime > new Date()) {
+        toast.error('A data de término não pode ser futura');
+        return;
+      }
+
+      // Criar viagem
+      const tripData = {
+        truckId: retroactiveData.truckId,
+        trailerId: retroactiveData.trailerId || undefined,
+        driverId: retroactiveData.driverId,
+        clientId: retroactiveData.clientId || undefined,
+        tripCode: retroactiveData.tripCode || undefined,
+        origin: retroactiveData.origin,
+        destination: retroactiveData.destination,
+        startDate: startDateTime.toISOString(),
+        endDate: endDateTime.toISOString(),
+        distance: parseFloat(retroactiveData.distance),
+        revenue: parseFloat(retroactiveData.revenue),
+        status: 'COMPLETED',
+        isRetroactive: true,
+      };
+
+      const createdTrip = await tripsAPI.create(tripData);
+
+      // Adicionar despesas se houver
+      if (retroactiveData.expenses.length > 0) {
+        for (const expense of retroactiveData.expenses) {
+          if (expense.amount && parseFloat(expense.amount) > 0) {
+            await expensesAPI.create({
+              tripId: createdTrip.id,
+              truckId: retroactiveData.truckId,
+              type: expense.type,
+              amount: parseFloat(expense.amount),
+              description: expense.description || undefined,
+              date: startDateTime.toISOString().split('T')[0],
+            });
+          }
+        }
+      }
+
+      toast.success('Viagem retroativa criada com sucesso!');
+      setShowRetroactiveModal(false);
+      setRetroactiveData({
+        truckId: '',
+        trailerId: '',
+        driverId: '',
+        clientId: '',
+        tripCode: '',
+        origin: '',
+        destination: '',
+        startDate: '',
+        startTime: '',
+        endDate: '',
+        endTime: '',
+        distance: '',
+        revenue: '',
+        expenses: []
+      });
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao criar viagem retroativa:', error);
+      toast.error(error.response?.data?.message || 'Erro ao criar viagem retroativa');
+    }
+  };
+
   // Separate trips by status for Kanban columns
   const plannedTrips = trips.filter(trip => trip.status === 'PLANNED' || trip.status === 'DELAYED');
   const inProgressTrips = trips.filter(trip => trip.status === 'IN_PROGRESS');
@@ -589,10 +727,20 @@ export default function TripsPage() {
             {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </Button>
           {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-            <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Viagem
-            </Button>
+            <>
+              <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Viagem
+              </Button>
+              <Button 
+                onClick={() => setShowRetroactiveModal(true)} 
+                variant="outline"
+                className="w-full md:w-auto border-purple-500 text-purple-700 hover:bg-purple-50"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Viagem Retroativa
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -1753,6 +1901,332 @@ export default function TripsPage() {
                 <Play className="w-4 h-4 mr-2" />
                 Iniciar Viagem
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Viagem Retroativa */}
+    {showRetroactiveModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <Card className="w-full max-w-4xl my-8" onClick={e => e.stopPropagation()}>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-purple-700 flex items-center">
+              <Clock className="w-6 h-6 mr-2" />
+              Adicionar Viagem Retroativa
+            </CardTitle>
+            <button
+              type="button"
+              className="text-gray-400 hover:text-gray-700 text-xl font-bold"
+              onClick={() => setShowRetroactiveModal(false)}
+            >
+              ×
+            </button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Informações Básicas */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">Informações Básicas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Caminhão *</label>
+                    <select
+                      value={retroactiveData.truckId}
+                      onChange={e => setRetroactiveData({...retroactiveData, truckId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    >
+                      <option value="">Selecione o caminhão</option>
+                      {trucks.map(truck => (
+                        <option key={truck.id} value={truck.id}>
+                          {truck.plate} - {truck.brand} {truck.model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Carreta (Opcional)</label>
+                    <select
+                      value={retroactiveData.trailerId}
+                      onChange={e => setRetroactiveData({...retroactiveData, trailerId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="">Sem carreta</option>
+                      {trailers.map(trailer => (
+                        <option key={trailer.id} value={trailer.id}>
+                          {trailer.plate} {trailer.brand && trailer.model ? `- ${trailer.brand} ${trailer.model}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motorista *</label>
+                    <select
+                      value={retroactiveData.driverId}
+                      onChange={e => setRetroactiveData({...retroactiveData, driverId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    >
+                      <option value="">Selecione o motorista</option>
+                      {drivers.map(driver => (
+                        <option key={driver.id} value={driver.id}>{driver.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cliente (Opcional)</label>
+                    <select
+                      value={retroactiveData.clientId}
+                      onChange={e => setRetroactiveData({...retroactiveData, clientId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="">Sem cliente</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>{client.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Código da Viagem (Opcional)</label>
+                    <input
+                      type="text"
+                      value={retroactiveData.tripCode}
+                      onChange={e => setRetroactiveData({...retroactiveData, tripCode: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="Ex: VIAGEM-2024-001"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Rota */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">Rota</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
+                    <input
+                      type="text"
+                      value={retroactiveData.origin}
+                      onChange={e => setRetroactiveData({...retroactiveData, origin: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="Ex: São Paulo - SP"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
+                    <input
+                      type="text"
+                      value={retroactiveData.destination}
+                      onChange={e => setRetroactiveData({...retroactiveData, destination: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="Ex: Rio de Janeiro - RJ"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Distância (KM) *</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={retroactiveData.distance}
+                      onChange={e => setRetroactiveData({...retroactiveData, distance: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor da Viagem (R$) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={retroactiveData.revenue}
+                      onChange={e => setRetroactiveData({...retroactiveData, revenue: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Datas e Horários */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">Data e Horário</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data de Início *</label>
+                    <input
+                      type="date"
+                      value={retroactiveData.startDate}
+                      onChange={e => setRetroactiveData({...retroactiveData, startDate: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      max={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Início *</label>
+                    <input
+                      type="time"
+                      value={retroactiveData.startTime}
+                      onChange={e => setRetroactiveData({...retroactiveData, startTime: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data de Término *</label>
+                    <input
+                      type="date"
+                      value={retroactiveData.endDate}
+                      onChange={e => setRetroactiveData({...retroactiveData, endDate: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      max={new Date().toISOString().split('T')[0]}
+                      min={retroactiveData.startDate}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Término *</label>
+                    <input
+                      type="time"
+                      value={retroactiveData.endTime}
+                      onChange={e => setRetroactiveData({...retroactiveData, endTime: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Despesas */}
+              <div>
+                <div className="flex items-center justify-between mb-4 border-b pb-2">
+                  <h3 className="text-lg font-semibold text-gray-700">Despesas (Opcional)</h3>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddExpense}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Adicionar Despesa
+                  </Button>
+                </div>
+                {retroactiveData.expenses.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">Nenhuma despesa adicionada</p>
+                ) : (
+                  <div className="space-y-3">
+                    {retroactiveData.expenses.map((expense, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            <select
+                              value={expense.type}
+                              onChange={e => handleExpenseChange(index, 'type', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            >
+                              <option value="FUEL">Combustível</option>
+                              <option value="TOLL">Pedágio</option>
+                              <option value="MAINTENANCE">Manutenção</option>
+                              <option value="TIRE">Pneu</option>
+                              <option value="FOOD">Alimentação</option>
+                              <option value="PARKING">Estacionamento</option>
+                              <option value="OTHER">Outros</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={expense.amount}
+                              onChange={e => handleExpenseChange(index, 'amount', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="0.00"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={expense.description}
+                                onChange={e => handleExpenseChange(index, 'description', e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                                placeholder="Opcional"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRemoveExpense(index)}
+                                className="text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Botões */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowRetroactiveModal(false);
+                    setRetroactiveData({
+                      truckId: '',
+                      trailerId: '',
+                      driverId: '',
+                      clientId: '',
+                      tripCode: '',
+                      origin: '',
+                      destination: '',
+                      startDate: '',
+                      startTime: '',
+                      endDate: '',
+                      endTime: '',
+                      distance: '',
+                      revenue: '',
+                      expenses: []
+                    });
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSubmitRetroactive}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Criar Viagem Retroativa
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
