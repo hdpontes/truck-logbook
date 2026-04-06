@@ -192,20 +192,36 @@ router.get('/:id', async (req, res) => {
 // POST /api/trips - Criar nova viagem (agendar)
 router.post('/', async (req, res) => {
   try {
-    const { truckId, trailerId, driverId, clientId, tripCode, origin, destination, startDate, distance, revenue, notes } = req.body;
+    const { 
+      truckId, 
+      trailerId, 
+      driverId, 
+      clientId, 
+      tripCode, 
+      origin, 
+      destination, 
+      startDate, 
+      endDate,
+      distance, 
+      revenue, 
+      notes,
+      status,
+      isRetroactive 
+    } = req.body;
 
-    if (!truckId || !driverId || !clientId || !origin || !destination || !startDate) {
+    if (!truckId || !driverId || !origin || !destination || !startDate) {
       return res.status(400).json({ 
-        message: 'TruckId, driverId, clientId, origin, destination and startDate are required' 
+        message: 'TruckId, driverId, origin, destination and startDate are required' 
       });
     }
 
-    // Validação 1: Não permitir data retroativa
+    // Validação 1: Não permitir data retroativa (exceto se for viagem retroativa explícita)
     const tripStartDate = new Date(startDate);
     const now = new Date();
     
     // Comparar timestamps diretos (ambos em UTC)
-    if (tripStartDate.getTime() < now.getTime()) {
+    // Permitir se isRetroactive for true (viagem retroativa intencional)
+    if (!isRetroactive && tripStartDate.getTime() < now.getTime()) {
       return res.status(400).json({ 
         message: 'Não é permitido cadastrar viagens com data/hora retroativa' 
       });
@@ -242,13 +258,16 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Verificar se o cliente existe
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
-    });
+    // Verificar se o cliente existe (opcional para viagens retroativas)
+    let client = null;
+    if (clientId) {
+      client = await prisma.client.findUnique({
+        where: { id: clientId },
+      });
 
-    if (!client) {
-      return res.status(404).json({ message: 'Client not found' });
+      if (!client) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
     }
 
     const trip = await prisma.trip.create({
@@ -261,10 +280,11 @@ router.post('/', async (req, res) => {
         origin,
         destination,
         startDate: tripStartDate,
+        endDate: endDate ? new Date(endDate) : null,
         distance: distance ? parseFloat(distance) : 0,
         revenue: revenue ? parseFloat(revenue) : 0,
         notes,
-        status: 'PLANNED',
+        status: status || 'PLANNED',
       },
       include: {
         truck: true,
@@ -278,40 +298,42 @@ router.post('/', async (req, res) => {
       },
     });
 
-    // Enviar webhook de corrida agendada
-    await sendWebhook('trip.scheduled', {
-      trip: {
-        id: trip.id,
-        tripCode: trip.tripCode,
-        origin: trip.origin,
-        destination: trip.destination,
-        startDate: trip.startDate,
-        revenue: trip.revenue,
-      },
-      truck: {
-        id: truck.id,
-        plate: truck.plate,
-        model: truck.model,
-        brand: truck.brand,
-      },
-      trailer: trailer ? {
-        id: trailer.id,
-        plate: trailer.plate,
-        model: trailer.model,
-        brand: trailer.brand,
-      } : null,
-      driver: {
-        id: driver.id,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-      },
-      client: trip.client ? {
-        clientId: trip.client.id,
-        name: trip.client.name,
-        cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
-      } : null,
-    });
+    // Enviar webhook de corrida agendada (apenas para viagens não retroativas)
+    if (!isRetroactive) {
+      await sendWebhook('trip.scheduled', {
+        trip: {
+          id: trip.id,
+          tripCode: trip.tripCode,
+          origin: trip.origin,
+          destination: trip.destination,
+          startDate: trip.startDate,
+          revenue: trip.revenue,
+        },
+        truck: {
+          id: truck.id,
+          plate: truck.plate,
+          model: truck.model,
+          brand: truck.brand,
+        },
+        trailer: trailer ? {
+          id: trailer.id,
+          plate: trailer.plate,
+          model: trailer.model,
+          brand: trailer.brand,
+        } : null,
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          email: driver.email,
+          phone: driver.phone,
+        },
+        client: trip.client ? {
+          clientId: trip.client.id,
+          name: trip.client.name,
+          cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
+        } : null,
+      });
+    }
 
     res.status(201).json(trip);
   } catch (error) {
