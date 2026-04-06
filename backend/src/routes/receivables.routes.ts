@@ -1,8 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest, requireRole } from '../middleware/auth';
-import axios from 'axios';
-import { config } from '../config';
+import { sendWebhook } from '../utils/webhook';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -672,43 +671,25 @@ router.post('/:id/send-notification', authenticate, async (req: AuthRequest, res
       return res.status(404).json({ message: 'Recebimento não encontrado' });
     }
 
-    // Webhook URL (deve ser configurada nas variáveis de ambiente)
-    const webhookUrl = config.N8N_WEBHOOK_URL;
-
-    if (!webhookUrl) {
-      return res.status(400).json({
-        message: 'URL do webhook não configurada',
-      });
-    }
-
     // Preparar dados para envio
     const notificationData = {
-      type: 'receivable.notification',
-      timestamp: new Date().toISOString(),
-      data: {
-        phoneNumber: receivable.phoneNumber || receivable.client?.phone,
-        name: receivable.client?.name || 'Cliente',
-        description: receivable.description || receivable.type,
-        receivableType: receivable.type,
-        amount: receivable.remainingAmount,
-        totalAmount: receivable.amount,
-        paidAmount: receivable.paidAmount,
-        dueDate: receivable.dueDate.toISOString().split('T')[0],
-        status: receivable.status,
-        isRecurring: receivable.isRecurring,
-        installmentNumber: receivable.installmentNumber,
-        totalInstallments: receivable.totalInstallments,
-      },
+      phoneNumber: receivable.phoneNumber || receivable.client?.phone,
+      name: receivable.client?.name || 'Cliente',
+      description: receivable.description || receivable.type,
+      receivableType: receivable.type,
+      amount: receivable.remainingAmount,
+      totalAmount: receivable.amount,
+      paidAmount: receivable.paidAmount,
+      dueDate: receivable.dueDate.toISOString().split('T')[0],
+      status: receivable.status,
+      isRecurring: receivable.isRecurring,
+      installmentNumber: receivable.installmentNumber,
+      totalInstallments: receivable.totalInstallments,
     };
 
     // Enviar webhook
     try {
-      await axios.post(webhookUrl, notificationData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000,
-      });
+      await sendWebhook('receivable.notification', notificationData);
 
       // Atualizar registro de notificação
       await prisma.receivable.update({
@@ -820,48 +801,30 @@ router.post('/test-job', authenticate, requireRole('ADMIN'), async (req: AuthReq
       });
     }
 
-    const webhookUrl = config.N8N_WEBHOOK_URL;
-
-    if (!webhookUrl) {
-      return res.status(400).json({
-        message: 'URL do webhook não configurada',
-        receivablesFound: receivables.length,
-      });
-    }
-
     let successCount = 0;
     let errorCount = 0;
     const results = [];
 
     for (const receivable of receivables) {
       try {
-        // Preparar dados para envio no formato estruturado
+        // Preparar dados para envio
         const notificationData = {
-          type: 'receivable.due',
-          timestamp: new Date().toISOString(),
-          data: {
-            phoneNumber: receivable.phoneNumber || receivable.client?.phone,
-            name: receivable.client?.name || 'Cliente',
-            description: receivable.description || receivable.type,
-            receivableType: receivable.type,
-            amount: receivable.remainingAmount,
-            totalAmount: receivable.amount,
-            paidAmount: receivable.paidAmount,
-            dueDate: receivable.dueDate.toISOString().split('T')[0],
-            status: receivable.status,
-            isRecurring: receivable.isRecurring,
-            installmentNumber: receivable.installmentNumber,
-            totalInstallments: receivable.totalInstallments,
-          },
+          phoneNumber: receivable.phoneNumber || receivable.client?.phone,
+          name: receivable.client?.name || 'Cliente',
+          description: receivable.description || receivable.type,
+          receivableType: receivable.type,
+          amount: receivable.remainingAmount,
+          totalAmount: receivable.amount,
+          paidAmount: receivable.paidAmount,
+          dueDate: receivable.dueDate.toISOString().split('T')[0],
+          status: receivable.status,
+          isRecurring: receivable.isRecurring,
+          installmentNumber: receivable.installmentNumber,
+          totalInstallments: receivable.totalInstallments,
         };
 
         // Enviar webhook
-        await axios.post(webhookUrl, notificationData, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: 10000,
-        });
+        await sendWebhook('receivable.due', notificationData);
 
         // Atualizar registro de notificação
         await prisma.receivable.update({
