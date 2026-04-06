@@ -403,6 +403,7 @@ model Settings {
   companyName    String   @default("Truck Logbook")
   companyLogo    String?  // URL do logo
   dieselPrice    Float    @default(0) // Preço por litro do diesel
+  webhookUrl     String?  // URL do webhook N8N para notificações
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
