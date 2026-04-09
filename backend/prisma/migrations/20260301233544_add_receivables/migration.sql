@@ -1,12 +1,11 @@
--- CreateEnum (apenas se não existir)
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ReceivableStatus') THEN
-        CREATE TYPE "ReceivableStatus" AS ENUM ('PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE');
-    END IF;
+-- CreateEnum
+DO $$ BEGIN
+ CREATE TYPE "ReceivableStatus" AS ENUM ('PENDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE');
+EXCEPTION
+ WHEN duplicate_object THEN null;
 END $$;
 
--- CreateTable (apenas se não existir)
+-- CreateTable
 CREATE TABLE IF NOT EXISTS "receivables" (
     "id" TEXT NOT NULL,
     "clientId" TEXT,
@@ -31,24 +30,15 @@ CREATE TABLE IF NOT EXISTS "receivables" (
     CONSTRAINT "receivables_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex (apenas se não existir)
+-- CreateIndex
 CREATE INDEX IF NOT EXISTS "receivables_clientId_idx" ON "receivables"("clientId");
-
--- CreateIndex
 CREATE INDEX IF NOT EXISTS "receivables_status_idx" ON "receivables"("status");
-
--- CreateIndex
 CREATE INDEX IF NOT EXISTS "receivables_dueDate_idx" ON "receivables"("dueDate");
-
--- CreateIndex
 CREATE INDEX IF NOT EXISTS "receivables_recurringGroupId_idx" ON "receivables"("recurringGroupId");
 
--- AddForeignKey (apenas se não existir)
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'receivables_clientId_fkey'
-    ) THEN
+-- AddForeignKey (só se a tabela clients existir)
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'clients') THEN
         ALTER TABLE "receivables" ADD CONSTRAINT "receivables_clientId_fkey" 
             FOREIGN KEY ("clientId") REFERENCES "clients"("id") 
             ON DELETE SET NULL ON UPDATE CASCADE;
