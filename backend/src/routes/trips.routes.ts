@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { sendWebhook } from '../utils/webhook';
 import { config } from '../config';
+import { logAction, LogAction, LogEntity } from '../utils/logger';
 
 const router = Router();
 
@@ -1196,10 +1197,13 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    // Permitir edição apenas de viagens PLANNED
-    if (currentTrip.status !== 'PLANNED' && currentTrip.status !== 'DELAYED') {
+    // Permitir edição de viagens PLANNED, DELAYED e COMPLETED (para ADMIN/MANAGER)
+    const canEditCompleted = currentTrip.status === 'COMPLETED' && (user.role === 'ADMIN' || user.role === 'MANAGER');
+    const canEditPlanned = currentTrip.status === 'PLANNED' || currentTrip.status === 'DELAYED';
+    
+    if (!canEditPlanned && !canEditCompleted) {
       return res.status(400).json({ 
-        message: 'Apenas viagens planejadas ou atrasadas podem ser editadas' 
+        message: 'Esta viagem não pode ser editada no momento' 
       });
     }
 
@@ -1250,23 +1254,57 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Preparar dados de atualização
+    const updateData: any = {
+      ...(tripCode !== undefined && { tripCode }),
+      ...(truckId && { truckId }),
+      ...(trailerId !== undefined && { trailerId: trailerId || null }),
+      ...(driverId && { driverId }),
+      ...(clientId && { clientId }),
+      ...(origin && { origin }),
+      ...(destination && { destination }),
+      ...(startDate && { startDate: new Date(startDate) }),
+      ...(endDate && { endDate: new Date(endDate) }),
+      ...(revenue !== undefined && { revenue: parseFloat(revenue) }),
+      ...(distance !== undefined && { distance: parseFloat(distance) }),
+      ...(notes !== undefined && { notes }),
+      ...(status && { status }),
+    };
+
+    // Se for viagem COMPLETED, recalcular valores baseado nas despesas
+    if (currentTrip.status === 'COMPLETED') {
+      const expenses = await prisma.expense.findMany({
+        where: { tripId: id },
+      });
+
+      const fuelCost = expenses
+        .filter((e) => e.type === 'FUEL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const tollCost = expenses
+        .filter((e) => e.type === 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const otherCosts = expenses
+        .filter((e) => e.type !== 'FUEL' && e.type !== 'TOLL')
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      const totalCost = fuelCost + tollCost + otherCosts;
+      const finalRevenue = revenue !== undefined ? parseFloat(revenue) : currentTrip.revenue;
+      const profit = finalRevenue - totalCost;
+      const profitMargin = finalRevenue > 0 ? (profit / finalRevenue) * 100 : 0;
+
+      updateData.fuelCost = fuelCost;
+      updateData.tollCost = tollCost;
+      updateData.otherCosts = otherCosts;
+      updateData.totalCost = totalCost;
+      updateData.profit = profit;
+      updateData.profitMargin = profitMargin;
+    }
+
     const trip = await prisma.trip.update({
       where: { id },
-      data: {
-        ...(tripCode !== undefined && { tripCode }),
-        ...(truckId && { truckId }),
-        ...(trailerId !== undefined && { trailerId: trailerId || null }),
-        ...(driverId && { driverId }),
-        ...(clientId && { clientId }),
-        ...(origin && { origin }),
-        ...(destination && { destination }),
-        ...(startDate && { startDate: new Date(startDate) }),
-        ...(endDate && { endDate: new Date(endDate) }),
-        ...(revenue !== undefined && { revenue: parseFloat(revenue) }),
-        ...(distance !== undefined && { distance: parseFloat(distance) }),
-        ...(notes !== undefined && { notes }),
-        ...(status && { status }),
-      },
+      data: updateData,
       include: {
         truck: true,
         trailer: true,
@@ -1278,6 +1316,38 @@ router.put('/:id', async (req, res) => {
         },
       },
     });
+
+    // Registrar alteração nos logs de auditoria
+    const changedFields = Object.keys(updateData).filter(key => {
+      const oldValue = (currentTrip as any)[key];
+      const newValue = updateData[key];
+      return JSON.stringify(oldValue) !== JSON.stringify(newValue);
+    });
+
+    if (changedFields.length > 0) {
+      await logAction({
+        userId: user.userId,
+        userName: user.name || user.email,
+        userRole: user.role,
+        action: LogAction.UPDATE,
+        entity: LogEntity.Trip,
+        entityId: id,
+        details: {
+          changedFields,
+          oldValues: changedFields.reduce((acc, field) => {
+            acc[field] = (currentTrip as any)[field];
+            return acc;
+          }, {} as any),
+          newValues: changedFields.reduce((acc, field) => {
+            acc[field] = updateData[field];
+            return acc;
+          }, {} as any),
+          tripCode: trip.tripCode,
+          status: trip.status,
+        },
+        req,
+      });
+    }
 
     // Enviar webhook de viagem atualizada (como se fosse nova viagem agendada)
     await sendWebhook('trip.scheduled', {
