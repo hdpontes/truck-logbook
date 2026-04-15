@@ -106,8 +106,12 @@ export default function TripEditPage() {
       ]);
 
       // Verificar se pode editar
-      if (tripData.status !== 'PLANNED' && tripData.status !== 'DELAYED') {
-        toast.warning('Apenas viagens planejadas ou atrasadas podem ser editadas.');
+      // ADMIN e MANAGER podem editar viagens concluídas
+      const canEditCompleted = tripData.status === 'COMPLETED' && (user?.role === 'ADMIN' || user?.role === 'MANAGER');
+      const canEditPlanned = tripData.status === 'PLANNED' || tripData.status === 'DELAYED';
+      
+      if (!canEditPlanned && !canEditCompleted) {
+        toast.warning('Esta viagem não pode ser editada no momento.');
         navigate(`/trips/${id}`);
         return;
       }
