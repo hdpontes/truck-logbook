@@ -1330,7 +1330,7 @@ router.put('/:id', async (req, res) => {
         userName: user.name || user.email,
         userRole: user.role,
         action: LogAction.UPDATE,
-        entity: LogEntity.Trip,
+        entity: LogEntity.TRIP,
         entityId: id,
         details: {
           changedFields,
