@@ -69,6 +69,7 @@ export default function TripEditPage() {
     origin: '',
     destination: '',
     startDate: '',
+    endDate: '',
     distance: '',
     revenue: '',
     notes: '',
@@ -136,6 +137,17 @@ export default function TripEditPage() {
       const minutes = String(startDate.getMinutes()).padStart(2, '0');
       const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
 
+      let formattedEndDate = '';
+      if (tripData.endDate) {
+        const endDate = new Date(tripData.endDate);
+        const endYear = endDate.getFullYear();
+        const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+        const endDay = String(endDate.getDate()).padStart(2, '0');
+        const endHours = String(endDate.getHours()).padStart(2, '0');
+        const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+        formattedEndDate = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
+      }
+
       setFormData({
         tripCode: tripData.tripCode || '',
         truckId: tripData.truck.id,
@@ -145,6 +157,7 @@ export default function TripEditPage() {
         origin: tripData.origin,
         destination: tripData.destination,
         startDate: formattedDate,
+        endDate: formattedEndDate,
         distance: tripData.distance?.toString() || '',
         revenue: tripData.revenue?.toString() || '',
         notes: tripData.notes || '',
@@ -172,6 +185,7 @@ export default function TripEditPage() {
         origin: formData.origin,
         destination: formData.destination,
         startDate: new Date(formData.startDate).toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         distance: parseFloat(formData.distance),
         revenue: parseFloat(formData.revenue),
         notes: formData.notes || null,
@@ -388,6 +402,27 @@ export default function TripEditPage() {
                     }
                   }}
                   required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Data de Término */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data e Hora de Término
+                </label>
+                <input
+                  type="datetime-local"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  onClick={(e) => {
+                    try {
+                      (e.target as HTMLInputElement).showPicker?.();
+                    } catch (error) {
+                      // showPicker não suportado em alguns navegadores
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
