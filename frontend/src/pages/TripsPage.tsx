@@ -2013,24 +2013,36 @@ export default function TripsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
                     <input
                       type="text"
+                      list="origin-locations"
                       value={retroactiveData.origin}
                       onChange={e => setRetroactiveData({...retroactiveData, origin: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       placeholder="Ex: São Paulo - SP"
                       required
                     />
+                    <datalist id="origin-locations">
+                      {[...new Set(trips.map(t => t.origin).filter(Boolean))].map((origin) => (
+                        <option key={origin} value={origin} />
+                      ))}
+                    </datalist>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
                     <input
                       type="text"
+                      list="destination-locations"
                       value={retroactiveData.destination}
                       onChange={e => setRetroactiveData({...retroactiveData, destination: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       placeholder="Ex: Rio de Janeiro - RJ"
                       required
                     />
+                    <datalist id="destination-locations">
+                      {[...new Set(trips.map(t => t.destination).filter(Boolean))].map((destination) => (
+                        <option key={destination} value={destination} />
+                      ))}
+                    </datalist>
                   </div>
 
                   <div>
