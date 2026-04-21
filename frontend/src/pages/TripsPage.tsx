@@ -642,8 +642,8 @@ export default function TripsPage() {
         for (const expense of retroactiveData.expenses) {
           if (expense.amount && parseFloat(expense.amount) > 0) {
             // Criar data no meio-dia para evitar problemas de timezone
-            const expenseDate = new Date(retroactiveData.startDate);
-            expenseDate.setHours(12, 0, 0, 0);
+            const [year, month, day] = retroactiveData.startDate.split('-');
+            const expenseDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
             
             await expensesAPI.create({
               tripId: createdTrip.id,
