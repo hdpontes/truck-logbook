@@ -72,7 +72,7 @@ interface RecurringExpense {
 
 interface Trip {
   id: string;
-  freight: number;
+  revenue: number;
   status: string;
   startDate?: string;
   endDate?: string;
@@ -297,7 +297,7 @@ export default function ExpensesAnalysisPage() {
     });
 
     // Faturamento (viagens completadas)
-    const billing = currentMonthTrips.reduce((sum: number, t: Trip) => sum + (t.freight || 0), 0);
+    const billing = currentMonthTrips.reduce((sum: number, t: Trip) => sum + (t.revenue || 0), 0);
 
     // Recebimentos do mês (valores pagos)
     const currentMonthReceivables = receivables.filter((r: Receivable) => {
@@ -348,7 +348,7 @@ export default function ExpensesAnalysisPage() {
         return rd.getMonth() === date.getMonth() && rd.getFullYear() === date.getFullYear();
       });
       
-      const monthBilling = monthTrips.reduce((sum: number, t: Trip) => sum + (t.freight || 0), 0);
+      const monthBilling = monthTrips.reduce((sum: number, t: Trip) => sum + (t.revenue || 0), 0);
       const monthReceivablesTotal = monthReceivables.reduce((sum: number, r: Receivable) => 
         sum + (r.paidAmount || 0), 0
       );
