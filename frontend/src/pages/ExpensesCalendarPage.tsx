@@ -14,10 +14,12 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { expensesAPI, recurringExpensesAPI } from '@/services/api';
 import { useToast } from '@/contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 import RecurringExpensesTab from '@/components/RecurringExpensesTab';
 
 interface Expense {
@@ -63,6 +65,7 @@ interface RecurringExpense {
 
 export default function ExpensesCalendarPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   
@@ -544,10 +547,14 @@ export default function ExpensesCalendarPage() {
                                         </span>
                                       )}
                                       {expense.trip && (
-                                        <span className="flex items-center gap-1">
+                                        <button
+                                          onClick={() => navigate(`/trips/${expense.tripId}`)}
+                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                                        >
                                           <MapPin className="w-3 h-3" />
                                           {expense.trip.origin} → {expense.trip.destination}
-                                        </span>
+                                          <ExternalLink className="w-3 h-3" />
+                                        </button>
                                       )}
                                     </div>
                                     {isPastDay && (expense.tripId || expense.truckId) && !expense.isPaid && (
@@ -584,10 +591,14 @@ export default function ExpensesCalendarPage() {
                                         </span>
                                       )}
                                       {expense.trip && (
-                                        <span className="flex items-center gap-1">
+                                        <button
+                                          onClick={() => navigate(`/trips/${expense.tripId}`)}
+                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                                        >
                                           <MapPin className="w-3 h-3" />
                                           {expense.trip.origin} → {expense.trip.destination}
-                                        </span>
+                                          <ExternalLink className="w-3 h-3" />
+                                        </button>
                                       )}
                                     </div>
                                   </div>
