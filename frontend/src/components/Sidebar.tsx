@@ -19,8 +19,6 @@ import {
   DollarSign,
   ChevronDown,
   ChevronRight,
-  Calendar,
-  List,
   BarChart3
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
@@ -54,21 +52,20 @@ const getMenuItems = (userRole: string): MenuItem[] => {
       { icon: RouteIcon, label: 'Viagens', path: '/trips' },
       { icon: Truck, label: 'Caminhões', path: '/trucks' },
       { icon: Truck, label: 'Carretas', path: '/trailers' },
-      { 
-        icon: Receipt, 
-        label: 'Despesas', 
-        path: '/expenses',
-        submenu: [
-          { icon: List, label: 'Lista de Despesas', path: '/expenses' },
-          { icon: Calendar, label: 'Calendário', path: '/expenses-calendar' },
-          { icon: BarChart3, label: 'Análise', path: '/expenses-analysis' },
-        ]
-      },
+      { icon: Receipt, label: 'Despesas', path: '/expenses' },
       { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
       { icon: Users, label: 'Motoristas', path: '/drivers' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
-      { icon: FileText, label: 'Relatórios', path: '/reports' },
+      { 
+        icon: FileText, 
+        label: 'Relatórios', 
+        path: '/reports',
+        submenu: [
+          { icon: FileText, label: 'Relatório Financeiro', path: '/reports' },
+          { icon: BarChart3, label: 'Análise Financeira', path: '/expenses-analysis' },
+        ]
+      },
       { icon: DollarSign, label: 'Recebimentos', path: '/receivables' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: UserCog, label: 'Usuários', path: '/users' },
@@ -82,21 +79,20 @@ const getMenuItems = (userRole: string): MenuItem[] => {
       { icon: RouteIcon, label: 'Viagens', path: '/trips' },
       { icon: Truck, label: 'Caminhões', path: '/trucks' },
       { icon: Truck, label: 'Carretas', path: '/trailers' },
-      { 
-        icon: Receipt, 
-        label: 'Despesas', 
-        path: '/expenses',
-        submenu: [
-          { icon: List, label: 'Lista de Despesas', path: '/expenses' },
-          { icon: Calendar, label: 'Calendário', path: '/expenses-calendar' },
-          { icon: BarChart3, label: 'Análise', path: '/expenses-analysis' },
-        ]
-      },
+      { icon: Receipt, label: 'Despesas', path: '/expenses' },
       { icon: Wrench, label: 'Manutenção', path: '/maintenance' },
       { icon: Users, label: 'Motoristas', path: '/drivers' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: MapPin, label: 'Localizações', path: '/locations' },
-      { icon: FileText, label: 'Relatórios', path: '/reports' },
+      { 
+        icon: FileText, 
+        label: 'Relatórios', 
+        path: '/reports',
+        submenu: [
+          { icon: FileText, label: 'Relatório Financeiro', path: '/reports' },
+          { icon: BarChart3, label: 'Análise Financeira', path: '/expenses-analysis' },
+        ]
+      },
       { icon: DollarSign, label: 'Recebimentos', path: '/receivables' },
       { icon: CreditCard, label: 'Cobranças', path: '/billing' },
       { icon: UserCog, label: 'Usuários', path: '/users' },
