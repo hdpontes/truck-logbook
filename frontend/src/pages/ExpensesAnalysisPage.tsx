@@ -212,11 +212,6 @@ export default function ExpensesAnalysisPage() {
       .filter((e: Expense) => e.isPaid === undefined || e.isPaid === true)
       .reduce((sum: number, e: Expense) => sum + e.amount, 0);
 
-    // Total pendente (despesas com isPaid = false)
-    const totalPending = currentMonthExpenses
-      .filter((e: Expense) => e.isPaid === false)
-      .reduce((sum: number, e: Expense) => sum + e.amount, 0);
-
     // Despesas recorrentes programadas para este mês (ainda não pagas)
     const now = new Date(selectedYear, selectedMonth + 1, 0);
     const daysInCurrentMonth = now.getDate();
