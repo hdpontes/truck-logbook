@@ -105,13 +105,17 @@ export default function MaintenancePage() {
         cost: actualCost,
       });
 
+      // Criar data no meio-dia para evitar problemas de timezone
+      const [year, month, day] = completionData.completedDate.split('-');
+      const dateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+
       // Criar despesa vinculada ao caminhão
       await expensesAPI.create({
         truckId: maintenanceToComplete.truck.id,
         type: 'MAINTENANCE',
         description: `Manutenção: ${typeLabels[maintenanceToComplete.type] || maintenanceToComplete.type} - ${maintenanceToComplete.description}`,
         amount: actualCost,
-        date: completionData.completedDate,
+        date: dateAtNoon.toISOString(),
       });
 
       // Atualizar lista
