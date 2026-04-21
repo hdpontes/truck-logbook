@@ -16,6 +16,8 @@ import TripEditPage from './pages/TripEditPage';
 import TripDetailPage from './pages/TripDetailPage';
 import ExpensesPage from './pages/ExpensesPage';
 import ExpenseFormPage from './pages/ExpenseFormPage';
+import ExpensesCalendarPage from './pages/ExpensesCalendarPage';
+import ExpensesAnalysisPage from './pages/ExpensesAnalysisPage';
 import MaintenancePage from './pages/MaintenancePage';
 import MaintenanceFormPage from './pages/MaintenanceFormPage';
 import DriversPage from './pages/DriversPage';
@@ -93,6 +95,8 @@ function App() {
             <Route path="trips/:id/edit" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TripEditPage /></RoleRoute>} />
             <Route path="expenses" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ExpensesPage /></RoleRoute>} />
             <Route path="expenses/new" element={<ExpenseFormPage />} />
+            <Route path="expenses-calendar" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ExpensesCalendarPage /></RoleRoute>} />
+            <Route path="expenses-analysis" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ExpensesAnalysisPage /></RoleRoute>} />
             <Route path="maintenance" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><MaintenancePage /></RoleRoute>} />
             <Route path="maintenance/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><MaintenanceFormPage /></RoleRoute>} />
             <Route path="maintenance/edit/:id" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><MaintenanceFormPage /></RoleRoute>} />
