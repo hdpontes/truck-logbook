@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Calendar as CalendarIcon, 
-  Plus, 
   DollarSign,
   Truck,
   MapPin,
@@ -17,7 +16,6 @@ import {
 } from 'lucide-react';
 import { expensesAPI, recurringExpensesAPI } from '@/services/api';
 import { useToast } from '@/contexts/ToastContext';
-import { useAuthStore } from '@/store/auth';
 import RecurringExpensesTab from '@/components/RecurringExpensesTab';
 
 interface Expense {
@@ -63,10 +61,8 @@ interface RecurringExpense {
 
 export default function ExpensesCalendarPage() {
   const toast = useToast();
-  const { user } = useAuthStore();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
-  const [loading, setLoading] = useState(true);
   
   // Estado do calendário
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -96,14 +92,11 @@ export default function ExpensesCalendarPage() {
 
   const fetchExpenses = async () => {
     try {
-      setLoading(true);
       const data = await expensesAPI.getAll();
       setExpenses(data);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       toast.error('Erro ao carregar despesas');
-    } finally {
-      setLoading(false);
     }
   };
 
