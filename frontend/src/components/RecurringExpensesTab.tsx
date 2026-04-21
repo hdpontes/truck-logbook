@@ -8,9 +8,7 @@ import {
   CheckCircle,
   Clock,
   Truck,
-  DollarSign,
-  Pause,
-  Play
+  DollarSign
 } from 'lucide-react';
 import { recurringExpensesAPI, trucksAPI } from '@/services/api';
 import { useToast } from '@/contexts/ToastContext';
@@ -50,6 +48,9 @@ export default function RecurringExpensesTab() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [payingExpenseId, setPayingExpenseId] = useState<string | null>(null);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [formData, setFormData] = useState({
     type: 'FINANCING',
     description: '',
@@ -145,11 +146,21 @@ export default function RecurringExpensesTab() {
   };
 
   const handlePay = async (id: string) => {
+    setPayingExpenseId(id);
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setShowPaymentModal(true);
+  };
+
+  const confirmPayment = async () => {
+    if (!payingExpenseId || !paymentDate) return;
+    
     try {
-      await recurringExpensesAPI.pay(id, {
-        paymentDate: new Date().toISOString(),
+      await recurringExpensesAPI.pay(payingExpenseId, {
+        paymentDate: new Date(paymentDate).toISOString(),
       });
       toast.success('Despesa marcada como paga!');
+      setShowPaymentModal(false);
+      setPayingExpenseId(null);
       fetchData();
     } catch (error) {
       console.error('Error paying recurring expense:', error);
@@ -158,15 +169,7 @@ export default function RecurringExpensesTab() {
   };
 
   const handleToggleStatus = async (expense: RecurringExpense) => {
-    try {
-      const newStatus = expense.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-      await recurringExpensesAPI.update(expense.id, { status: newStatus });
-      toast.success(`Despesa ${newStatus === 'ACTIVE' ? 'ativada' : 'pausada'}!`);
-      fetchData();
-    } catch (error) {
-      console.error('Error toggling status:', error);
-      toast.error('Erro ao alterar status');
-    }
+    // Removido - não pausar mais despesas recorrentes
   };
 
   const resetForm = () => {
@@ -283,7 +286,7 @@ export default function RecurringExpensesTab() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Parcelas:</span>
                     <span className="font-medium">
-                      {expense.paidInstallments}/{expense.totalInstallments}
+                      {(expense.paidInstallments + 1)}/{expense.totalInstallments}
                     </span>
                   </div>
                 )}
@@ -307,25 +310,6 @@ export default function RecurringExpensesTab() {
                       Pagar
                     </Button>
                   )}
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleToggleStatus(expense)}
-                    className="flex-1"
-                  >
-                    {expense.status === 'ACTIVE' ? (
-                      <>
-                        <Pause className="w-4 h-4 mr-1" />
-                        Pausar
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4 mr-1" />
-                        Ativar
-                      </>
-                    )}
-                  </Button>
 
                   <Button
                     size="sm"
@@ -347,6 +331,47 @@ export default function RecurringExpensesTab() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Modal de Pagamento */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Confirmar Pagamento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Data do Pagamento *</label>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => { setShowPaymentModal(false); setPayingExpenseId(null); }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={confirmPayment}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Confirmar Pagamento
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
