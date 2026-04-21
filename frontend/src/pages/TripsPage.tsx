@@ -636,13 +636,17 @@ export default function TripsPage() {
       if (retroactiveData.expenses.length > 0) {
         for (const expense of retroactiveData.expenses) {
           if (expense.amount && parseFloat(expense.amount) > 0) {
+            // Criar data no meio-dia para evitar problemas de timezone
+            const expenseDate = new Date(retroactiveData.startDate);
+            expenseDate.setHours(12, 0, 0, 0);
+            
             await expensesAPI.create({
               tripId: createdTrip.id,
               truckId: retroactiveData.truckId,
               type: expense.type,
               amount: parseFloat(expense.amount),
               description: expense.description || undefined,
-              date: startDateTime.toISOString().split('T')[0],
+              date: expenseDate.toISOString(),
             });
           }
         }
@@ -2176,6 +2180,8 @@ export default function TripsPage() {
                               <option value="TIRE">Pneu</option>
                               <option value="FOOD">Alimentação</option>
                               <option value="PARKING">Estacionamento</option>
+                              <option value="TAX">Impostos</option>
+                              <option value="OVERTIME">Hora Extra</option>
                               <option value="OTHER">Outros</option>
                             </select>
                           </div>
