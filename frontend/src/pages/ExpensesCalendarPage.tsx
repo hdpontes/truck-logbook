@@ -57,6 +57,7 @@ interface RecurringExpense {
   truckId?: string;
   totalInstallments?: number;
   paidInstallments: number;
+  startDate: string;
   truck?: {
     id: string;
     plate: string;
@@ -186,6 +187,16 @@ export default function ExpensesCalendarPage() {
 
     // Despesas recorrentes pendentes do mês (incluindo atrasadas)
     const pendingRecurring = recurringExpenses.filter((re: RecurringExpense) => {
+      // Verificar se a despesa recorrente já estava ativa no mês selecionado
+      const startDate = new Date(re.startDate);
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth();
+      
+      // Se a despesa foi criada depois do mês selecionado (comparar apenas ano/mês), ignorar
+      if (startYear > year || (startYear === year && startMonth > month)) {
+        return false;
+      }
+      
       // Verificar se já foi paga neste mês
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
@@ -215,6 +226,16 @@ export default function ExpensesCalendarPage() {
 
     // Despesas recorrentes futuras do mês
     const futureRecurring = recurringExpenses.filter((re: RecurringExpense) => {
+      // Verificar se a despesa recorrente já estava ativa no mês selecionado
+      const startDate = new Date(re.startDate);
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth();
+      
+      // Se a despesa foi criada depois do mês selecionado (comparar apenas ano/mês), ignorar
+      if (startYear > year || (startYear === year && startMonth > month)) {
+        return false;
+      }
+      
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
         new Date(e.date).getMonth() === month &&
@@ -300,6 +321,16 @@ export default function ExpensesCalendarPage() {
     // Despesas recorrentes do dia
     const recurring = recurringExpenses.filter((re: RecurringExpense) => {
       if (re.dueDay !== day) return false;
+      
+      // Verificar se a despesa recorrente já estava ativa neste dia (comparar ano/mês)
+      const startDate = new Date(re.startDate);
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth();
+      
+      // Se a despesa foi criada depois do mês deste dia, ignorar
+      if (startYear > year || (startYear === year && startMonth > month)) {
+        return false;
+      }
       
       // Verificar se já foi paga neste mês/ano
       const alreadyPaid = expenses.some((e: Expense) => 
