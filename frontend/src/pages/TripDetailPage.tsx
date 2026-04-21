@@ -323,7 +323,9 @@ const TripDetailPage: React.FC = () => {
     REPAIR: 'Reparo',
     TIRE: 'Pneu',
     INSURANCE: 'Seguro',
-    TAX: 'Imposto',
+    TAX: 'Impostos',
+    PARKING: 'Estacionamento',
+    OVERTIME: 'Hora Extra',
     OTHER: 'Outros',
   };
 
