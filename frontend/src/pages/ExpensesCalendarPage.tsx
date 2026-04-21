@@ -12,7 +12,9 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { expensesAPI, recurringExpensesAPI } from '@/services/api';
 import { useToast } from '@/contexts/ToastContext';
@@ -66,8 +68,8 @@ export default function ExpensesCalendarPage() {
   
   // Estado do calendário
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [calendarExpenses, setCalendarExpenses] = useState<any[]>([]);
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [modalDate, setModalDate] = useState<Date | null>(null);
 
   // Estatísticas do mês
   const [monthStats, setMonthStats] = useState({
@@ -85,7 +87,6 @@ export default function ExpensesCalendarPage() {
 
   useEffect(() => {
     if (currentDate) {
-      fetchCalendarData();
       calculateMonthStats();
     }
   }, [currentDate, expenses, recurringExpenses]);
@@ -110,62 +111,83 @@ export default function ExpensesCalendarPage() {
     }
   };
 
-  const fetchCalendarData = async () => {
-    try {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
-      const data = await recurringExpensesAPI.getCalendar(year, month);
-      setCalendarExpenses(data);
-    } catch (error) {
-      console.error('Error fetching calendar data:', error);
-    }
-  };
-
   const calculateMonthStats = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     // Despesas reais do mês
-    const monthExpenses = expenses.filter(e => {
+    const monthExpenses = expenses.filter((e: Expense) => {
       const expenseDate = new Date(e.date);
       return expenseDate >= firstDay && expenseDate <= lastDay;
     });
 
-    const paidExpenses = monthExpenses.filter(e => e.isPaid);
-    const pendingRealExpenses = monthExpenses.filter(e => !e.isPaid);
+    // Separar despesas pagas e pendentes considerando viagens/caminhões em dias passados
+    const paidExpenses = monthExpenses.filter((e: Expense) => {
+      const expenseDate = new Date(e.date);
+      expenseDate.setHours(0, 0, 0, 0);
+      const isPastDay = expenseDate < today;
+      
+      // Se é dia passado e tem tripId ou truckId, considerar como paga
+      if (isPastDay && (e.tripId || e.truckId)) {
+        return true;
+      }
+      return e.isPaid;
+    });
 
-    // Despesas recorrentes pendentes do mês
-    const today = new Date();
-    const pendingRecurring = recurringExpenses.filter(re => {
-      // Verifica se já foi paga este mês
-      const alreadyPaid = expenses.some(e => 
+    const pendingRealExpenses = monthExpenses.filter((e: Expense) => {
+      const expenseDate = new Date(e.date);
+      expenseDate.setHours(0, 0, 0, 0);
+      const isPastDay = expenseDate < today;
+      
+      // Se é dia passado e tem tripId ou truckId, não é pendente
+      if (isPastDay && (e.tripId || e.truckId)) {
+        return false;
+      }
+      return !e.isPaid;
+    });
+
+    // Despesas recorrentes pendentes do mês (incluindo atrasadas)
+    const pendingRecurring = recurringExpenses.filter((re: RecurringExpense) => {
+      // Verificar se já foi paga este mês
+      const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
         new Date(e.date).getMonth() === month &&
         new Date(e.date).getFullYear() === year &&
         e.isPaid
       );
       
-      // Inclui se não foi paga e o dia de vencimento já passou ou é hoje
-      return !alreadyPaid && re.dueDay <= today.getDate() && month === today.getMonth();
+      // Verificar se o dia já passou
+      const dueDate = new Date(year, month, re.dueDay);
+      dueDate.setHours(0, 0, 0, 0);
+      const isPastOrToday = dueDate <= today;
+      
+      // Inclui se não foi paga e o dia já passou ou é hoje
+      return !alreadyPaid && isPastOrToday && month === today.getMonth() && year === today.getFullYear();
     });
 
     // Despesas recorrentes futuras do mês
-    const futureRecurring = recurringExpenses.filter(re => {
-      const alreadyPaid = expenses.some(e => 
+    const futureRecurring = recurringExpenses.filter((re: RecurringExpense) => {
+      const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
         new Date(e.date).getMonth() === month &&
         new Date(e.date).getFullYear() === year
       );
       
-      return !alreadyPaid && re.dueDay > today.getDate() && month === today.getMonth();
+      const dueDate = new Date(year, month, re.dueDay);
+      dueDate.setHours(0, 0, 0, 0);
+      const isFuture = dueDate > today;
+      
+      return !alreadyPaid && isFuture && month === today.getMonth() && year === today.getFullYear();
     });
 
-    const paidAmount = paidExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const pendingAmount = pendingRealExpenses.reduce((sum, e) => sum + e.amount, 0) +
-                          pendingRecurring.reduce((sum, re) => sum + re.amount, 0);
-    const futureAmount = futureRecurring.reduce((sum, re) => sum + re.amount, 0);
+    const paidAmount = paidExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+    const pendingAmount = pendingRealExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0) +
+                          pendingRecurring.reduce((sum: number, re: RecurringExpense) => sum + re.amount, 0);
+    const futureAmount = futureRecurring.reduce((sum: number, re: RecurringExpense) => sum + re.amount, 0);
 
     setMonthStats({
       paid: paidAmount,
@@ -190,21 +212,62 @@ export default function ExpensesCalendarPage() {
   const getExpensesForDay = (day: number) => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
+    const dayDate = new Date(year, month, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPastDay = dayDate < today;
     
     // Despesas reais do dia
-    const realExpenses = expenses.filter(e => {
+    const realExpenses = expenses.filter((e: Expense) => {
       const expenseDate = new Date(e.date);
       return expenseDate.getDate() === day &&
              expenseDate.getMonth() === month &&
              expenseDate.getFullYear() === year;
     });
 
-    // Despesas recorrentes do dia
-    const recurring = calendarExpenses.filter(re => 
-      re.dueDay === day && !re.isPaidThisMonth
-    );
+    // Separar despesas em pagas e pendentes
+    const paidExpenses = realExpenses.filter((e: Expense) => {
+      // Se tem tripId ou truckId, considerar como paga se o dia já passou
+      if (isPastDay && (e.tripId || e.truckId)) {
+        return true;
+      }
+      return e.isPaid;
+    });
 
-    return { realExpenses, recurring };
+    const pendingExpenses = realExpenses.filter((e: Expense) => {
+      // Se tem tripId ou truckId e o dia já passou, não é pendente
+      if (isPastDay && (e.tripId || e.truckId)) {
+        return false;
+      }
+      return !e.isPaid;
+    });
+
+    // Despesas recorrentes do dia
+    const recurring = recurringExpenses.filter((re: RecurringExpense) => {
+      if (re.dueDay !== day) return false;
+      
+      // Verificar se já foi paga neste mês
+      const alreadyPaid = expenses.some((e: Expense) => 
+        e.recurringExpenseId === re.id && 
+        new Date(e.date).getMonth() === month &&
+        new Date(e.date).getFullYear() === year &&
+        e.isPaid
+      );
+      
+      return !alreadyPaid;
+    });
+
+    // Identificar recorrentes atrasadas (dia passou e não foi paga)
+    const overdueRecurring = recurring.filter(() => isPastDay);
+    const futureRecurring = recurring.filter(() => !isPastDay);
+
+    return { 
+      paidExpenses, 
+      pendingExpenses, 
+      overdueRecurring, 
+      futureRecurring,
+      isPastDay 
+    };
   };
 
   const handlePreviousMonth = () => {
@@ -216,7 +279,9 @@ export default function ExpensesCalendarPage() {
   };
 
   const handleDayClick = (day: number) => {
-    setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+    const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    setModalDate(clickedDate);
+    setShowDayModal(true);
   };
 
   const formatCurrency = (value: number) => {
@@ -321,62 +386,69 @@ export default function ExpensesCalendarPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1.5">
                 {/* Cabeçalho dos dias da semana */}
                 {weekDays.map(day => (
-                  <div key={day} className="text-center font-semibold text-sm py-2">
+                  <div key={day} className="text-center font-semibold text-xs py-1.5">
                     {day}
                   </div>
                 ))}
                 
                 {/* Dias vazios antes do primeiro dia do mês */}
                 {emptyDays.map(i => (
-                  <div key={`empty-${i}`} className="aspect-square" />
+                  <div key={`empty-${i}`} className="h-20" />
                 ))}
                 
                 {/* Dias do mês */}
                 {calendarDays.map(day => {
-                  const { realExpenses, recurring } = getExpensesForDay(day);
-                  const totalExpenses = realExpenses.length + recurring.length;
-                  const paidExpenses = realExpenses.filter(e => e.isPaid).length;
-                  const totalAmount = realExpenses.reduce((sum, e) => sum + e.amount, 0) +
-                                     recurring.reduce((sum, re) => sum + re.amount, 0);
+                  const { paidExpenses, pendingExpenses, overdueRecurring, futureRecurring } = getExpensesForDay(day);
+                  const allExpenses = [...paidExpenses, ...pendingExpenses];
+                  const totalAmount = [...paidExpenses, ...pendingExpenses, ...overdueRecurring, ...futureRecurring]
+                    .reduce((sum: number, item: any) => sum + item.amount, 0);
+                  
+                  const hasOverdue = overdueRecurring.length > 0;
                   
                   const isToday = day === new Date().getDate() && 
                                   month === new Date().getMonth() && 
                                   year === new Date().getFullYear();
-                  
-                  const isSelected = selectedDate && 
-                                    day === selectedDate.getDate() &&
-                                    month === selectedDate.getMonth() &&
-                                    year === selectedDate.getFullYear();
 
                   return (
                     <button
                       key={day}
                       onClick={() => handleDayClick(day)}
                       className={`
-                        aspect-square p-2 rounded-lg border transition-colors
+                        h-20 p-1.5 rounded-lg border transition-colors relative
                         ${isToday ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}
-                        ${isSelected ? 'ring-2 ring-blue-500' : ''}
-                        ${totalExpenses > 0 ? 'hover:bg-gray-100' : ''}
+                        ${hasOverdue ? 'border-red-400 bg-red-50' : ''}
+                        ${allExpenses.length > 0 || overdueRecurring.length > 0 || futureRecurring.length > 0 ? 'hover:bg-gray-100 cursor-pointer' : ''}
                       `}
                     >
                       <div className="flex flex-col h-full">
-                        <span className={`text-sm font-medium ${isToday ? 'text-blue-600' : ''}`}>
-                          {day}
-                        </span>
-                        {totalExpenses > 0 && (
-                          <div className="mt-auto space-y-1">
-                            <div className="text-xs font-semibold text-red-600">
+                        <div className="flex items-start justify-between">
+                          <span className={`text-xs font-medium ${isToday ? 'text-blue-600' : ''}`}>
+                            {day}
+                          </span>
+                          {hasOverdue && (
+                            <AlertTriangle className="w-3 h-3 text-red-500" />
+                          )}
+                        </div>
+                        {(allExpenses.length > 0 || overdueRecurring.length > 0 || futureRecurring.length > 0) && (
+                          <div className="mt-auto space-y-0.5">
+                            <div className="text-[10px] font-semibold text-red-600 truncate">
                               {formatCurrency(totalAmount)}
                             </div>
-                            <div className="flex gap-1 text-xs">
-                              {paidExpenses > 0 && (
-                                <span className="text-green-600">✓{paidExpenses}</span>
+                            <div className="flex gap-1 text-[10px] flex-wrap">
+                              {paidExpenses.length > 0 && (
+                                <span className="text-green-600">✓{paidExpenses.length}</span>
                               )}
-                              {totalExpenses - paidExpenses > 0 && (
-                                <span className="text-orange-600">⏰{totalExpenses - paidExpenses}</span>
+                              {pendingExpenses.length > 0 && (
+                                <span className="text-orange-600">⏰{pendingExpenses.length}</span>
+                              )}
+                              {futureRecurring.length > 0 && (
+                                <span className="text-purple-600">📅{futureRecurring.length}</span>
+                              )}
+                              {hasOverdue && (
+                                <span className="text-red-600 font-bold">!{overdueRecurring.length}</span>
                               )}
                             </div>
                           </div>
@@ -386,65 +458,230 @@ export default function ExpensesCalendarPage() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Detalhes do dia selecionado */}
-              {selectedDate && (
-                <div className="mt-6 p-4 border-t">
-                  <h3 className="font-semibold mb-3">
-                    Despesas de {selectedDate.getDate()} de {monthNames[selectedDate.getMonth()]}
-                  </h3>
+          {/* Modal de Detalhes do Dia */}
+          {showDayModal && modalDate && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h2 className="text-xl font-bold">
+                    Despesas de {modalDate.getDate()} de {monthNames[modalDate.getMonth()]} de {modalDate.getFullYear()}
+                  </h2>
+                  <button 
+                    onClick={() => setShowDayModal(false)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
                   {(() => {
-                    const { realExpenses, recurring } = getExpensesForDay(selectedDate.getDate());
-                    return (
-                      <div className="space-y-2">
-                        {realExpenses.map(expense => (
-                          <div key={expense.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                            <div>
-                              <p className="font-medium">{expense.description || expense.type}</p>
-                              <p className="text-sm text-gray-600">
-                                {expense.truck && `${expense.truck.plate}`}
-                                {expense.trip && ` - ${expense.trip.origin} → ${expense.trip.destination}`}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
-                              <p className="text-xs">
-                                {expense.isPaid ? (
-                                  <span className="text-green-600">✓ Paga</span>
-                                ) : (
-                                  <span className="text-orange-600">Pendente</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                        
-                        {recurring.map((re: any) => (
-                          <div key={re.id} className="flex justify-between items-center p-2 bg-purple-50 rounded border border-purple-200">
-                            <div>
-                              <p className="font-medium">{re.description}</p>
-                              <p className="text-sm text-gray-600">
-                                {re.truck && `${re.truck.plate}`}
-                                {re.totalInstallments && ` - Parcela ${re.paidInstallments + 1}/${re.totalInstallments}`}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-red-600">{formatCurrency(re.amount)}</p>
-                              <p className="text-xs text-purple-600">Recorrente</p>
-                            </div>
-                          </div>
-                        ))}
+                    const { paidExpenses, pendingExpenses, overdueRecurring, futureRecurring, isPastDay } = getExpensesForDay(modalDate.getDate());
+                    const totalPaid = paidExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+                    const totalPending = pendingExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+                    const totalOverdue = overdueRecurring.reduce((sum: number, re: RecurringExpense) => sum + re.amount, 0);
+                    const totalFuture = futureRecurring.reduce((sum: number, re: RecurringExpense) => sum + re.amount, 0);
+                    const grandTotal = totalPaid + totalPending + totalOverdue + totalFuture;
 
-                        {realExpenses.length === 0 && recurring.length === 0 && (
-                          <p className="text-gray-500 text-sm">Nenhuma despesa neste dia</p>
+                    return (
+                      <div className="space-y-4">
+                        {/* Resumo */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                            <p className="text-xs text-green-700">Pagas</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(totalPaid)}</p>
+                            <p className="text-xs text-green-600">{paidExpenses.length} despesas</p>
+                          </div>
+                          <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                            <p className="text-xs text-orange-700">Pendentes</p>
+                            <p className="text-lg font-bold text-orange-600">{formatCurrency(totalPending)}</p>
+                            <p className="text-xs text-orange-600">{pendingExpenses.length} despesas</p>
+                          </div>
+                          {overdueRecurring.length > 0 && (
+                            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                              <p className="text-xs text-red-700">Atrasadas</p>
+                              <p className="text-lg font-bold text-red-600">{formatCurrency(totalOverdue)}</p>
+                              <p className="text-xs text-red-600">{overdueRecurring.length} recorrentes</p>
+                            </div>
+                          )}
+                          {futureRecurring.length > 0 && (
+                            <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                              <p className="text-xs text-purple-700">Programadas</p>
+                              <p className="text-lg font-bold text-purple-600">{formatCurrency(totalFuture)}</p>
+                              <p className="text-xs text-purple-600">{futureRecurring.length} recorrentes</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Total Geral */}
+                        <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-blue-900">Total do Dia</span>
+                            <span className="text-2xl font-bold text-blue-600">{formatCurrency(grandTotal)}</span>
+                          </div>
+                        </div>
+
+                        {/* Despesas Pagas */}
+                        {paidExpenses.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-2 text-green-700 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Despesas Pagas ({paidExpenses.length})
+                            </h3>
+                            <div className="space-y-2">
+                              {paidExpenses.map((expense: Expense) => (
+                                <div key={expense.id} className="flex justify-between items-start p-3 bg-green-50 rounded-lg border border-green-200">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{expense.description || expense.type}</p>
+                                    <div className="flex gap-2 text-xs text-gray-600 mt-1">
+                                      {expense.truck && (
+                                        <span className="flex items-center gap-1">
+                                          <Truck className="w-3 h-3" />
+                                          {expense.truck.plate}
+                                        </span>
+                                      )}
+                                      {expense.trip && (
+                                        <span className="flex items-center gap-1">
+                                          <MapPin className="w-3 h-3" />
+                                          {expense.trip.origin} → {expense.trip.destination}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {isPastDay && (expense.tripId || expense.truckId) && !expense.isPaid && (
+                                      <p className="text-xs text-green-600 mt-1">✓ Marcada como paga (dia passado)</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-green-600">{formatCurrency(expense.amount)}</p>
+                                    <p className="text-xs text-green-600">✓ Paga</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Despesas Pendentes */}
+                        {pendingExpenses.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-2 text-orange-700 flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              Despesas Pendentes ({pendingExpenses.length})
+                            </h3>
+                            <div className="space-y-2">
+                              {pendingExpenses.map((expense: Expense) => (
+                                <div key={expense.id} className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{expense.description || expense.type}</p>
+                                    <div className="flex gap-2 text-xs text-gray-600 mt-1">
+                                      {expense.truck && (
+                                        <span className="flex items-center gap-1">
+                                          <Truck className="w-3 h-3" />
+                                          {expense.truck.plate}
+                                        </span>
+                                      )}
+                                      {expense.trip && (
+                                        <span className="flex items-center gap-1">
+                                          <MapPin className="w-3 h-3" />
+                                          {expense.trip.origin} → {expense.trip.destination}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-orange-600">{formatCurrency(expense.amount)}</p>
+                                    <p className="text-xs text-orange-600">⏰ Pendente</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pagamentos Atrasados */}
+                        {overdueRecurring.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-2 text-red-700 flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4" />
+                              Pagamentos Recorrentes Atrasados ({overdueRecurring.length})
+                            </h3>
+                            <div className="space-y-2">
+                              {overdueRecurring.map((re: RecurringExpense) => (
+                                <div key={re.id} className="flex justify-between items-start p-3 bg-red-50 rounded-lg border-2 border-red-300">
+                                  <div className="flex-1">
+                                    <p className="font-medium text-red-900">{re.description}</p>
+                                    <div className="flex gap-2 text-xs text-gray-600 mt-1">
+                                      {re.truck && (
+                                        <span className="flex items-center gap-1">
+                                          <Truck className="w-3 h-3" />
+                                          {re.truck.plate}
+                                        </span>
+                                      )}
+                                      {re.totalInstallments && (
+                                        <span>Parcela {re.paidInstallments + 1}/{re.totalInstallments}</span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-red-600 font-semibold mt-1">⚠️ Pagamento não realizado!</p>
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-red-600">{formatCurrency(re.amount)}</p>
+                                    <p className="text-xs text-red-600">! Atrasado</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pagamentos Futuros */}
+                        {futureRecurring.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold mb-2 text-purple-700 flex items-center gap-2">
+                              <CalendarIcon className="w-4 h-4" />
+                              Pagamentos Recorrentes Programados ({futureRecurring.length})
+                            </h3>
+                            <div className="space-y-2">
+                              {futureRecurring.map((re: RecurringExpense) => (
+                                <div key={re.id} className="flex justify-between items-start p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{re.description}</p>
+                                    <div className="flex gap-2 text-xs text-gray-600 mt-1">
+                                      {re.truck && (
+                                        <span className="flex items-center gap-1">
+                                          <Truck className="w-3 h-3" />
+                                          {re.truck.plate}
+                                        </span>
+                                      )}
+                                      {re.totalInstallments && (
+                                        <span>Parcela {re.paidInstallments + 1}/{re.totalInstallments}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-purple-600">{formatCurrency(re.amount)}</p>
+                                    <p className="text-xs text-purple-600">📅 Programado</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {paidExpenses.length === 0 && pendingExpenses.length === 0 && overdueRecurring.length === 0 && futureRecurring.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <p>Nenhuma despesa registrada para este dia</p>
+                          </div>
                         )}
                       </div>
                     );
                   })()}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* Outras abas serão implementadas posteriormente */}
