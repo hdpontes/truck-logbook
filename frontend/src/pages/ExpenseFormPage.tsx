@@ -153,7 +153,9 @@ export default function ExpenseFormPage() {
     { value: 'REPAIR', label: 'Reparo' },
     { value: 'TIRE', label: 'Pneu' },
     { value: 'INSURANCE', label: 'Seguro' },
-    { value: 'TAX', label: 'Imposto' },
+    { value: 'TAX', label: 'Impostos' },
+    { value: 'PARKING', label: 'Estacionamento' },
+    { value: 'OVERTIME', label: 'Hora Extra' },
     { value: 'OTHER', label: 'Outros' },
   ];
 
