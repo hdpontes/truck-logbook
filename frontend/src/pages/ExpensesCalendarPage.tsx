@@ -186,21 +186,31 @@ export default function ExpensesCalendarPage() {
 
     // Despesas recorrentes pendentes do mês (incluindo atrasadas)
     const pendingRecurring = recurringExpenses.filter((re: RecurringExpense) => {
-      // Verificar se já foi paga este mês
+      // Verificar se já foi paga neste mês
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
         new Date(e.date).getMonth() === month &&
-        new Date(e.date).getFullYear() === year &&
-        e.isPaid
+        new Date(e.date).getFullYear() === year
       );
       
-      // Verificar se o dia já passou
+      // Verificar se o dia já passou no mês selecionado
       const dueDate = new Date(year, month, re.dueDay);
       dueDate.setHours(0, 0, 0, 0);
       const isPastOrToday = dueDate <= today;
       
-      // Inclui se não foi paga e o dia já passou ou é hoje
-      return !alreadyPaid && isPastOrToday && month === today.getMonth() && year === today.getFullYear();
+      // Inclui se não foi paga e o dia já passou ou é hoje (apenas para o mês atual)
+      // OU se o mês selecionado é passado e não foi paga
+      const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+      const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
+      
+      if (isPastMonth) {
+        // Para meses passados, mostra apenas se não foi paga
+        return !alreadyPaid && re.status === 'ACTIVE';
+      } else if (isCurrentMonth) {
+        // Para mês atual, mostra apenas se o dia já passou e não foi paga
+        return !alreadyPaid && isPastOrToday && re.status === 'ACTIVE';
+      }
+      return false;
     });
 
     // Despesas recorrentes futuras do mês
@@ -215,7 +225,18 @@ export default function ExpensesCalendarPage() {
       dueDate.setHours(0, 0, 0, 0);
       const isFuture = dueDate > today;
       
-      return !alreadyPaid && isFuture && month === today.getMonth() && year === today.getFullYear();
+      // Apenas para o mês atual mostra despesas futuras
+      const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+      const isFutureMonth = year > today.getFullYear() || (year === today.getFullYear() && month > today.getMonth());
+      
+      if (isFutureMonth) {
+        // Para meses futuros, mostra todas as recorrentes ativas não pagas
+        return !alreadyPaid && re.status === 'ACTIVE';
+      } else if (isCurrentMonth) {
+        // Para mês atual, mostra apenas se o dia ainda não passou e não foi paga
+        return !alreadyPaid && isFuture && re.status === 'ACTIVE';
+      }
+      return false;
     });
 
     const paidAmount = paidExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
@@ -280,12 +301,11 @@ export default function ExpensesCalendarPage() {
     const recurring = recurringExpenses.filter((re: RecurringExpense) => {
       if (re.dueDay !== day) return false;
       
-      // Verificar se já foi paga neste mês
+      // Verificar se já foi paga neste mês/ano
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
         new Date(e.date).getMonth() === month &&
-        new Date(e.date).getFullYear() === year &&
-        e.isPaid
+        new Date(e.date).getFullYear() === year
       );
       
       return !alreadyPaid;
