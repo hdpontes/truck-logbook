@@ -56,6 +56,7 @@ interface Expense {
   amount: number;
   date: string;
   isPaid?: boolean;
+  recurringExpenseId?: string;
   truck?: { id: string; plate: string; };
   trip?: { id: string; origin: string; destination: string; };
 }
