@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { expensesAPI } from '@/lib/api';
-import { Calendar, Route, Truck as TruckIcon, FileText, Repeat, Trash2, Edit, ExternalLink } from 'lucide-react';
+import { Calendar, Route, Truck as TruckIcon, FileText, Repeat, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
