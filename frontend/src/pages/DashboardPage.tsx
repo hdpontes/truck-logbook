@@ -397,9 +397,10 @@ export default function DashboardPage() {
                                   TIRE: 'Pneus',
                                   REPAIR: 'Reparo',
                                   INSURANCE: 'Seguro',
-                                  TAX: 'Imposto',
+                                  TAX: 'Impostos',
                                   PARKING: 'Estacionamento',
                                   SALARY: 'Salário',
+                                  OVERTIME: 'Hora Extra',
                                   OTHER: 'Outros',
                                 };
                                 
