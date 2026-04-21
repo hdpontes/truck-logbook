@@ -26,7 +26,6 @@ interface RecurringExpense {
   totalInstallments?: number;
   paidInstallments: number;
   startDate: string;
-  endDate?: string;
   supplier?: string;
   truck?: {
     id: string;
@@ -56,7 +55,6 @@ export default function RecurringExpensesTab() {
     amount: '',
     dueDay: '',
     startDate: '',
-    endDate: '',
     totalInstallments: '',
     truckId: '',
     supplier: '',
@@ -93,8 +91,7 @@ export default function RecurringExpensesTab() {
         amount: parseFloat(formData.amount),
         dueDay: parseInt(formData.dueDay),
         startDate: new Date(formData.startDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        totalInstallments: formData.totalInstallments ? parseInt(formData.totalInstallments) : null,
+        totalInstallments: parseInt(formData.totalInstallments),
         truckId: formData.truckId || null,
         supplier: formData.supplier || null,
         notes: formData.notes || null,
@@ -125,11 +122,10 @@ export default function RecurringExpensesTab() {
       amount: expense.amount.toString(),
       dueDay: expense.dueDay.toString(),
       startDate: new Date(expense.startDate).toISOString().split('T')[0],
-      endDate: expense.endDate ? new Date(expense.endDate).toISOString().split('T')[0] : '',
       totalInstallments: expense.totalInstallments?.toString() || '',
       truckId: expense.truckId || '',
       supplier: expense.supplier || '',
-      notes: '',
+      notes: expense.notes || '',
     });
     setShowModal(true);
   };
@@ -180,7 +176,6 @@ export default function RecurringExpensesTab() {
       amount: '',
       dueDay: '',
       startDate: '',
-      endDate: '',
       totalInstallments: '',
       truckId: '',
       supplier: '',
@@ -447,23 +442,14 @@ export default function RecurringExpensesTab() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Data de Término</label>
-                    <input
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Total de Parcelas</label>
+                    <label className="block text-sm font-medium mb-2">Total de Parcelas *</label>
                     <input
                       type="number"
                       min="1"
                       value={formData.totalInstallments}
                       onChange={(e) => setFormData({ ...formData, totalInstallments: e.target.value })}
-                      placeholder="60 (deixe vazio para recorrência sem fim)"
+                      required
+                      placeholder="Ex: 60"
                       className="w-full px-3 py-2 border rounded-md"
                     />
                   </div>
