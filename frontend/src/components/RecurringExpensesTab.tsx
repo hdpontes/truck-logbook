@@ -27,6 +27,7 @@ interface RecurringExpense {
   paidInstallments: number;
   startDate: string;
   supplier?: string;
+  notes?: string;
   truck?: {
     id: string;
     plate: string;
