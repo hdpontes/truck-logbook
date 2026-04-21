@@ -157,7 +157,8 @@ export default function ExpensesCalendarPage() {
     // Despesas reais do mês
     const monthExpenses = expenses.filter((e: Expense) => {
       const expenseDate = new Date(e.date);
-      return expenseDate >= firstDay && expenseDate <= lastDay;
+      return expenseDate.getUTCMonth() === month && 
+             expenseDate.getUTCFullYear() === year;
     });
 
     // Separar despesas pagas e pendentes considerando viagens/caminhões em dias passados
@@ -200,8 +201,8 @@ export default function ExpensesCalendarPage() {
       // Verificar se já foi paga neste mês
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getMonth() === month &&
-        new Date(e.date).getFullYear() === year
+        new Date(e.date).getUTCMonth() === month &&
+        new Date(e.date).getUTCFullYear() === year
       );
       
       // Verificar se o dia já passou no mês selecionado
@@ -238,8 +239,8 @@ export default function ExpensesCalendarPage() {
       
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getMonth() === month &&
-        new Date(e.date).getFullYear() === year
+        new Date(e.date).getUTCMonth() === month &&
+        new Date(e.date).getUTCFullYear() === year
       );
       
       const dueDate = new Date(year, month, re.dueDay);
@@ -300,9 +301,9 @@ export default function ExpensesCalendarPage() {
     // Despesas reais do dia
     const realExpenses = expenses.filter((e: Expense) => {
       const expenseDate = new Date(e.date);
-      return expenseDate.getDate() === day &&
-             expenseDate.getMonth() === month &&
-             expenseDate.getFullYear() === year;
+      return expenseDate.getUTCDate() === day &&
+             expenseDate.getUTCMonth() === month &&
+             expenseDate.getUTCFullYear() === year;
     });
 
     // Separar despesas em pagas e pendentes
@@ -339,8 +340,8 @@ export default function ExpensesCalendarPage() {
       // Verificar se já foi paga neste mês/ano
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getMonth() === month &&
-        new Date(e.date).getFullYear() === year
+        new Date(e.date).getUTCMonth() === month &&
+        new Date(e.date).getUTCFullYear() === year
       );
       
       return !alreadyPaid;
