@@ -441,11 +441,16 @@ export default function TripsPage() {
     }
 
     try {
+      // Criar data no meio-dia para evitar problemas de timezone
+      const [year, month, day] = expenseData.date.split('-');
+      const dateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+      
       await expensesAPI.create({
         ...expenseData,
         amount: parseFloat(expenseData.amount),
         truckId: tripForExpense.truck.id,
         tripId: tripForExpense.id,
+        date: dateAtNoon.toISOString(),
       });
       
       toast.success('Despesa adicionada com sucesso!');
