@@ -62,6 +62,7 @@ model Truck {
   trips       Trip[]
   expenses    Expense[]
   maintenances Maintenance[]
+  recurringExpenses RecurringExpense[]
   tripLegs    TripLeg[]
 
   @@map("trucks")
@@ -222,6 +223,7 @@ model Expense {
   trip        Trip?       @relation(fields: [tripId], references: [id])
   clientId    String?
   client      Client?     @relation(fields: [clientId], references: [id])
+  recurringExpenseId String?
   
   type        ExpenseType
   category    String? // Subcategoria personalizada
@@ -237,6 +239,7 @@ model Expense {
   location    String? // Local da despesa
   
   date        DateTime
+  isPaid      Boolean     @default(false) // Se foi paga (para despesas recorrentes)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -245,6 +248,7 @@ model Expense {
   @@index([clientId])
   @@index([type])
   @@index([date])
+  @@index([recurringExpenseId])
   @@map("expenses")
 }
 
@@ -259,7 +263,49 @@ enum ExpenseType {
   TAX // Impostos
   SALARY // Salário
   OVERTIME // Hora Extra
+  FINANCING // Financiamento
   OTHER // Outros
+}
+
+model RecurringExpense {
+  id          String      @id @default(uuid())
+  truckId     String?
+  truck       Truck?      @relation(fields: [truckId], references: [id])
+  
+  type        ExpenseType
+  category    String? // Subcategoria personalizada
+  description String
+  amount      Float // Valor fixo da parcela/recorrência
+  
+  dueDay      Int // Dia do vencimento (1-31)
+  startDate   DateTime // Data de início da recorrência
+  endDate     DateTime? // Data de término (null = sem fim)
+  
+  status      RecurringExpenseStatus @default(ACTIVE)
+  
+  totalInstallments Int? // Total de parcelas (null = sem fim)
+  paidInstallments  Int @default(0) // Parcelas já pagas
+  
+  supplier    String? // Nome do fornecedor
+  notes       String?
+  
+  // Controle de geração de despesas
+  lastGeneratedDate DateTime? // Última data em que foi gerada uma despesa
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([truckId])
+  @@index([status])
+  @@index([dueDay])
+  @@map("recurring_expenses")
+}
+
+enum RecurringExpenseStatus {
+  ACTIVE // Ativa
+  PAUSED // Pausada
+  COMPLETED // Concluída
+  CANCELLED // Cancelada
 }
 
 model Maintenance {
