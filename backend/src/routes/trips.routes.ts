@@ -1433,6 +1433,11 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
+    // Excluir todas as despesas associadas a esta viagem
+    await prisma.expense.deleteMany({
+      where: { tripId: id },
+    });
+
     await prisma.trip.delete({
       where: { id },
     });
