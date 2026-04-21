@@ -154,12 +154,6 @@ export default function ExpensesCalendarPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    console.log('[DEBUG] calculateMonthStats:', {
-      selectedMonth: `${month + 1}/${year}`,
-      todayMonth: `${today.getMonth() + 1}/${today.getFullYear()}`,
-      recurringExpensesCount: recurringExpenses.length,
-    });
-
     // Despesas reais do mês
     const monthExpenses = expenses.filter((e: Expense) => {
       const expenseDate = new Date(e.date);
@@ -258,16 +252,7 @@ export default function ExpensesCalendarPage() {
       
       if (isFutureMonth) {
         // Para meses futuros, mostra todas as recorrentes ativas não pagas
-        const result = !alreadyPaid && re.status === 'ACTIVE';
-        if (result) {
-          console.log('[DEBUG] Future recurring for future month:', {
-            description: re.description,
-            amount: re.amount,
-            dueDay: re.dueDay,
-            startDate: re.startDate,
-          });
-        }
-        return result;
+        return !alreadyPaid && re.status === 'ACTIVE';
       } else if (isCurrentMonth) {
         // Para mês atual, mostra apenas se o dia ainda não passou e não foi paga
         return !alreadyPaid && isFuture && re.status === 'ACTIVE';
@@ -283,15 +268,6 @@ export default function ExpensesCalendarPage() {
     // Para meses futuros, somar despesas futuras ao pending
     const isFutureMonth = year > today.getFullYear() || (year === today.getFullYear() && month > today.getMonth());
     const totalPendingWithFuture = isFutureMonth ? pendingAmount + futureAmount : pendingAmount;
-
-    console.log('[DEBUG] Stats calculated:', {
-      pendingRecurringCount: pendingRecurring.length,
-      futureRecurringCount: futureRecurring.length,
-      pendingAmount,
-      futureAmount,
-      totalPendingWithFuture,
-      isFutureMonth,
-    });
 
     setMonthStats({
       paid: paidAmount,
