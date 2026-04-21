@@ -18,7 +18,10 @@
     "lucide-react": "^0.294.0",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.2.0",
-    "html2canvas": "^1.4.1"
+    "html2canvas": "^1.4.1",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "chart.js": "^4.4.0",
+    "react-chartjs-2": "^5.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
