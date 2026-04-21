@@ -161,4 +161,15 @@ export const locationsAPI = {
   importCSV: (csvData: string) => api.post('/locations/import/csv', { csvData }).then(res => res.data),
 };
 
+// Recurring Expenses API
+export const recurringExpensesAPI = {
+  getAll: (params?: any) => api.get('/recurring-expenses', { params }).then(res => res.data),
+  getById: (id: string) => api.get(`/recurring-expenses/${id}`).then(res => res.data),
+  create: (data: any) => api.post('/recurring-expenses', data).then(res => res.data),
+  update: (id: string, data: any) => api.put(`/recurring-expenses/${id}`, data).then(res => res.data),
+  delete: (id: string) => api.delete(`/recurring-expenses/${id}`).then(res => res.data),
+  pay: (id: string, data: any) => api.post(`/recurring-expenses/${id}/pay`, data).then(res => res.data),
+  getCalendar: (year: number, month: number) => api.get(`/recurring-expenses/calendar/${year}/${month}`).then(res => res.data),
+};
+
 export default api;
