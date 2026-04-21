@@ -168,10 +168,6 @@ export default function RecurringExpensesTab() {
     }
   };
 
-  const handleToggleStatus = async (expense: RecurringExpense) => {
-    // Removido - não pausar mais despesas recorrentes
-  };
-
   const resetForm = () => {
     setEditingId(null);
     setFormData({
