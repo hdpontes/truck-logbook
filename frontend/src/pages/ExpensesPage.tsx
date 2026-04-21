@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { expensesAPI } from '@/lib/api';
-import { Receipt, Plus, Trash2, Download, Upload } from 'lucide-react';
+import { Receipt, Plus, Trash2, Download, Upload, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -116,6 +116,10 @@ export default function ExpensesPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Despesas</h1>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/expenses-calendar')}>
+            <Calendar className="mr-2 h-4 w-4" />
+            Calendário
+          </Button>
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV
