@@ -51,6 +51,8 @@ export default function RecurringExpensesTab() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [payingExpenseId, setPayingExpenseId] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     type: 'FINANCING',
     description: '',
@@ -87,12 +89,16 @@ export default function RecurringExpensesTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Criar data no meio-dia para evitar problemas de timezone
+      const [year, month, day] = formData.startDate.split('-');
+      const startDateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+      
       const data = {
         type: formData.type,
         description: formData.description,
         amount: parseFloat(formData.amount),
         dueDay: parseInt(formData.dueDay),
-        startDate: new Date(formData.startDate).toISOString(),
+        startDate: startDateAtNoon.toISOString(),
         totalInstallments: parseInt(formData.totalInstallments),
         truckId: formData.truckId || null,
         supplier: formData.supplier || null,
@@ -132,12 +138,19 @@ export default function RecurringExpensesTab() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta despesa recorrente?')) return;
+  const handleDelete = (id: string) => {
+    setDeletingExpenseId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingExpenseId) return;
     
     try {
-      await recurringExpensesAPI.delete(id);
+      await recurringExpensesAPI.delete(deletingExpenseId);
       toast.success('Despesa recorrente excluída!');
+      setShowDeleteModal(false);
+      setDeletingExpenseId(null);
       fetchData();
     } catch (error) {
       console.error('Error deleting recurring expense:', error);
@@ -155,8 +168,12 @@ export default function RecurringExpensesTab() {
     if (!payingExpenseId || !paymentDate) return;
     
     try {
+      // Criar data no meio-dia para evitar problemas de timezone
+      const [year, month, day] = paymentDate.split('-');
+      const dateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+      
       await recurringExpensesAPI.pay(payingExpenseId, {
-        paymentDate: new Date(paymentDate).toISOString(),
+        paymentDate: dateAtNoon.toISOString(),
       });
       toast.success('Despesa marcada como paga!');
       setShowPaymentModal(false);
@@ -512,6 +529,38 @@ export default function RecurringExpensesTab() {
                   </Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-red-600">Confirmar Exclusão</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 mb-6">
+                Tem certeza que deseja excluir esta despesa recorrente? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex justify-end gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setShowDeleteModal(false); setDeletingExpenseId(null); }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Excluir
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
