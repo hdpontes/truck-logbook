@@ -6,11 +6,9 @@ import {
   Edit, 
   Trash2, 
   CheckCircle,
-  XCircle,
   Clock,
   Truck,
   DollarSign,
-  Calendar,
   Pause,
   Play
 } from 'lucide-react';
