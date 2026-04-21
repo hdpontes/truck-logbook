@@ -218,12 +218,12 @@ export default function ExpensesAnalysisPage() {
 
     // Verificar quais já foram pagas
     const totalScheduled = scheduledThisMonth.reduce((sum: number, re: RecurringExpense) => {
-      // Verificar se já existe uma despesa paga para esta recorrente no mês
-      const alreadyPaid = currentMonthExpenses.some((e: Expense) => {
-        const expenseDay = new Date(e.date).getDate();
-        return e.type === re.type && 
-               expenseDay === re.dueDay && 
-               (e.isPaid === undefined || e.isPaid === true);
+      // Verificar se já existe uma despesa paga para esta recorrente específica no mês/ano selecionado
+      const alreadyPaid = expenses.some((e: Expense) => {
+        const expenseDate = new Date(e.date);
+        return e.recurringExpenseId === re.id && 
+               expenseDate.getMonth() === selectedMonth &&
+               expenseDate.getFullYear() === selectedYear;
       });
       return alreadyPaid ? sum : sum + re.amount;
     }, 0);
