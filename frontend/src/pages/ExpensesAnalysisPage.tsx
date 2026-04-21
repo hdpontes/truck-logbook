@@ -204,9 +204,17 @@ export default function ExpensesAnalysisPage() {
              expenseDate.getFullYear() === selectedYear;
     });
 
+    // Total de TODAS as despesas registradas no mês (independente de estarem pagas ou não)
+    const totalMonth = currentMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+
     // Total já pago (despesas com isPaid = true ou sem flag)
     const totalPaid = currentMonthExpenses
       .filter((e: Expense) => e.isPaid === undefined || e.isPaid === true)
+      .reduce((sum: number, e: Expense) => sum + e.amount, 0);
+
+    // Total pendente (despesas com isPaid = false)
+    const totalPending = currentMonthExpenses
+      .filter((e: Expense) => e.isPaid === false)
       .reduce((sum: number, e: Expense) => sum + e.amount, 0);
 
     // Despesas recorrentes programadas para este mês (ainda não pagas)
@@ -229,11 +237,8 @@ export default function ExpensesAnalysisPage() {
       return alreadyPaid ? sum : sum + re.amount;
     }, 0);
 
-    // Total esperado = pago + programado
-    const totalExpected = totalPaid + totalScheduled;
-
-    // Total do mês (para compatibilidade com gráficos)
-    const totalMonth = totalPaid;
+    // Total esperado = todas as despesas registradas + recorrentes não pagas
+    const totalExpected = totalMonth + totalScheduled;
 
     // Média por dia
     const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
@@ -543,28 +548,28 @@ export default function ExpensesAnalysisPage() {
       <div>
         <h2 className="text-lg font-semibold mb-3">Resumo Financeiro do Mês</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-red-200 bg-red-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-900">Total Gasto</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium text-red-900">Total do Mês</CardTitle>
+              <DollarSign className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-700">{formatCurrency(analysisData.totalPaid)}</div>
-              <p className="text-xs text-green-700">
-                Despesas já pagas
+              <div className="text-2xl font-bold text-red-700">{formatCurrency(analysisData.totalMonth)}</div>
+              <p className="text-xs text-red-700">
+                Todas as despesas registradas (pagas: {formatCurrency(analysisData.totalPaid)})
               </p>
             </CardContent>
           </Card>
 
           <Card className="border-yellow-200 bg-yellow-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-900">Total Programado</CardTitle>
+              <CardTitle className="text-sm font-medium text-yellow-900">Recorrentes Não Pagas</CardTitle>
               <Calendar className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-700">{formatCurrency(analysisData.totalScheduled)}</div>
               <p className="text-xs text-yellow-700">
-                Despesas recorrentes a vencer
+                Despesas recorrentes pendentes deste mês
               </p>
             </CardContent>
           </Card>
@@ -577,7 +582,7 @@ export default function ExpensesAnalysisPage() {
             <CardContent>
               <div className="text-2xl font-bold text-blue-700">{formatCurrency(analysisData.totalExpected)}</div>
               <p className="text-xs text-blue-700">
-                Gasto + Programado = {formatCurrency(analysisData.totalPaid)} + {formatCurrency(analysisData.totalScheduled)}
+                Todas as despesas do mês + Recorrentes não pagas
               </p>
             </CardContent>
           </Card>
