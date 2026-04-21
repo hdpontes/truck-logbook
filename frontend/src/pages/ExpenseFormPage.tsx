@@ -95,6 +95,10 @@ export default function ExpenseFormPage() {
     setLoading(true);
 
     try {
+      // Criar data no meio-dia para evitar problemas de timezone
+      const [year, month, day] = formData.date.split('-');
+      const dateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+      
       const expenseData = {
         truckId: formData.truckId || undefined,
         tripId: formData.tripId || undefined,
@@ -104,7 +108,7 @@ export default function ExpenseFormPage() {
         quantity: formData.quantity ? parseFloat(formData.quantity) : undefined,
         unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : undefined,
         description: formData.description,
-        date: new Date(formData.date).toISOString(),
+        date: dateAtNoon.toISOString(),
       };
 
       await expensesAPI.create(expenseData);
