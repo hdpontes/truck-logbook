@@ -35,6 +35,8 @@ interface Expense {
   tripId?: string;
   isPaid: boolean;
   recurringExpenseId?: string;
+  supplier?: string;
+  location?: string;
   truck?: {
     id: string;
     plate: string;
@@ -811,7 +813,7 @@ export default function ExpensesCalendarPage() {
                 
                 <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
                   {(() => {
-                    const { paidExpenses, pendingExpenses, overdueRecurring, futureRecurring, isPastDay } = getExpensesForDay(modalDate.getDate());
+                    const { paidExpenses, pendingExpenses, overdueRecurring, futureRecurring } = getExpensesForDay(modalDate.getDate());
                     const totalPaid = paidExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
                     const totalPending = pendingExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
                     const totalOverdue = overdueRecurring.reduce((sum: number, re: RecurringExpense) => sum + re.amount, 0);
