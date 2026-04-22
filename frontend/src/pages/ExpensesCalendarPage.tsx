@@ -17,9 +17,10 @@ import {
   X,
   ExternalLink,
   Trash2,
-  Route
+  Route,
+  Plus
 } from 'lucide-react';
-import { expensesAPI, recurringExpensesAPI } from '@/services/api';
+import { expensesAPI, recurringExpensesAPI, trucksAPI, tripsAPI, clientsAPI } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import RecurringExpensesTab from '@/components/RecurringExpensesTab';
@@ -66,6 +67,33 @@ interface RecurringExpense {
   };
 }
 
+interface TruckData {
+  id: string;
+  plate: string;
+  model: string;
+  brand: string;
+}
+
+interface TripData {
+  id: string;
+  origin: string;
+  destination: string;
+  truck?: {
+    id: string;
+    plate: string;
+  };
+  truckId?: string;
+}
+
+interface ClientData {
+  id: string;
+  name: string;
+  cnpj: string;
+  city: string;
+  state: string;
+  active?: boolean;
+}
+
 export default function ExpensesCalendarPage() {
   const toast = useToast();
   const navigate = useNavigate();
@@ -81,6 +109,21 @@ export default function ExpensesCalendarPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
 
+  // Modal de criação de despesa
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [trucks, setTrucks] = useState<TruckData[]>([]);
+  const [trips, setTrips] = useState<TripData[]>([]);
+  const [clients, setClients] = useState<ClientData[]>([]);
+  const [expenseForm, setExpenseForm] = useState({
+    truckId: '',
+    tripId: '',
+    clientId: '',
+    type: 'FUEL',
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+
   // Estatísticas do mês
   const [monthStats, setMonthStats] = useState({
     paid: 0,
@@ -93,6 +136,7 @@ export default function ExpensesCalendarPage() {
   useEffect(() => {
     fetchExpenses();
     fetchRecurringExpenses();
+    fetchFormData();
   }, []);
 
   useEffect(() => {
@@ -143,6 +187,69 @@ export default function ExpensesCalendarPage() {
     } catch (error) {
       console.error('Error fetching recurring expenses:', error);
       toast.error('Erro ao carregar despesas recorrentes');
+    }
+  };
+
+  const fetchFormData = async () => {
+    try {
+      const [trucksData, tripsData, clientsData] = await Promise.all([
+        trucksAPI.getAll(),
+        tripsAPI.getAll(),
+        clientsAPI.getAll(),
+      ]);
+      setTrucks(trucksData);
+      setTrips(tripsData.filter((t: TripData) => t.origin)); // Filtrar viagens válidas
+      setClients(clientsData.filter((c: ClientData) => c.active !== false));
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+    }
+  };
+
+  const handleCreateExpense = async () => {
+    if (!expenseForm.type) {
+      toast.error('Selecione o tipo de despesa');
+      return;
+    }
+
+    if (!expenseForm.amount || parseFloat(expenseForm.amount) <= 0) {
+      toast.error('Informe um valor válido');
+      return;
+    }
+
+    try {
+      // Criar data no meio-dia para evitar problemas de timezone
+      const [year, month, day] = expenseForm.date.split('-');
+      const dateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+
+      await expensesAPI.create({
+        truckId: expenseForm.truckId || undefined,
+        tripId: expenseForm.tripId || undefined,
+        clientId: expenseForm.clientId || undefined,
+        type: expenseForm.type,
+        amount: parseFloat(expenseForm.amount),
+        description: expenseForm.description || undefined,
+        date: dateAtNoon.toISOString(),
+      });
+
+      toast.success('Despesa criada com sucesso!');
+      setShowCreateModal(false);
+      
+      // Resetar formulário
+      setExpenseForm({
+        truckId: '',
+        tripId: '',
+        clientId: '',
+        type: 'FUEL',
+        amount: '',
+        description: '',
+        date: new Date().toISOString().split('T')[0],
+      });
+
+      // Recarregar despesas
+      fetchExpenses();
+    } catch (error: any) {
+      console.error('Erro ao criar despesa:', error);
+      toast.error(error.response?.data?.message || 'Erro ao criar despesa');
     }
   };
 
@@ -460,6 +567,10 @@ export default function ExpensesCalendarPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Gestão de Despesas</h1>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Adicionar Despesa
+        </Button>
       </div>
 
       <Tabs defaultValue="calendar" className="space-y-4">
@@ -923,6 +1034,169 @@ export default function ExpensesCalendarPage() {
           <RecurringExpensesTab />
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Criação de Despesa */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Adicionar Despesa Avulsa</CardTitle>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Data */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Data *</label>
+                  <input
+                    type="date"
+                    value={expenseForm.date}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+
+                {/* Tipo de Despesa */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tipo de Despesa *</label>
+                  <select
+                    value={expenseForm.type}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, type: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  >
+                    <option value="FUEL">Combustível</option>
+                    <option value="TOLL">Pedágio</option>
+                    <option value="MAINTENANCE">Manutenção</option>
+                    <option value="TIRE">Pneus</option>
+                    <option value="FOOD">Alimentação</option>
+                    <option value="PARKING">Estacionamento</option>
+                    <option value="INSURANCE">Seguro</option>
+                    <option value="TAX">Impostos</option>
+                    <option value="SALARY">Salário</option>
+                    <option value="OVERTIME">Hora Extra</option>
+                    <option value="FINANCING">Financiamento</option>
+                    <option value="OTHER">Outros</option>
+                  </select>
+                </div>
+
+                {/* Valor */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Valor (R$) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={expenseForm.amount}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="0,00"
+                    required
+                  />
+                </div>
+
+                {/* Descrição */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Descrição</label>
+                  <textarea
+                    value={expenseForm.description}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    rows={3}
+                    placeholder="Informações adicionais sobre a despesa"
+                  />
+                </div>
+
+                {/* Vinculações Opcionais */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold mb-3">Vinculações Opcionais</h3>
+                  
+                  {/* Viagem */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium mb-1">Viagem</label>
+                    <select
+                      value={expenseForm.tripId}
+                      onChange={(e) => {
+                        const selectedTrip = trips.find(t => t.id === e.target.value);
+                        setExpenseForm({ 
+                          ...expenseForm, 
+                          tripId: e.target.value,
+                          truckId: selectedTrip?.truckId || selectedTrip?.truck?.id || expenseForm.truckId
+                        });
+                      }}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="">Nenhuma viagem</option>
+                      {trips.map((trip) => (
+                        <option key={trip.id} value={trip.id}>
+                          {trip.origin} → {trip.destination} ({trip.truck?.plate || 'Sem placa'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Caminhão */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium mb-1">Caminhão</label>
+                    <select
+                      value={expenseForm.truckId}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, truckId: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="">Nenhum caminhão</option>
+                      {trucks.map((truck) => (
+                        <option key={truck.id} value={truck.id}>
+                          {truck.plate} - {truck.brand} {truck.model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Cliente */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Cliente</label>
+                    <select
+                      value={expenseForm.clientId}
+                      onChange={(e) => setExpenseForm({ ...expenseForm, clientId: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="">Nenhum cliente</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name} - {client.city}/{client.state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Botões */}
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateModal(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleCreateExpense}
+                  >
+                    Criar Despesa
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && (
