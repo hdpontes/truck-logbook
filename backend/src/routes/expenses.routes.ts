@@ -86,6 +86,7 @@ router.post('/', async (req, res) => {
       supplier,
       location,
       date,
+      isPaid,
     } = req.body;
 
     if (!type || !amount) {
@@ -108,6 +109,7 @@ router.post('/', async (req, res) => {
         supplier,
         location,
         date: date ? new Date(date) : new Date(),
+        isPaid: isPaid !== undefined ? isPaid : false,
       },
       include: {
         truck: truckId ? {
