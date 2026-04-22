@@ -45,6 +45,13 @@ interface Expense {
     id: string;
     origin: string;
     destination: string;
+    tripCode?: string;
+    clientId?: string;
+    client?: {
+      id: string;
+      name: string;
+      cnpj: string;
+    };
   };
 }
 
@@ -104,6 +111,17 @@ export default function ExpensesCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showDayModal, setShowDayModal] = useState(false);
   const [modalDate, setModalDate] = useState<Date | null>(null);
+  
+  // Modal de despesas da viagem
+  const [showTripExpensesModal, setShowTripExpensesModal] = useState(false);
+  const [selectedTripExpenses, setSelectedTripExpenses] = useState<{
+    tripId: string;
+    tripCode?: string;
+    origin: string;
+    destination: string;
+    clientName?: string;
+    expenses: Expense[];
+  } | null>(null);
 
   // Modal de exclusão
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -480,6 +498,54 @@ export default function ExpensesCalendarPage() {
     setShowDayModal(true);
   };
 
+  // Agrupar despesas por viagem
+  const groupExpensesByTrip = (expenses: Expense[]) => {
+    const tripMap = new Map<string, {
+      tripId: string;
+      tripCode?: string;
+      origin: string;
+      destination: string;
+      clientName?: string;
+      expenses: Expense[];
+      total: number;
+    }>();
+
+    expenses.forEach(expense => {
+      if (expense.tripId && expense.trip) {
+        const existing = tripMap.get(expense.tripId);
+        if (existing) {
+          existing.expenses.push(expense);
+          existing.total += expense.amount;
+        } else {
+          tripMap.set(expense.tripId, {
+            tripId: expense.tripId,
+            tripCode: expense.trip.tripCode,
+            origin: expense.trip.origin,
+            destination: expense.trip.destination,
+            clientName: expense.trip.client?.name,
+            expenses: [expense],
+            total: expense.amount,
+          });
+        }
+      }
+    });
+
+    return Array.from(tripMap.values());
+  };
+
+  // Abrir modal de despesas da viagem
+  const handleOpenTripExpenses = (tripData: {
+    tripId: string;
+    tripCode?: string;
+    origin: string;
+    destination: string;
+    clientName?: string;
+    expenses: Expense[];
+  }) => {
+    setSelectedTripExpenses(tripData);
+    setShowTripExpensesModal(true);
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -798,7 +864,37 @@ export default function ExpensesCalendarPage() {
                               Despesas Pagas ({paidExpenses.length})
                             </h3>
                             <div className="space-y-2">
-                              {paidExpenses.map((expense: Expense) => (
+                              {/* Despesas de Viagens Agrupadas */}
+                              {groupExpensesByTrip(paidExpenses.filter(e => e.tripId)).map((tripGroup) => (
+                                <button
+                                  key={tripGroup.tripId}
+                                  onClick={() => handleOpenTripExpenses(tripGroup)}
+                                  className="w-full flex justify-between items-start p-3 bg-blue-50 rounded-lg border border-blue-300 hover:bg-blue-100 transition-colors cursor-pointer"
+                                >
+                                  <div className="flex-1 text-left">
+                                    <p className="font-medium text-blue-900">
+                                      🚚 Viagem: {tripGroup.tripCode || tripGroup.tripId.substring(0, 8)}
+                                    </p>
+                                    <div className="flex gap-2 text-xs text-gray-600 mt-1">
+                                      <span className="flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" />
+                                        {tripGroup.origin} → {tripGroup.destination}
+                                      </span>
+                                      {tripGroup.clientName && (
+                                        <span>• Cliente: {tripGroup.clientName}</span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-blue-600 mt-1">{tripGroup.expenses.length} despesa(s)</p>
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-blue-600">{formatCurrency(tripGroup.total)}</p>
+                                    <p className="text-xs text-blue-600">📋 Ver detalhes →</p>
+                                  </div>
+                                </button>
+                              ))}
+
+                              {/* Outras Despesas (Avulsas/Recorrentes) */}
+                              {paidExpenses.filter(e => !e.tripId).map((expense: Expense) => (
                                 <div key={expense.id} className="flex justify-between items-start p-3 bg-green-50 rounded-lg border border-green-200">
                                   <div className="flex-1">
                                     <p className="font-medium">{expense.description || expense.type}</p>
@@ -809,20 +905,10 @@ export default function ExpensesCalendarPage() {
                                           {expense.truck.plate}
                                         </span>
                                       )}
-                                      {expense.trip && (
-                                        <button
-                                          onClick={() => navigate(`/trips/${expense.tripId}`)}
-                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
-                                        >
-                                          <MapPin className="w-3 h-3" />
-                                          {expense.trip.origin} → {expense.trip.destination}
-                                          <ExternalLink className="w-3 h-3" />
-                                        </button>
+                                      {expense.recurringExpenseId && (
+                                        <span className="text-purple-600">🔄 Recorrente</span>
                                       )}
                                     </div>
-                                    {isPastDay && (expense.tripId || expense.truckId) && !expense.isPaid && (
-                                      <p className="text-xs text-green-600 mt-1">✓ Marcada como paga (dia passado)</p>
-                                    )}
                                   </div>
                                   <div className="text-right ml-4">
                                     <p className="font-bold text-green-600">{formatCurrency(expense.amount)}</p>
@@ -842,7 +928,37 @@ export default function ExpensesCalendarPage() {
                               Despesas Pendentes ({pendingExpenses.length})
                             </h3>
                             <div className="space-y-2">
-                              {pendingExpenses.map((expense: Expense) => (
+                              {/* Despesas de Viagens Agrupadas */}
+                              {groupExpensesByTrip(pendingExpenses.filter(e => e.tripId)).map((tripGroup) => (
+                                <button
+                                  key={tripGroup.tripId}
+                                  onClick={() => handleOpenTripExpenses(tripGroup)}
+                                  className="w-full flex justify-between items-start p-3 bg-blue-50 rounded-lg border border-blue-300 hover:bg-blue-100 transition-colors cursor-pointer"
+                                >
+                                  <div className="flex-1 text-left">
+                                    <p className="font-medium text-blue-900">
+                                      🚚 Viagem: {tripGroup.tripCode || tripGroup.tripId.substring(0, 8)}
+                                    </p>
+                                    <div className="flex gap-2 text-xs text-gray-600 mt-1">
+                                      <span className="flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" />
+                                        {tripGroup.origin} → {tripGroup.destination}
+                                      </span>
+                                      {tripGroup.clientName && (
+                                        <span>• Cliente: {tripGroup.clientName}</span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-blue-600 mt-1">{tripGroup.expenses.length} despesa(s)</p>
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-bold text-orange-600">{formatCurrency(tripGroup.total)}</p>
+                                    <p className="text-xs text-orange-600">⏰ Pendente • 📋 Ver →</p>
+                                  </div>
+                                </button>
+                              ))}
+
+                              {/* Outras Despesas (Avulsas/Recorrentes) */}
+                              {pendingExpenses.filter(e => !e.tripId).map((expense: Expense) => (
                                 <div key={expense.id} className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200">
                                   <div className="flex-1">
                                     <p className="font-medium">{expense.description || expense.type}</p>
@@ -853,15 +969,8 @@ export default function ExpensesCalendarPage() {
                                           {expense.truck.plate}
                                         </span>
                                       )}
-                                      {expense.trip && (
-                                        <button
-                                          onClick={() => navigate(`/trips/${expense.tripId}`)}
-                                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
-                                        >
-                                          <MapPin className="w-3 h-3" />
-                                          {expense.trip.origin} → {expense.trip.destination}
-                                          <ExternalLink className="w-3 h-3" />
-                                        </button>
+                                      {expense.recurringExpenseId && (
+                                        <span className="text-purple-600">🔄 Recorrente</span>
                                       )}
                                     </div>
                                   </div>
@@ -1196,6 +1305,141 @@ export default function ExpensesCalendarPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Modal de Despesas da Viagem */}
+      {showTripExpensesModal && selectedTripExpenses && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b bg-blue-50">
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-blue-900">
+                  Despesas da Viagem: {selectedTripExpenses.tripCode || selectedTripExpenses.tripId.substring(0, 8)}
+                </h2>
+                <div className="flex gap-3 text-sm text-gray-600 mt-1">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {selectedTripExpenses.origin} → {selectedTripExpenses.destination}
+                  </span>
+                  {selectedTripExpenses.clientName && (
+                    <span>• Cliente: <strong>{selectedTripExpenses.clientName}</strong></span>
+                  )}
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowTripExpensesModal(false);
+                  setSelectedTripExpenses(null);
+                }}
+                className="p-1 hover:bg-blue-100 rounded ml-4"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <div className="space-y-3">
+                {/* Total da Viagem */}
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-300 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium text-blue-900">Total de Despesas da Viagem</span>
+                      <p className="text-xs text-gray-600 mt-1">{selectedTripExpenses.expenses.length} despesa(s)</p>
+                    </div>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {formatCurrency(selectedTripExpenses.expenses.reduce((sum, e) => sum + e.amount, 0))}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lista de Despesas */}
+                {selectedTripExpenses.expenses.map((expense) => (
+                  <div 
+                    key={expense.id} 
+                    className={`flex justify-between items-start p-4 rounded-lg border-2 ${
+                      expense.isPaid 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-orange-50 border-orange-200'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-lg">{expense.description || expense.type}</p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Tipo: <span className="font-medium">{expense.type}</span>
+                          </p>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className={`text-2xl font-bold ${expense.isPaid ? 'text-green-600' : 'text-orange-600'}`}>
+                            {formatCurrency(expense.amount)}
+                          </p>
+                          <p className={`text-xs ${expense.isPaid ? 'text-green-600' : 'text-orange-600'}`}>
+                            {expense.isPaid ? '✓ Paga' : '⏰ Pendente'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Detalhes Adicionais */}
+                      <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Data:</span>{' '}
+                          <span className="font-medium">
+                            {new Date(expense.date).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        {expense.truck && (
+                          <div>
+                            <span className="text-gray-500">Caminhão:</span>{' '}
+                            <span className="font-medium flex items-center gap-1 inline-flex">
+                              <Truck className="w-3 h-3" />
+                              {expense.truck.plate}
+                            </span>
+                          </div>
+                        )}
+                        {expense.supplier && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500">Fornecedor:</span>{' '}
+                            <span className="font-medium">{expense.supplier}</span>
+                          </div>
+                        )}
+                        {expense.location && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500">Local:</span>{' '}
+                            <span className="font-medium flex items-center gap-1 inline-flex">
+                              <MapPin className="w-3 h-3" />
+                              {expense.location}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Botão de Fechar */}
+            <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
+              <button
+                onClick={() => navigate(`/trips/${selectedTripExpenses.tripId}`)}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Ver detalhes da viagem
+              </button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowTripExpensesModal(false);
+                  setSelectedTripExpenses(null);
+                }}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
