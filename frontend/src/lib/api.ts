@@ -5,6 +5,7 @@ export {
   trailersAPI,
   tripsAPI,
   expensesAPI,
+  recurringExpensesAPI,
   driversAPI,
   maintenanceAPI,
   dashboardAPI,
