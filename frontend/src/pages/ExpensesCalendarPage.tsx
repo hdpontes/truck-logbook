@@ -875,7 +875,7 @@ export default function ExpensesCalendarPage() {
                                 >
                                   <div className="flex-1 text-left">
                                     <p className="font-medium text-blue-900">
-                                      🚚 Viagem: {tripGroup.tripCode || tripGroup.tripId.substring(0, 8)}
+                                      🚚 Viagem: {tripGroup.tripCode ? `#${tripGroup.tripCode}` : `ID: ${tripGroup.tripId.substring(0, 8)}`}
                                     </p>
                                     <div className="flex gap-2 text-xs text-gray-600 mt-1">
                                       <span className="flex items-center gap-1">
@@ -939,7 +939,7 @@ export default function ExpensesCalendarPage() {
                                 >
                                   <div className="flex-1 text-left">
                                     <p className="font-medium text-blue-900">
-                                      🚚 Viagem: {tripGroup.tripCode || tripGroup.tripId.substring(0, 8)}
+                                      🚚 Viagem: {tripGroup.tripCode ? `#${tripGroup.tripCode}` : `ID: ${tripGroup.tripId.substring(0, 8)}`}
                                     </p>
                                     <div className="flex gap-2 text-xs text-gray-600 mt-1">
                                       <span className="flex items-center gap-1">
@@ -1317,7 +1317,7 @@ export default function ExpensesCalendarPage() {
             <div className="flex items-center justify-between p-4 border-b bg-blue-50">
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-blue-900">
-                  Despesas da Viagem: {selectedTripExpenses.tripCode || selectedTripExpenses.tripId.substring(0, 8)}
+                  Despesas da Viagem: {selectedTripExpenses.tripCode ? `#${selectedTripExpenses.tripCode}` : `ID: ${selectedTripExpenses.tripId.substring(0, 8)}`}
                 </h2>
                 <div className="flex gap-3 text-sm text-gray-600 mt-1">
                   <span className="flex items-center gap-1">
