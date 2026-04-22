@@ -229,6 +229,7 @@ export default function ExpensesCalendarPage() {
         amount: parseFloat(expenseForm.amount),
         description: expenseForm.description || undefined,
         date: dateAtNoon.toISOString(),
+        isPaid: true, // Despesa avulsa já entra como paga
       });
 
       toast.success('Despesa criada com sucesso!');
