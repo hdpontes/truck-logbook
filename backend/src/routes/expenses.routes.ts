@@ -27,7 +27,17 @@ router.get('/', async (req, res) => {
           select: { id: true, plate: true, model: true },
         },
         trip: {
-          select: { id: true, origin: true, destination: true, status: true },
+          select: { 
+            id: true, 
+            origin: true, 
+            destination: true, 
+            status: true,
+            tripCode: true,
+            clientId: true,
+            client: {
+              select: { id: true, name: true, cnpj: true }
+            }
+          },
         },
         client: {
           select: { id: true, name: true, cnpj: true },
@@ -52,7 +62,13 @@ router.get('/:id', async (req, res) => {
       where: { id },
       include: {
         truck: true,
-        trip: true,
+        trip: {
+          include: {
+            client: {
+              select: { id: true, name: true, cnpj: true }
+            }
+          }
+        },
         client: {
           select: { id: true, name: true, cnpj: true, city: true, state: true },
         },
@@ -116,7 +132,18 @@ router.post('/', async (req, res) => {
           select: { id: true, plate: true, model: true },
         } : false,
         trip: tripId ? {
-          select: { id: true, origin: true, destination: true, status: true, revenue: true },
+          select: { 
+            id: true, 
+            origin: true, 
+            destination: true, 
+            status: true, 
+            revenue: true,
+            tripCode: true,
+            clientId: true,
+            client: {
+              select: { id: true, name: true, cnpj: true }
+            }
+          },
         } : false,
         client: clientId ? {
           select: { id: true, name: true, cnpj: true },
