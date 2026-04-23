@@ -187,6 +187,9 @@ export default function ExpensesCalendarPage() {
       await expensesAPI.delete(expenseToDelete);
       await fetchExpenses();
       toast.success('Despesa excluída com sucesso!');
+      
+      // Fechar o modal do dia se estiver aberto
+      setShowDayModal(false);
     } catch (error: any) {
       console.error('Erro ao excluir despesa:', error);
       if (error.response?.status === 403) {
@@ -237,9 +240,9 @@ export default function ExpensesCalendarPage() {
     }
 
     try {
-      // Criar data no meio-dia para evitar problemas de timezone
+      // Criar data em UTC ao meio-dia para evitar problemas de timezone
       const [year, month, day] = expenseForm.date.split('-');
-      const dateAtNoon = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+      const dateAtNoon = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
 
       await expensesAPI.create({
         truckId: expenseForm.truckId || undefined,
@@ -913,8 +916,18 @@ export default function ExpensesCalendarPage() {
                                     </div>
                                   </div>
                                   <div className="text-right ml-4">
-                                    <p className="font-bold text-green-600">{formatCurrency(expense.amount)}</p>
-                                    <p className="text-xs text-green-600">✓ Paga</p>
+                                    <div className="mb-2">
+                                      <p className="font-bold text-green-600">{formatCurrency(expense.amount)}</p>
+                                      <p className="text-xs text-green-600">✓ Paga</p>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDeleteExpense(expense.id)}
+                                      className="text-red-600 hover:text-red-700 h-7"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                 </div>
                               ))}
@@ -977,8 +990,18 @@ export default function ExpensesCalendarPage() {
                                     </div>
                                   </div>
                                   <div className="text-right ml-4">
-                                    <p className="font-bold text-orange-600">{formatCurrency(expense.amount)}</p>
-                                    <p className="text-xs text-orange-600">⏰ Pendente</p>
+                                    <div className="mb-2">
+                                      <p className="font-bold text-orange-600">{formatCurrency(expense.amount)}</p>
+                                      <p className="text-xs text-orange-600">⏰ Pendente</p>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDeleteExpense(expense.id)}
+                                      className="text-red-600 hover:text-red-700 h-7"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                 </div>
                               ))}
