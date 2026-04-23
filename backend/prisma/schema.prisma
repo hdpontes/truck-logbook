@@ -240,6 +240,13 @@ model Expense {
   
   date        DateTime
   isPaid      Boolean     @default(false) // Se foi paga (para despesas recorrentes)
+  
+  // Campos de parcelamento
+  paymentType PaymentType? @default(A_VISTA) // À vista ou parcelado
+  paymentMethod PaymentMethod? // Forma de pagamento
+  installmentNumber Int? // Número da parcela (1, 2, 3...)
+  totalInstallments Int? // Total de parcelas
+  
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -250,6 +257,21 @@ model Expense {
   @@index([date])
   @@index([recurringExpenseId])
   @@map("expenses")
+}
+
+enum PaymentType {
+  A_VISTA    // À vista
+  PARCELADO  // Parcelado
+}
+
+enum PaymentMethod {
+  DINHEIRO        // Dinheiro
+  PIX             // Pix
+  CARTAO_DEBITO   // Cartão de débito
+  CARTAO_CREDITO  // Cartão de crédito
+  TRANSFERENCIA   // Transferência bancária
+  BOLETO          // Boleto
+  CHEQUE          // Cheque
 }
 
 enum ExpenseType {
