@@ -103,6 +103,10 @@ router.post('/', async (req, res) => {
       location,
       date,
       isPaid,
+      paymentType,
+      paymentMethod,
+      installmentNumber,
+      totalInstallments,
     } = req.body;
 
     if (!type || !amount) {
@@ -126,6 +130,10 @@ router.post('/', async (req, res) => {
         location,
         date: date ? new Date(date) : new Date(),
         isPaid: isPaid !== undefined ? isPaid : false,
+        paymentType: paymentType || 'A_VISTA',
+        paymentMethod: paymentMethod || null,
+        installmentNumber: installmentNumber ? parseInt(installmentNumber) : null,
+        totalInstallments: totalInstallments ? parseInt(totalInstallments) : null,
       },
       include: {
         truck: truckId ? {
