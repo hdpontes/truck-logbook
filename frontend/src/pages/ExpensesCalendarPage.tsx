@@ -37,6 +37,10 @@ interface Expense {
   recurringExpenseId?: string;
   supplier?: string;
   location?: string;
+  paymentType?: string;
+  paymentMethod?: string;
+  installmentNumber?: number;
+  totalInstallments?: number;
   truck?: {
     id: string;
     plate: string;
@@ -142,6 +146,10 @@ export default function ExpensesCalendarPage() {
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
+    paymentType: 'A_VISTA', // À VISTA ou PARCELADO
+    paymentMethod: 'DINHEIRO', // CARTAO_CREDITO, CARTAO_DEBITO, PIX, DINHEIRO, TRANSFERENCIA
+    installments: '1',
+    dueDay: '',
   });
 
   // Estatísticas do mês
@@ -239,23 +247,75 @@ export default function ExpensesCalendarPage() {
       return;
     }
 
+    if (expenseForm.paymentType === 'PARCELADO') {
+      const installments = parseInt(expenseForm.installments);
+      if (!installments || installments < 2 || installments > 48) {
+        toast.error('Número de parcelas deve ser entre 2 e 48');
+        return;
+      }
+
+      if (!expenseForm.dueDay || parseInt(expenseForm.dueDay) < 1 || parseInt(expenseForm.dueDay) > 31) {
+        toast.error('Informe um dia de vencimento válido (1-31)');
+        return;
+      }
+    }
+
     try {
-      // Criar data em UTC ao meio-dia para evitar problemas de timezone
-      const [year, month, day] = expenseForm.date.split('-');
-      const dateAtNoon = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
+      const totalAmount = parseFloat(expenseForm.amount);
+      const isInstallment = expenseForm.paymentType === 'PARCELADO';
+      const installmentsCount = isInstallment ? parseInt(expenseForm.installments) : 1;
+      const installmentAmount = totalAmount / installmentsCount;
 
-      await expensesAPI.create({
-        truckId: expenseForm.truckId || undefined,
-        tripId: expenseForm.tripId || undefined,
-        clientId: expenseForm.clientId || undefined,
-        type: expenseForm.type,
-        amount: parseFloat(expenseForm.amount),
-        description: expenseForm.description || undefined,
-        date: dateAtNoon.toISOString(),
-        isPaid: true, // Despesa avulsa já entra como paga
-      });
+      // Criar despesas parceladas
+      const expensesToCreate = [];
+      
+      for (let i = 0; i < installmentsCount; i++) {
+        const [year, month, day] = expenseForm.date.split('-');
+        
+        let expenseDate;
+        if (isInstallment) {
+          // Para parcelado, usar o dia de vencimento e adicionar meses
+          const dueDay = parseInt(expenseForm.dueDay);
+          const baseDate = new Date(parseInt(year), parseInt(month) - 1 + i, dueDay);
+          expenseDate = new Date(Date.UTC(
+            baseDate.getFullYear(), 
+            baseDate.getMonth(), 
+            baseDate.getDate(), 
+            12, 0, 0
+          ));
+        } else {
+          // Para à vista, usar a data selecionada
+          expenseDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
+        }
 
-      toast.success('Despesa criada com sucesso!');
+        const expenseDescription = isInstallment 
+          ? `${expenseForm.description || expenseForm.type} (${i + 1}/${installmentsCount})`
+          : expenseForm.description || undefined;
+
+        expensesToCreate.push({
+          truckId: expenseForm.truckId || undefined,
+          tripId: expenseForm.tripId || undefined,
+          clientId: expenseForm.clientId || undefined,
+          type: expenseForm.type,
+          amount: installmentAmount,
+          description: expenseDescription,
+          date: expenseDate.toISOString(),
+          isPaid: i === 0 && !isInstallment, // Primeira parcela à vista é paga, demais pendentes
+          paymentType: expenseForm.paymentType,
+          paymentMethod: expenseForm.paymentMethod,
+          installmentNumber: isInstallment ? i + 1 : undefined,
+          totalInstallments: isInstallment ? installmentsCount : undefined,
+        });
+      }
+
+      // Criar todas as despesas
+      await Promise.all(expensesToCreate.map(expense => expensesAPI.create(expense)));
+
+      const message = isInstallment 
+        ? `Despesa criada com sucesso! ${installmentsCount} parcelas de ${formatCurrency(installmentAmount)}`
+        : 'Despesa criada com sucesso!';
+      
+      toast.success(message);
       setShowCreateModal(false);
       
       // Resetar formulário
@@ -267,6 +327,10 @@ export default function ExpensesCalendarPage() {
         amount: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
+        paymentType: 'A_VISTA',
+        paymentMethod: 'DINHEIRO',
+        installments: '1',
+        dueDay: '',
       });
 
       // Recarregar despesas
@@ -913,6 +977,16 @@ export default function ExpensesCalendarPage() {
                                       {expense.recurringExpenseId && (
                                         <span className="text-purple-600">🔄 Recorrente</span>
                                       )}
+                                      {expense.totalInstallments && expense.totalInstallments > 1 && (
+                                        <span className="text-blue-600">
+                                          💳 Parcela {expense.installmentNumber}/{expense.totalInstallments}
+                                        </span>
+                                      )}
+                                      {expense.paymentMethod && (
+                                        <span className="text-gray-600">
+                                          • {expense.paymentMethod.replace('_', ' ')}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                   <div className="text-right ml-4">
@@ -986,6 +1060,16 @@ export default function ExpensesCalendarPage() {
                                       )}
                                       {expense.recurringExpenseId && (
                                         <span className="text-purple-600">🔄 Recorrente</span>
+                                      )}
+                                      {expense.totalInstallments && expense.totalInstallments > 1 && (
+                                        <span className="text-blue-600">
+                                          💳 Parcela {expense.installmentNumber}/{expense.totalInstallments}
+                                        </span>
+                                      )}
+                                      {expense.paymentMethod && (
+                                        <span className="text-gray-600">
+                                          • {expense.paymentMethod.replace('_', ' ')}
+                                        </span>
                                       )}
                                     </div>
                                   </div>
@@ -1223,7 +1307,7 @@ export default function ExpensesCalendarPage() {
 
                 {/* Valor */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Valor (R$) *</label>
+                  <label className="block text-sm font-medium mb-1">Valor Total (R$) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1235,6 +1319,109 @@ export default function ExpensesCalendarPage() {
                     required
                   />
                 </div>
+
+                {/* Tipo de Pagamento */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tipo de Pagamento *</label>
+                  <select
+                    value={expenseForm.paymentType}
+                    onChange={(e) => {
+                      setExpenseForm({ 
+                        ...expenseForm, 
+                        paymentType: e.target.value,
+                        installments: e.target.value === 'PARCELADO' ? '2' : '1'
+                      });
+                    }}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  >
+                    <option value="A_VISTA">À Vista</option>
+                    <option value="PARCELADO">Parcelado</option>
+                  </select>
+                </div>
+
+                {/* Forma de Pagamento */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Forma de Pagamento *</label>
+                  <select
+                    value={expenseForm.paymentMethod}
+                    onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  >
+                    <option value="DINHEIRO">Dinheiro</option>
+                    <option value="PIX">Pix</option>
+                    <option value="CARTAO_DEBITO">Cartão de Débito</option>
+                    <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+                    <option value="TRANSFERENCIA">Transferência Bancária</option>
+                    <option value="BOLETO">Boleto</option>
+                    <option value="CHEQUE">Cheque</option>
+                  </select>
+                </div>
+
+                {/* Campos específicos para parcelado */}
+                {expenseForm.paymentType === 'PARCELADO' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Número de Parcelas */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Número de Parcelas *</label>
+                        <input
+                          type="number"
+                          min="2"
+                          max="48"
+                          value={expenseForm.installments}
+                          onChange={(e) => setExpenseForm({ ...expenseForm, installments: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-md"
+                          required
+                        />
+                      </div>
+
+                      {/* Dia de Vencimento */}
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Dia de Vencimento *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={expenseForm.dueDay}
+                          onChange={(e) => setExpenseForm({ ...expenseForm, dueDay: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-md"
+                          placeholder="Ex: 10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Visualização das Parcelas */}
+                    {expenseForm.amount && expenseForm.installments && parseInt(expenseForm.installments) >= 2 && (
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-sm font-medium text-blue-900 mb-2">Resumo do Parcelamento</p>
+                        <div className="space-y-1 text-sm">
+                          <p>
+                            <span className="text-gray-600">Valor total:</span>{' '}
+                            <span className="font-semibold">{formatCurrency(parseFloat(expenseForm.amount))}</span>
+                          </p>
+                          <p>
+                            <span className="text-gray-600">Número de parcelas:</span>{' '}
+                            <span className="font-semibold">{expenseForm.installments}x</span>
+                          </p>
+                          <p>
+                            <span className="text-gray-600">Valor de cada parcela:</span>{' '}
+                            <span className="font-semibold text-blue-600">
+                              {formatCurrency(parseFloat(expenseForm.amount) / parseInt(expenseForm.installments))}
+                            </span>
+                          </p>
+                          {expenseForm.dueDay && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              As parcelas vencerão todo dia {expenseForm.dueDay} de cada mês
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {/* Descrição */}
                 <div>
