@@ -21,6 +21,7 @@ interface Trip {
   profit: number;
   profitMargin: number;
   status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DELAYED';
+  notes?: string;
   truck: {
     id: string;
     plate: string;
@@ -342,19 +343,19 @@ export default function TripsPage() {
             continue;
           }
 
-          const tripData = {
-            tripCode: columns[1] || undefined,
-            origin: columns[2],
-            destination: columns[3],
-            startDate: columns[4],
-            status: columns[6] as any,
-            distance: parseFloat(columns[7]) || 0,
-            revenue: parseFloat(columns[8]) || 0,
-            // Adicione outros campos conforme necessário
-          };
-
-          // Aqui você precisaria adaptar para seus dados reais
+          // TODO: Implementar criação de viagem via API
+          // const tripData = {
+          //   tripCode: columns[1] || undefined,
+          //   origin: columns[2],
+          //   destination: columns[3],
+          //   startDate: columns[4],
+          //   status: columns[6] as any,
+          //   distance: parseFloat(columns[7]) || 0,
+          //   revenue: parseFloat(columns[8]) || 0,
+          //   // Adicione outros campos conforme necessário
+          // };
           // await tripsAPI.create(tripData);
+          
           imported++;
         } catch (error) {
           console.error('Erro ao importar linha:', error);
