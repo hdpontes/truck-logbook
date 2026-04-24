@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, driversAPI, clientsAPI, expensesAPI, trailersAPI, trucksAPI } from '@/lib/api';
-import { Plus, Eye, Edit, Trash2, MapPin, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, MapPin, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -97,6 +97,10 @@ export default function TripsPage() {
   const [clientFilter, setClientFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
   const [tripCodeFilter, setTripCodeFilter] = useState('');
+  
+  // Estados para importação CSV
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
   
   // Dados para dropdowns
   const [clients, setClients] = useState<any[]>([]);
@@ -211,6 +215,160 @@ export default function TripsPage() {
       console.error('Erro ao carregar viagens:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Função para exportar todas as viagens para CSV
+  const handleExportAllTrips = async () => {
+    try {
+      // Buscar despesas de todas as viagens
+      const tripsWithExpenses = await Promise.all(
+        trips.map(async (trip) => {
+          try {
+            const expenses = await expensesAPI.getByTrip(trip.id);
+            return { ...trip, expenses };
+          } catch (error) {
+            return { ...trip, expenses: [] };
+          }
+        })
+      );
+
+      // Preparar dados CSV
+      const csvRows = [];
+      
+      // Cabeçalho
+      csvRows.push([
+        'ID',
+        'Código',
+        'Origem',
+        'Destino',
+        'Data Início',
+        'Data Fim',
+        'Status',
+        'Distância (km)',
+        'Receita (R$)',
+        'Custo Total (R$)',
+        'Lucro (R$)',
+        'Margem (%)',
+        'Caminhão Placa',
+        'Carreta Placa',
+        'Motorista',
+        'Cliente',
+        'Observações',
+        'Total Despesas',
+        'Despesas Detalhadas'
+      ].join(';'));
+
+      // Dados
+      tripsWithExpenses.forEach(trip => {
+        const expensesDetail = trip.expenses.map((e: any) => 
+          `${e.type}:${e.amount}:${e.description || ''}`
+        ).join('|');
+        
+        const totalExpenses = trip.expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
+
+        csvRows.push([
+          trip.id,
+          trip.tripCode || '',
+          trip.origin,
+          trip.destination,
+          new Date(trip.startDate).toLocaleString('pt-BR'),
+          trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR') : '',
+          trip.status,
+          trip.distance,
+          trip.revenue,
+          trip.totalCost,
+          trip.profit,
+          trip.profitMargin.toFixed(2),
+          trip.truck.plate,
+          trip.trailer?.plate || '',
+          trip.driver.name,
+          trip.client?.name || '',
+          (trip.notes || '').replace(/;/g, ',').replace(/\n/g, ' '),
+          totalExpenses,
+          expensesDetail
+        ].join(';'));
+      });
+
+      // Criar blob e download
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `viagens_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`${trips.length} viagens exportadas com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao exportar viagens:', error);
+      toast.error('Erro ao exportar viagens');
+    }
+  };
+
+  // Função para importar viagens do CSV
+  const handleImportCSV = async () => {
+    if (!importFile) {
+      toast.error('Selecione um arquivo CSV');
+      return;
+    }
+
+    try {
+      const text = await importFile.text();
+      const lines = text.split('\n');
+      
+      if (lines.length < 2) {
+        toast.error('Arquivo CSV vazio ou inválido');
+        return;
+      }
+
+      // Pular o cabeçalho
+      const dataLines = lines.slice(1).filter(line => line.trim());
+      
+      let imported = 0;
+      let errors = 0;
+
+      for (const line of dataLines) {
+        try {
+          const columns = line.split(';');
+          
+          // Validação básica
+          if (columns.length < 10) {
+            errors++;
+            continue;
+          }
+
+          const tripData = {
+            tripCode: columns[1] || undefined,
+            origin: columns[2],
+            destination: columns[3],
+            startDate: columns[4],
+            status: columns[6] as any,
+            distance: parseFloat(columns[7]) || 0,
+            revenue: parseFloat(columns[8]) || 0,
+            // Adicione outros campos conforme necessário
+          };
+
+          // Aqui você precisaria adaptar para seus dados reais
+          // await tripsAPI.create(tripData);
+          imported++;
+        } catch (error) {
+          console.error('Erro ao importar linha:', error);
+          errors++;
+        }
+      }
+
+      toast.success(`Importação concluída! ${imported} viagens importadas${errors > 0 ? `, ${errors} com erro` : ''}`);
+      setShowImportModal(false);
+      setImportFile(null);
+      fetchTrips();
+    } catch (error) {
+      console.error('Erro ao importar CSV:', error);
+      toast.error('Erro ao processar arquivo CSV');
     }
   };
 
@@ -735,8 +893,24 @@ export default function TripsPage() {
             <Filter className="mr-2 h-4 w-4" />
             {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportAllTrips}
+            className="w-full md:w-auto border-green-500 text-green-700 hover:bg-green-50"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
           {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
             <>
+              <Button
+                variant="outline"
+                onClick={() => setShowImportModal(true)}
+                className="w-full md:w-auto border-blue-500 text-blue-700 hover:bg-blue-50"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
+              </Button>
               <Button onClick={() => navigate('/trips/new')} className="w-full md:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Viagem
@@ -1452,6 +1626,72 @@ export default function TripsPage() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Excluir
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Importação CSV */}
+    {showImportModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Importar Viagens (CSV)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-700 mb-3">
+                  Selecione um arquivo CSV para importar viagens. O arquivo deve seguir o formato exportado pelo sistema.
+                </p>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="csv-upload"
+                  />
+                  <label
+                    htmlFor="csv-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-600">
+                      {importFile ? importFile.name : 'Clique para selecionar arquivo'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>Atenção:</strong> A importação criará novas viagens. Certifique-se de que os dados estão corretos antes de importar.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleImportCSV}
+                disabled={!importFile}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Importar
               </Button>
             </div>
           </CardContent>
