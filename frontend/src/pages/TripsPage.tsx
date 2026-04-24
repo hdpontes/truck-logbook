@@ -881,6 +881,7 @@ export default function TripsPage() {
               amount: parseFloat(expense.amount),
               description: expense.description || undefined,
               date: expenseDate.toISOString(),
+              isPaid: true, // Viagens retroativas já aconteceram, despesas já foram pagas
             });
           }
         }
