@@ -301,6 +301,7 @@ router.post('/', async (req, res) => {
             description: `Combustível calculado automaticamente (${litersConsumed.toFixed(2)}L)`,
             amount: estimatedFuelCost,
             date: trip.startDate,
+            isPaid: true, // Viagens retroativas já aconteceram, despesa já foi paga
           },
         });
 
