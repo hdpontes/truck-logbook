@@ -113,6 +113,10 @@ export default function ExpensesCalendarPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   
+  // Filtros
+  const [selectedTripFilter, setSelectedTripFilter] = useState<string>('');
+  const [selectedTruckFilter, setSelectedTruckFilter] = useState<string>('');
+  
   // Estado do calendário
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showDayModal, setShowDayModal] = useState(false);
@@ -634,9 +638,39 @@ export default function ExpensesCalendarPage() {
   const emptyDays = Array.from({ length: startingDayOfWeek }, (_, i) => i);
 
   // Filtrar despesas por tipo
-  const tripExpenses = expenses.filter(e => e.tripId);
-  const truckExpenses = expenses.filter(e => e.truckId && !e.tripId);
-  const otherExpenses = expenses.filter(e => !e.tripId && !e.truckId);
+  // Aplicar filtros
+  const tripExpenses = expenses
+    .filter((e: Expense) => e.tripId)
+    .filter((e: Expense) => !selectedTripFilter || e.tripId === selectedTripFilter);
+  
+  const truckExpenses = expenses
+    .filter((e: Expense) => e.truckId && !e.tripId)
+    .filter((e: Expense) => !selectedTruckFilter || e.truckId === selectedTruckFilter);
+  
+  const otherExpenses = expenses.filter((e: Expense) => !e.tripId && !e.truckId);
+
+  // Obter lista única de viagens e caminhões para os filtros
+  const tripsWithExpenses = Array.from(new Set(expenses.filter((e: Expense) => e.tripId).map((e: Expense) => e.tripId)))
+    .map(tripId => {
+      const expense = expenses.find((e: Expense) => e.tripId === tripId);
+      return expense?.trip;
+    })
+    .filter((trip): trip is NonNullable<typeof trip> => trip !== undefined)
+    .sort((a, b) => {
+      // Priorizar viagens com código
+      if (a.tripCode && !b.tripCode) return -1;
+      if (!a.tripCode && b.tripCode) return 1;
+      if (a.tripCode && b.tripCode) return a.tripCode.localeCompare(b.tripCode);
+      return `${a.origin} → ${a.destination}`.localeCompare(`${b.origin} → ${b.destination}`);
+    });
+
+  const trucksWithExpenses = Array.from(new Set(expenses.filter((e: Expense) => e.truckId && !e.tripId).map((e: Expense) => e.truckId)))
+    .map(truckId => {
+      const expense = expenses.find((e: Expense) => e.truckId === truckId);
+      return expense?.truck;
+    })
+    .filter((truck): truck is NonNullable<typeof truck> => truck !== undefined)
+    .sort((a, b) => a.plate.localeCompare(b.plate));
 
   const ExpenseCard = ({ expense }: { expense: Expense }) => (
     <Card key={expense.id} className="hover:shadow-lg transition-shadow">
@@ -662,7 +696,7 @@ export default function ExpensesCalendarPage() {
                     className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
                   >
                     <span className="font-medium">Viagem:</span>{' '}
-                    {expense.trip.origin} → {expense.trip.destination}
+                    {expense.trip.tripCode ? `#${expense.trip.tripCode}` : `ID: ${expense.tripId?.substring(0, 8)}`} - {expense.trip.origin} → {expense.trip.destination}
                     <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
@@ -1180,7 +1214,24 @@ export default function ExpensesCalendarPage() {
         <TabsContent value="trips" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Despesas de Viagens</h2>
-            <p className="text-sm text-gray-600">{tripExpenses.length} despesas encontradas</p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Filtrar por viagem:</label>
+                <select
+                  value={selectedTripFilter}
+                  onChange={(e) => setSelectedTripFilter(e.target.value)}
+                  className="px-3 py-1.5 border rounded-md text-sm min-w-[250px]"
+                >
+                  <option value="">Todas as viagens</option>
+                  {tripsWithExpenses.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {trip.tripCode ? `#${trip.tripCode}` : `ID: ${trip.id.substring(0, 8)}`} - {trip.origin} → {trip.destination}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-sm text-gray-600">{tripExpenses.length} despesas encontradas</p>
+            </div>
           </div>
           {tripExpenses.length === 0 ? (
             <Card>
@@ -1204,7 +1255,24 @@ export default function ExpensesCalendarPage() {
         <TabsContent value="trucks" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Despesas de Caminhões</h2>
-            <p className="text-sm text-gray-600">{truckExpenses.length} despesas encontradas</p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Filtrar por caminhão:</label>
+                <select
+                  value={selectedTruckFilter}
+                  onChange={(e) => setSelectedTruckFilter(e.target.value)}
+                  className="px-3 py-1.5 border rounded-md text-sm min-w-[200px]"
+                >
+                  <option value="">Todos os caminhões</option>
+                  {trucksWithExpenses.map((truck) => (
+                    <option key={truck.id} value={truck.id}>
+                      {truck.plate} - {truck.brand} {truck.model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-sm text-gray-600">{truckExpenses.length} despesas encontradas</p>
+            </div>
           </div>
           {truckExpenses.length === 0 ? (
             <Card>
