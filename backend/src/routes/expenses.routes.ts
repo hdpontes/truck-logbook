@@ -129,7 +129,9 @@ router.post('/', async (req, res) => {
         supplier,
         location,
         date: date ? new Date(date) : new Date(),
-        isPaid: isPaid !== undefined ? isPaid : false,
+        // Despesas avulsas são consideradas pagas por padrão (já foram realizadas)
+        // Apenas parcelamentos futuros ou recorrentes começam como não pagas
+        isPaid: isPaid !== undefined ? isPaid : true,
         paymentType: paymentType || 'A_VISTA',
         paymentMethod: paymentMethod || null,
         installmentNumber: installmentNumber ? parseInt(installmentNumber) : null,
