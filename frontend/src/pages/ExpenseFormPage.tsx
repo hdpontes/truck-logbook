@@ -115,10 +115,9 @@ export default function ExpenseFormPage() {
       
       toast.success('Despesa registrada com sucesso!');
       
-      // Se veio de uma viagem, volta para a página da viagem
-      const tripIdFromUrl = searchParams.get('tripId');
-      if (tripIdFromUrl) {
-        navigate(`/trips/${tripIdFromUrl}`);
+      // Se a despesa foi vinculada a uma viagem, volta para a página da viagem
+      if (formData.tripId) {
+        navigate(`/trips/${formData.tripId}`);
       } else {
         navigate('/expenses');
       }
@@ -174,9 +173,9 @@ export default function ExpenseFormPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={() => {
-          const tripIdFromUrl = searchParams.get('tripId');
-          if (tripIdFromUrl) {
-            navigate(`/trips/${tripIdFromUrl}`);
+          // Se tem tripId no formulário (veio da URL ou foi selecionado), volta para a viagem
+          if (formData.tripId) {
+            navigate(`/trips/${formData.tripId}`);
           } else {
             navigate('/expenses');
           }
@@ -363,9 +362,9 @@ export default function ExpenseFormPage() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  const tripIdFromUrl = searchParams.get('tripId');
-                  if (tripIdFromUrl) {
-                    navigate(`/trips/${tripIdFromUrl}`);
+                  // Se tem tripId no formulário, volta para a viagem
+                  if (formData.tripId) {
+                    navigate(`/trips/${formData.tripId}`);
                   } else {
                     navigate('/expenses');
                   }
