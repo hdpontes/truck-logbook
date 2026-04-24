@@ -114,7 +114,14 @@ export default function ExpenseFormPage() {
       await expensesAPI.create(expenseData);
       
       toast.success('Despesa registrada com sucesso!');
-      navigate('/expenses');
+      
+      // Se veio de uma viagem, volta para a página da viagem
+      const tripIdFromUrl = searchParams.get('tripId');
+      if (tripIdFromUrl) {
+        navigate(`/trips/${tripIdFromUrl}`);
+      } else {
+        navigate('/expenses');
+      }
     } catch (error) {
       console.error('Erro ao criar despesa:', error);
       toast.error('Erro ao registrar despesa. Tente novamente.');
@@ -166,7 +173,14 @@ export default function ExpenseFormPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => navigate('/expenses')}>
+        <Button variant="outline" onClick={() => {
+          const tripIdFromUrl = searchParams.get('tripId');
+          if (tripIdFromUrl) {
+            navigate(`/trips/${tripIdFromUrl}`);
+          } else {
+            navigate('/expenses');
+          }
+        }}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
@@ -348,7 +362,14 @@ export default function ExpenseFormPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/expenses')}
+                onClick={() => {
+                  const tripIdFromUrl = searchParams.get('tripId');
+                  if (tripIdFromUrl) {
+                    navigate(`/trips/${tripIdFromUrl}`);
+                  } else {
+                    navigate('/expenses');
+                  }
+                }}
                 disabled={loading}
               >
                 Cancelar
