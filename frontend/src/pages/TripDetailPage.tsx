@@ -18,6 +18,7 @@ import {
   Clock,
   Plus,
   Edit,
+  FileDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
@@ -82,6 +83,7 @@ interface Expense {
   amount: number;
   description: string;
   date: string;
+  isPaid?: boolean;
 }
 
 const TripDetailPage: React.FC = () => {
@@ -293,6 +295,76 @@ const TripDetailPage: React.FC = () => {
     } finally {
       setShowMessageModal(false);
       setMessageText('');
+    }
+  };
+
+  // Função para exportar dados da viagem para CSV
+  const handleExportTrip = async () => {
+    if (!trip || !id) return;
+
+    try {
+      // Preparar dados CSV
+      const csvRows = [];
+      
+      // Cabeçalho da viagem
+      csvRows.push(['DADOS DA VIAGEM']);
+      csvRows.push(['Campo', 'Valor']);
+      csvRows.push(['ID', trip.id]);
+      csvRows.push(['Código', trip.tripCode || '']);
+      csvRows.push(['Origem', trip.origin]);
+      csvRows.push(['Destino', trip.destination]);
+      csvRows.push(['Data Início', new Date(trip.startDate).toLocaleString('pt-BR')]);
+      csvRows.push(['Data Fim', trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR') : '']);
+      csvRows.push(['Status', trip.status]);
+      csvRows.push(['Distância (km)', trip.distance]);
+      csvRows.push(['Receita (R$)', trip.revenue]);
+      csvRows.push(['Custo Total (R$)', trip.totalCost]);
+      csvRows.push(['Lucro (R$)', trip.profit]);
+      csvRows.push(['Margem (%)', trip.profitMargin.toFixed(2)]);
+      csvRows.push(['Caminhão', trip.truck.plate + ' - ' + trip.truck.brand + ' ' + trip.truck.model]);
+      csvRows.push(['Carreta', trip.trailer?.plate || 'N/A']);
+      csvRows.push(['Motorista', trip.driver.name]);
+      csvRows.push(['Cliente', trip.client?.name || 'N/A']);
+      csvRows.push(['Observações', (trip.notes || '').replace(/;/g, ',').replace(/\n/g, ' ')]);
+      csvRows.push([]);
+      
+      // Cabeçalho de despesas
+      csvRows.push(['DESPESAS DA VIAGEM']);
+      csvRows.push(['Data', 'Tipo', 'Descrição', 'Valor (R$)', 'Status']);
+      
+      // Despesas
+      if (expenses && expenses.length > 0) {
+        expenses.forEach((expense: Expense) => {
+          csvRows.push([
+            new Date(expense.date).toLocaleDateString('pt-BR'),
+            expense.type,
+            (expense.description || '').replace(/;/g, ','),
+            expense.amount.toFixed(2),
+            expense.isPaid ? 'Paga' : 'Pendente'
+          ]);
+        });
+      } else {
+        csvRows.push(['Nenhuma despesa registrada']);
+      }
+
+      // Criar blob e download
+      const csvContent = csvRows.map(row => row.join(';')).join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      const fileName = `viagem_${trip.tripCode || trip.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.csv`;
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Dados da viagem exportados com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar viagem:', error);
+      toast.error('Erro ao exportar dados da viagem');
     }
   };
 
@@ -515,6 +587,14 @@ const TripDetailPage: React.FC = () => {
             Editar Viagem
           </Button>
         )}
+        <Button 
+          onClick={handleExportTrip}
+          variant="outline"
+          className="w-full md:w-auto border-green-600 text-green-700 hover:bg-green-50 touch-manipulation"
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          Exportar CSV
+        </Button>
       </div>
 
       {/* Stats Cards */}
