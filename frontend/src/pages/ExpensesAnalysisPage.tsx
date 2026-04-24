@@ -109,6 +109,7 @@ interface AnalysisData {
   byTruck: { [key: string]: number };
   monthlyTrend: { month: string; amount: number }[];
   monthlyRevenue: { month: string; amount: number }[];
+  dailyTrend: { day: string; amount: number; revenue: number; profit: number }[];
   topCategories: { category: string; amount: number; percentage: number }[];
 }
 
@@ -121,6 +122,7 @@ export default function ExpensesAnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('monthly');
   const [analysisData, setAnalysisData] = useState<AnalysisData>({
     totalMonth: 0,
     totalPaid: 0,
@@ -141,6 +143,7 @@ export default function ExpensesAnalysisPage() {
     byTruck: {},
     monthlyTrend: [],
     monthlyRevenue: [],
+    dailyTrend: [],
     topCategories: [],
   });
 
@@ -375,6 +378,70 @@ export default function ExpensesAnalysisPage() {
       });
     }
 
+    // Tendência diária (mês selecionado)
+    const dailyTrend = [];
+    const daysInSelectedMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    
+    for (let day = 1; day <= daysInSelectedMonth; day++) {
+      // Despesas do dia (incluindo todas as despesas registradas)
+      const dayExpenses = expenses.filter((e: Expense) => {
+        const ed = new Date(e.date);
+        return ed.getDate() === day && 
+               ed.getMonth() === selectedMonth && 
+               ed.getFullYear() === selectedYear;
+      });
+      
+      // Adicionar despesas recorrentes se caírem neste dia e ainda não foram pagas
+      const recurringForDay = recurringExpenses.filter((re: RecurringExpense) => {
+        if (re.dueDay !== day || re.status !== 'ACTIVE') return false;
+        
+        // Verificar se já foi paga neste dia
+        const alreadyPaid = expenses.some((e: Expense) => {
+          const ed = new Date(e.date);
+          return e.recurringExpenseId === re.id && 
+                 ed.getDate() === day &&
+                 ed.getMonth() === selectedMonth &&
+                 ed.getFullYear() === selectedYear;
+        });
+        
+        return !alreadyPaid;
+      });
+      
+      const dayExpensesTotal = dayExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+      const recurringTotal = recurringForDay.reduce((sum: number, re: RecurringExpense) => sum + re.amount, 0);
+      const totalDayExpenses = dayExpensesTotal + recurringTotal;
+      
+      // Receitas do dia (viagens completadas)
+      const dayTrips = trips.filter((t: Trip) => {
+        if (!t.endDate) return false;
+        const td = new Date(t.endDate);
+        return td.getDate() === day && 
+               td.getMonth() === selectedMonth && 
+               td.getFullYear() === selectedYear &&
+               (t.status === 'COMPLETED' || t.status === 'FINISHED');
+      });
+      
+      // Recebimentos do dia
+      const dayReceivables = receivables.filter((r: Receivable) => {
+        const rd = new Date(r.dueDate);
+        return rd.getDate() === day && 
+               rd.getMonth() === selectedMonth && 
+               rd.getFullYear() === selectedYear;
+      });
+      
+      const dayRevenue = dayTrips.reduce((sum: number, t: Trip) => sum + (t.revenue || 0), 0) +
+                        dayReceivables.reduce((sum: number, r: Receivable) => sum + (r.paidAmount || 0), 0);
+      
+      const dayProfit = dayRevenue - totalDayExpenses;
+      
+      dailyTrend.push({
+        day: day.toString().padStart(2, '0'),
+        amount: totalDayExpenses,
+        revenue: dayRevenue,
+        profit: dayProfit,
+      });
+    }
+
     setAnalysisData({
       totalMonth,
       totalPaid,
@@ -395,6 +462,7 @@ export default function ExpensesAnalysisPage() {
       byTruck,
       monthlyTrend,
       monthlyRevenue,
+      dailyTrend,
       topCategories,
     });
   };
@@ -487,11 +555,15 @@ export default function ExpensesAnalysisPage() {
 
   // Gráfico comparativo: Receitas vs Despesas
   const revenueVsExpensesData = {
-    labels: analysisData.monthlyTrend.map((m: any) => m.month),
+    labels: viewMode === 'daily' 
+      ? analysisData.dailyTrend.map((d: any) => d.day)
+      : analysisData.monthlyTrend.map((m: any) => m.month),
     datasets: [
       {
         label: 'Receitas',
-        data: analysisData.monthlyRevenue.map((m: any) => m.amount),
+        data: viewMode === 'daily'
+          ? analysisData.dailyTrend.map((d: any) => d.revenue)
+          : analysisData.monthlyRevenue.map((m: any) => m.amount),
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
         fill: true,
@@ -499,9 +571,23 @@ export default function ExpensesAnalysisPage() {
       },
       {
         label: 'Despesas',
-        data: analysisData.monthlyTrend.map((m: any) => m.amount),
+        data: viewMode === 'daily'
+          ? analysisData.dailyTrend.map((d: any) => d.amount)
+          : analysisData.monthlyTrend.map((m: any) => m.amount),
         borderColor: 'rgb(239, 68, 68)',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4,
+      },
+      {
+        label: 'Lucro',
+        data: viewMode === 'daily'
+          ? analysisData.dailyTrend.map((d: any) => d.profit)
+          : analysisData.monthlyRevenue.map((m: any, i: number) => 
+              m.amount - (analysisData.monthlyTrend[i]?.amount || 0)
+            ),
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
         fill: true,
         tension: 0.4,
       },
@@ -795,10 +881,33 @@ export default function ExpensesAnalysisPage() {
         {/* Receitas vs Despesas */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Receitas vs Despesas (Últimos 6 Meses)
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                {viewMode === 'daily' 
+                  ? `Receitas vs Despesas (${months[selectedMonth]} ${selectedYear} - Por Dia)`
+                  : 'Receitas vs Despesas (Últimos 6 Meses)'
+                }
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={viewMode === 'monthly' ? 'default' : 'outline'}
+                  onClick={() => setViewMode('monthly')}
+                  className="text-xs"
+                >
+                  Por Mês
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'daily' ? 'default' : 'outline'}
+                  onClick={() => setViewMode('daily')}
+                  className="text-xs"
+                >
+                  Por Dia
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -806,21 +915,36 @@ export default function ExpensesAnalysisPage() {
             </div>
             <div className="mt-4 grid grid-cols-3 gap-4 text-center">
               <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-gray-600">Receita Média</p>
+                <p className="text-sm text-gray-600">
+                  {viewMode === 'daily' ? 'Receita do Mês' : 'Receita Média'}
+                </p>
                 <p className="text-lg font-bold text-green-600">
-                  {formatCurrency(analysisData.monthlyRevenue.reduce((sum: number, m: any) => sum + m.amount, 0) / analysisData.monthlyRevenue.length)}
+                  {viewMode === 'daily'
+                    ? formatCurrency(analysisData.dailyTrend.reduce((sum: number, d: any) => sum + d.revenue, 0))
+                    : formatCurrency(analysisData.monthlyRevenue.reduce((sum: number, m: any) => sum + m.amount, 0) / analysisData.monthlyRevenue.length)
+                  }
                 </p>
               </div>
               <div className="p-3 bg-red-50 rounded-lg">
-                <p className="text-sm text-gray-600">Despesa Média</p>
+                <p className="text-sm text-gray-600">
+                  {viewMode === 'daily' ? 'Despesa do Mês' : 'Despesa Média'}
+                </p>
                 <p className="text-lg font-bold text-red-600">
-                  {formatCurrency(analysisData.monthlyTrend.reduce((sum: number, m: any) => sum + m.amount, 0) / analysisData.monthlyTrend.length)}
+                  {viewMode === 'daily'
+                    ? formatCurrency(analysisData.dailyTrend.reduce((sum: number, d: any) => sum + d.amount, 0))
+                    : formatCurrency(analysisData.monthlyTrend.reduce((sum: number, m: any) => sum + m.amount, 0) / analysisData.monthlyTrend.length)
+                  }
                 </p>
               </div>
               <div className={`p-3 rounded-lg ${analysisData.profit >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                <p className="text-sm text-gray-600">Saldo Médio</p>
+                <p className="text-sm text-gray-600">
+                  {viewMode === 'daily' ? 'Lucro do Mês' : 'Saldo Médio'}
+                </p>
                 <p className={`text-lg font-bold ${analysisData.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                  {formatCurrency((analysisData.monthlyRevenue.reduce((sum: number, m: any) => sum + m.amount, 0) - analysisData.monthlyTrend.reduce((sum: number, m: any) => sum + m.amount, 0)) / 6)}
+                  {viewMode === 'daily'
+                    ? formatCurrency(analysisData.dailyTrend.reduce((sum: number, d: any) => sum + d.profit, 0))
+                    : formatCurrency((analysisData.monthlyRevenue.reduce((sum: number, m: any) => sum + m.amount, 0) - analysisData.monthlyTrend.reduce((sum: number, m: any) => sum + m.amount, 0)) / 6)
+                  }
                 </p>
               </div>
             </div>
