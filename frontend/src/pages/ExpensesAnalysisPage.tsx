@@ -207,9 +207,24 @@ export default function ExpensesAnalysisPage() {
     // Total de TODAS as despesas registradas no mês (independente de estarem pagas ou não)
     const totalMonth = currentMonthExpenses.reduce((sum: number, e: Expense) => sum + e.amount, 0);
 
-    // Total já pago (despesas com isPaid = true ou sem flag)
+    // Total já pago:
+    // - Despesas com isPaid = true (explicitamente pagas)
+    // - Despesas sem recurringExpenseId (despesas avulsas/viagem são consideradas pagas)
+    // - Despesas antigas sem flag isPaid (undefined) para compatibilidade
     const totalPaid = currentMonthExpenses
-      .filter((e: Expense) => e.isPaid === undefined || e.isPaid === true)
+      .filter((e: Expense) => {
+        // Se tem isPaid definido, usar esse valor
+        if (e.isPaid !== undefined) {
+          return e.isPaid === true;
+        }
+        // Se não tem isPaid (despesa antiga), considerar paga
+        // EXCETO se for uma recorrente não paga (tem recurringExpenseId mas não foi marcada como paga)
+        if (e.recurringExpenseId) {
+          return false; // Recorrente sem isPaid = não paga ainda
+        }
+        // Despesa avulsa/viagem sem isPaid = considerada paga
+        return true;
+      })
       .reduce((sum: number, e: Expense) => sum + e.amount, 0);
 
     // Despesas recorrentes programadas para este mês (ainda não pagas)
