@@ -292,6 +292,15 @@ router.post('/', async (req, res) => {
         // Calcular custo estimado
         const estimatedFuelCost = litersConsumed * dieselPrice;
         
+        // Criar data às 12:00 (meio-dia) para evitar problemas de timezone
+        const startDate = new Date(trip.startDate);
+        const expenseDate = new Date(
+          startDate.getFullYear(),
+          startDate.getMonth(),
+          startDate.getDate(),
+          12, 0, 0, 0
+        );
+        
         // Criar despesa de combustível automaticamente
         await prisma.expense.create({
           data: {
@@ -300,7 +309,7 @@ router.post('/', async (req, res) => {
             type: 'FUEL',
             description: `Combustível calculado automaticamente (${litersConsumed.toFixed(2)}L)`,
             amount: estimatedFuelCost,
-            date: trip.startDate,
+            date: expenseDate,
             isPaid: true, // Viagens retroativas já aconteceram, despesa já foi paga
           },
         });
