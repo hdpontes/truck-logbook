@@ -59,6 +59,15 @@ interface TripData {
     email: string;
     phone: string;
   };
+  client?: {
+    id: string;
+    name: string;
+    cnpj: string;
+    phone: string;
+    email: string;
+    city: string;
+    state: string;
+  } | null;
   calculations?: {
     timeInTransit: { hours: number; minutes: number };
     timeLoading: { hours: number; minutes: number };
@@ -152,6 +161,9 @@ const TripDetailPage: React.FC = () => {
         tripsAPI.getById(tripId),
         expensesAPI.getByTrip(tripId),
       ]);
+      
+      console.log('[TripDetailPage] Trip data received:', tripData);
+      console.log('[TripDetailPage] Client data:', tripData.client);
       
       setTrip(tripData);
       setExpenses(expensesData);
@@ -328,6 +340,9 @@ const TripDetailPage: React.FC = () => {
     OVERTIME: 'Hora Extra',
     OTHER: 'Outros',
   };
+
+  console.log('[TripDetailPage] Rendering with trip:', trip);
+  console.log('[TripDetailPage] Client in render:', trip?.client);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -726,6 +741,59 @@ const TripDetailPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {trip.client && (
+            <Card>
+              <CardHeader className="pb-3 md:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <User className="h-4 w-4 md:h-5 md:w-5" />
+                  Cliente
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm md:text-base text-gray-600">Nome:</span>
+                  <span className="font-medium text-sm md:text-base">{trip.client.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm md:text-base text-gray-600">CNPJ:</span>
+                  <span className="font-medium text-xs md:text-sm">{trip.client.cnpj}</span>
+                </div>
+                {trip.client.city && trip.client.state && (
+                  <div className="flex justify-between">
+                    <span className="text-sm md:text-base text-gray-600">Cidade/UF:</span>
+                    <span className="font-medium text-sm md:text-base">{trip.client.city}/{trip.client.state}</span>
+                  </div>
+                )}
+                {trip.client.email && (
+                  <div className="flex justify-between">
+                    <span className="text-sm md:text-base text-gray-600">Email:</span>
+                    <span className="font-medium text-xs md:text-sm break-all">{trip.client.email}</span>
+                  </div>
+                )}
+                {trip.client.phone && (
+                  <div className="flex justify-between">
+                    <span className="text-sm md:text-base text-gray-600">Telefone:</span>
+                    <span className="font-medium text-sm md:text-base">{trip.client.phone}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {!trip.client && (
+            <Card className="border-dashed">
+              <CardHeader className="pb-3 md:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-400">
+                  <User className="h-4 w-4 md:h-5 md:w-5" />
+                  Cliente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 italic">Nenhum cliente associado a esta viagem</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
