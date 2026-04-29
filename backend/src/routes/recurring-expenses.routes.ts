@@ -408,6 +408,33 @@ router.post('/test-notifications', async (req, res) => {
 
     console.log(`[Test Notifications] Testing for date: ${targetDate} (day ${currentDay})`);
 
+    // PRIMEIRO: Buscar TODAS as despesas recorrentes para debug
+    const allRecurringExpenses = await prisma.recurringExpense.findMany({
+      include: {
+        truck: {
+          select: { id: true, plate: true, model: true, brand: true },
+        },
+      },
+    });
+
+    console.log(`[Test Notifications] Total recurring expenses in DB: ${allRecurringExpenses.length}`);
+    
+    // Filtrar manualmente para debug
+    const debugInfo = allRecurringExpenses.map(re => ({
+      id: re.id,
+      description: re.description,
+      dueDay: re.dueDay,
+      status: re.status,
+      startDate: re.startDate,
+      endDate: re.endDate,
+      matches: {
+        status: re.status === 'ACTIVE',
+        dueDay: re.dueDay === currentDay,
+        startDate: re.startDate <= testDate,
+        endDate: !re.endDate || re.endDate >= testDate,
+      },
+    }));
+
     // Buscar despesas recorrentes ativas que vencem no dia especificado
     const dueExpenses = await prisma.recurringExpense.findMany({
       where: {
@@ -440,6 +467,15 @@ router.post('/test-notifications', async (req, res) => {
           alreadyPaid: 0,
         },
         expenses: [],
+        debug: {
+          searchCriteria: {
+            status: 'ACTIVE',
+            dueDay: currentDay,
+            startDate_lte: testDate.toISOString(),
+            endDate_gte_or_null: testDate.toISOString(),
+          },
+          allRecurringExpenses: debugInfo,
+        },
       });
     }
 
