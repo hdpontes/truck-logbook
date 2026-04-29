@@ -10,9 +10,16 @@ export const startRecurringExpensesNotificationJob = () => {
       console.log('[RecurringExpenses Job] Checking due expenses for today...');
       
       const today = new Date();
+      // Normalizar para meia-noite (00:00:00)
+      today.setHours(0, 0, 0, 0);
+      
       const currentDay = today.getDate();
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
+
+      // Criar data de fim do dia (23:59:59) para comparações
+      const endOfToday = new Date(today);
+      endOfToday.setHours(23, 59, 59, 999);
 
       // Buscar despesas recorrentes ativas que vencem hoje
       const dueExpenses = await prisma.recurringExpense.findMany({
@@ -20,7 +27,7 @@ export const startRecurringExpensesNotificationJob = () => {
           status: 'ACTIVE',
           dueDay: currentDay,
           startDate: {
-            lte: today,
+            lte: endOfToday, // Usar fim do dia para incluir qualquer horário do dia
           },
           OR: [
             { endDate: null }, // Sem data de término
