@@ -549,18 +549,56 @@ router.post('/test-notifications', async (req, res) => {
       installment: e.totalInstallments ? `${e.paidInstallments + 1}/${e.totalInstallments}` : null,
     }));
 
+    // Formatar data brasileira
+    const dateStr = `${currentDay.toString().padStart(2, '0')}/${(currentMonth + 1).toString().padStart(2, '0')}/${currentYear}`;
+
+    // Criar mensagem formatada pronta para envio
+    let formattedMessage = '';
+    if (pendingExpenses.length > 0) {
+      formattedMessage = `🔔 *DESPESAS RECORRENTES VENCENDO HOJE (${dateStr})*\n\n`;
+      formattedMessage += `📋 *${pendingExpenses.length} despesa(s) pendente(s):*\n\n`;
+
+      pendingExpenses.forEach(expense => {
+        let line = `• ${expense.description}`;
+        
+        if (expense.truck) {
+          line += ` - ${expense.truck.plate}`;
+        }
+        
+        line += ` - R$ ${expense.amount.toFixed(2).replace('.', ',')}`;
+        
+        if (expense.totalInstallments) {
+          line += ` (${expense.paidInstallments + 1}/${expense.totalInstallments})`;
+        }
+        
+        formattedMessage += line + '\n';
+      });
+
+      formattedMessage += `\n💰 *Total: R$ ${totalAmount.toFixed(2).replace('.', ',')}*`;
+
+      if (Object.keys(expensesByTruck).length > 0) {
+        formattedMessage += `\n\n🚛 Despesas de caminhões: ${Object.keys(expensesByTruck).length}`;
+      }
+      if (otherExpenses.length > 0) {
+        formattedMessage += `\n📦 Outras despesas: ${otherExpenses.length}`;
+      }
+    }
+
     // Se não for dry run, enviar webhook
     if (!dryRun && pendingExpenses.length > 0) {
       await sendWebhook('recurring_expenses.due', {
         date: testDate.toISOString(),
         dueDay: currentDay,
+        dateFormatted: dateStr,
         totalExpenses: pendingExpenses.length,
         totalAmount,
+        totalAmountFormatted: `R$ ${totalAmount.toFixed(2).replace('.', ',')}`,
         expenses: expensesList,
         summary: {
           byTruck: Object.keys(expensesByTruck).length,
           other: otherExpenses.length,
         },
+        formattedMessage,
       });
     }
 
@@ -576,12 +614,15 @@ router.post('/test-notifications', async (req, res) => {
         pending: pendingExpenses.length,
         alreadyPaid: dueExpenses.length - pendingExpenses.length,
         totalAmount: totalAmount,
+        totalAmountFormatted: `R$ ${totalAmount.toFixed(2).replace('.', ',')}`,
       },
       expenses: expensesList,
       summary: {
         byTruck: Object.keys(expensesByTruck).length,
         other: otherExpenses.length,
       },
+      dateFormatted: dateStr,
+      formattedMessage,
     });
 
   } catch (error) {
