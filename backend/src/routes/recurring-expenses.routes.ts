@@ -402,9 +402,16 @@ router.post('/test-notifications', async (req, res) => {
       });
     }
 
+    // Normalizar para meia-noite (00:00:00) para comparação de datas sem horário
+    testDate.setHours(0, 0, 0, 0);
+
     const currentDay = testDate.getDate();
     const currentMonth = testDate.getMonth();
     const currentYear = testDate.getFullYear();
+
+    // Criar data de fim do dia (23:59:59) para comparações
+    const endOfTestDay = new Date(testDate);
+    endOfTestDay.setHours(23, 59, 59, 999);
 
     console.log(`[Test Notifications] Testing for date: ${targetDate} (day ${currentDay})`);
 
@@ -420,20 +427,28 @@ router.post('/test-notifications', async (req, res) => {
     console.log(`[Test Notifications] Total recurring expenses in DB: ${allRecurringExpenses.length}`);
     
     // Filtrar manualmente para debug
-    const debugInfo = allRecurringExpenses.map(re => ({
-      id: re.id,
-      description: re.description,
-      dueDay: re.dueDay,
-      status: re.status,
-      startDate: re.startDate,
-      endDate: re.endDate,
-      matches: {
-        status: re.status === 'ACTIVE',
-        dueDay: re.dueDay === currentDay,
-        startDate: re.startDate <= testDate,
-        endDate: !re.endDate || re.endDate >= testDate,
-      },
-    }));
+    const debugInfo = allRecurringExpenses.map(re => {
+      const startDateOnly = new Date(re.startDate);
+      startDateOnly.setHours(0, 0, 0, 0);
+      
+      const endDateOnly = re.endDate ? new Date(re.endDate) : null;
+      if (endDateOnly) endDateOnly.setHours(0, 0, 0, 0);
+
+      return {
+        id: re.id,
+        description: re.description,
+        dueDay: re.dueDay,
+        status: re.status,
+        startDate: re.startDate,
+        endDate: re.endDate,
+        matches: {
+          status: re.status === 'ACTIVE',
+          dueDay: re.dueDay === currentDay,
+          startDate: startDateOnly <= testDate,
+          endDate: !endDateOnly || endDateOnly >= testDate,
+        },
+      };
+    });
 
     // Buscar despesas recorrentes ativas que vencem no dia especificado
     const dueExpenses = await prisma.recurringExpense.findMany({
@@ -441,7 +456,7 @@ router.post('/test-notifications', async (req, res) => {
         status: 'ACTIVE',
         dueDay: currentDay,
         startDate: {
-          lte: testDate,
+          lte: endOfTestDay, // Usar fim do dia para incluir qualquer horário do dia
         },
         OR: [
           { endDate: null }, // Sem data de término
