@@ -483,4 +483,100 @@ router.post('/change-temporary-password', async (req: Request, res: Response) =>
   }
 });
 
+// POST /api/auth/refresh - Renovar token JWT
+router.post('/refresh', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ 
+        message: 'No token provided' 
+      });
+    }
+
+    // Verificar token atual (mesmo que expirado, para pegar os dados do usuário)
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, config.JWT_SECRET);
+    } catch (error) {
+      // Se o token expirou, tentar decodificar sem verificar (apenas para pegar o userId)
+      if (error instanceof jwt.TokenExpiredError) {
+        decoded = jwt.decode(token);
+      } else {
+        throw error;
+      }
+    }
+
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({ 
+        message: 'Token inválido' 
+      });
+    }
+
+    // Buscar usuário
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        login: true,
+        active: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'Usuário não encontrado' 
+      });
+    }
+
+    if (!user.active) {
+      return res.status(403).json({ 
+        message: 'Usuário desativado' 
+      });
+    }
+
+    // Gerar novo token
+    const jwtSecret: string = config.JWT_SECRET;
+    const jwtExpiry: string | number = config.JWT_EXPIRES_IN;
+    
+    // @ts-expect-error - JWT library type definitions issue with expiresIn
+    const newToken = jwt.sign(
+      {
+        userId: user.id,
+        login: user.login,
+        email: user.email,
+        role: user.role
+      },
+      jwtSecret,
+      { expiresIn: jwtExpiry }
+    );
+
+    console.log('✅ Token renovado para:', user.login);
+
+    res.json({
+      token: newToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        login: user.login,
+      },
+    });
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({ 
+        message: 'Token inválido' 
+      });
+    }
+    console.error('💥 Token refresh error:', error);
+    res.status(500).json({ 
+      message: 'Erro ao renovar token' 
+    });
+  }
+});
+
 export default router;
