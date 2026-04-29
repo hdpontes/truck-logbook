@@ -68,6 +68,7 @@ interface RecurringExpense {
   dueDay: number;
   description: string;
   status: string;
+  startDate: string;
   truck?: { id: string; plate: string; };
 }
 
@@ -234,8 +235,18 @@ export default function ExpensesAnalysisPage() {
     const now = new Date(selectedYear, selectedMonth + 1, 0);
     const daysInCurrentMonth = now.getDate();
     const scheduledThisMonth = recurringExpenses.filter((re: RecurringExpense) => {
-      // Verifica se o dia de vencimento está dentro do mês
-      return re.dueDay >= 1 && re.dueDay <= daysInCurrentMonth && re.status === 'ACTIVE';
+      // Verificar se o dia de vencimento está dentro do mês
+      if (re.dueDay < 1 || re.dueDay > daysInCurrentMonth || re.status !== 'ACTIVE') {
+        return false;
+      }
+      
+      // Verificar se a despesa recorrente já estava ativa no mês selecionado
+      const startDate = new Date(re.startDate);
+      const selectedMonthStart = new Date(selectedYear, selectedMonth, 1);
+      
+      // A despesa recorrente só deve aparecer se sua data de início for anterior ou igual ao mês selecionado
+      return startDate <= selectedMonthStart || 
+             (startDate.getFullYear() === selectedYear && startDate.getMonth() === selectedMonth);
     });
 
     // Verificar quais já foram pagas
@@ -394,6 +405,13 @@ export default function ExpensesAnalysisPage() {
       // Adicionar despesas recorrentes se caírem neste dia e ainda não foram pagas
       const recurringForDay = recurringExpenses.filter((re: RecurringExpense) => {
         if (re.dueDay !== day || re.status !== 'ACTIVE') return false;
+        
+        // Verificar se a despesa recorrente já estava ativa neste dia
+        const startDate = new Date(re.startDate);
+        const currentDay = new Date(selectedYear, selectedMonth, day);
+        
+        // A despesa só deve aparecer se foi criada antes ou no mesmo dia
+        if (startDate > currentDay) return false;
         
         // Verificar se já foi paga neste dia
         const alreadyPaid = expenses.some((e: Expense) => {
