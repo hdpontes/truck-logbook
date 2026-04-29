@@ -9,11 +9,49 @@ export const api = axios.create({
   },
 });
 
+// Função para verificar se o token está próximo de expirar
+const isTokenExpiringSoon = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000; // Converter para milliseconds
+    const now = Date.now();
+    const timeUntilExpiry = exp - now;
+    // Se faltar menos de 7 dias (604800000 ms) para expirar, renovar
+    return timeUntilExpiry < 7 * 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+};
+
+// Função para renovar o token
+const renewToken = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const response = await axios.post(`${API_URL}/api/auth/refresh`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      console.log('✅ Token renovado automaticamente');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao renovar token:', error);
+  }
+};
+
 // Interceptor para adicionar token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    
+    // Verificar se o token está próximo de expirar e renovar em background
+    if (isTokenExpiringSoon(token)) {
+      renewToken();
+    }
   }
   return config;
 });
@@ -23,9 +61,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Token expirado ou inválido
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // Evitar loop de redirecionamento
+      if (!window.location.pathname.includes('/login')) {
+        console.log('⚠️ Token expirado. Redirecionando para login...');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
