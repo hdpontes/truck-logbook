@@ -374,4 +374,169 @@ router.get('/calendar/:year/:month', async (req, res) => {
   }
 });
 
+// POST /api/recurring-expenses/test-notifications - Testar notificações para uma data específica
+router.post('/test-notifications', async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Apenas ADMIN e MANAGER podem testar notificações
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({ 
+        message: 'Apenas administradores e gerentes podem testar notificações' 
+      });
+    }
+
+    const { targetDate, dryRun = true } = req.body;
+
+    if (!targetDate) {
+      return res.status(400).json({
+        message: 'targetDate is required (format: YYYY-MM-DD)',
+      });
+    }
+
+    const testDate = new Date(targetDate);
+    
+    if (isNaN(testDate.getTime())) {
+      return res.status(400).json({
+        message: 'Invalid targetDate format. Use YYYY-MM-DD',
+      });
+    }
+
+    const currentDay = testDate.getDate();
+    const currentMonth = testDate.getMonth();
+    const currentYear = testDate.getFullYear();
+
+    console.log(`[Test Notifications] Testing for date: ${targetDate} (day ${currentDay})`);
+
+    // Buscar despesas recorrentes ativas que vencem no dia especificado
+    const dueExpenses = await prisma.recurringExpense.findMany({
+      where: {
+        status: 'ACTIVE',
+        dueDay: currentDay,
+        startDate: {
+          lte: testDate,
+        },
+        OR: [
+          { endDate: null }, // Sem data de término
+          { endDate: { gte: testDate } }, // Ou não terminou ainda
+        ],
+      },
+      include: {
+        truck: {
+          select: { id: true, plate: true, model: true, brand: true },
+        },
+      },
+    });
+
+    if (dueExpenses.length === 0) {
+      return res.json({
+        success: true,
+        targetDate,
+        dryRun,
+        message: 'No due expenses for this date',
+        stats: {
+          totalFound: 0,
+          pending: 0,
+          alreadyPaid: 0,
+        },
+        expenses: [],
+      });
+    }
+
+    // Verificar quais ainda não foram pagas no mês especificado
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+    const alreadyPaid = await prisma.expense.findMany({
+      where: {
+        recurringExpenseId: {
+          in: dueExpenses.map(e => e.id),
+        },
+        date: {
+          gte: firstDayOfMonth,
+          lte: lastDayOfMonth,
+        },
+        isPaid: true,
+      },
+      select: {
+        recurringExpenseId: true,
+      },
+    });
+
+    const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
+    const pendingExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
+
+    // Calcular total de despesas pendentes
+    const totalAmount = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+    // Agrupar por caminhão e outras despesas
+    const expensesByTruck: { [key: string]: typeof pendingExpenses } = {};
+    const otherExpenses: typeof pendingExpenses = [];
+
+    pendingExpenses.forEach(expense => {
+      if (expense.truckId) {
+        if (!expensesByTruck[expense.truckId]) {
+          expensesByTruck[expense.truckId] = [];
+        }
+        expensesByTruck[expense.truckId].push(expense);
+      } else {
+        otherExpenses.push(expense);
+      }
+    });
+
+    // Preparar lista de despesas para o webhook
+    const expensesList = pendingExpenses.map(e => ({
+      id: e.id,
+      description: e.description,
+      amount: e.amount,
+      type: e.type,
+      truck: e.truck ? {
+        plate: e.truck.plate,
+        model: e.truck.model,
+        brand: e.truck.brand,
+      } : null,
+      installment: e.totalInstallments ? `${e.paidInstallments + 1}/${e.totalInstallments}` : null,
+    }));
+
+    // Se não for dry run, enviar webhook
+    if (!dryRun && pendingExpenses.length > 0) {
+      await sendWebhook('recurring_expenses.due', {
+        date: testDate.toISOString(),
+        dueDay: currentDay,
+        totalExpenses: pendingExpenses.length,
+        totalAmount,
+        expenses: expensesList,
+        summary: {
+          byTruck: Object.keys(expensesByTruck).length,
+          other: otherExpenses.length,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      targetDate,
+      dryRun,
+      message: pendingExpenses.length === 0 
+        ? 'All expenses for this date are already paid' 
+        : `Found ${pendingExpenses.length} pending expense(s)`,
+      stats: {
+        totalFound: dueExpenses.length,
+        pending: pendingExpenses.length,
+        alreadyPaid: dueExpenses.length - pendingExpenses.length,
+        totalAmount: totalAmount,
+      },
+      expenses: expensesList,
+      summary: {
+        byTruck: Object.keys(expensesByTruck).length,
+        other: otherExpenses.length,
+      },
+    });
+
+  } catch (error) {
+    console.error('[Test Notifications] Error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
