@@ -67,21 +67,64 @@ export const startRecurringExpensesNotificationJob = () => {
       });
 
       const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
-      const pendingExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
+      const pendingRecurringExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
 
-      if (pendingExpenses.length === 0) {
+      // Buscar também despesas normais (não recorrentes) pendentes para hoje
+      const normalExpenses = await prisma.expense.findMany({
+        where: {
+          date: {
+            gte: today,
+            lte: endOfToday,
+          },
+          isPaid: false,
+        },
+        include: {
+          truck: {
+            select: { id: true, plate: true, model: true, brand: true },
+          },
+        },
+        orderBy: { date: 'asc' },
+      });
+
+      // Combinar despesas recorrentes e normais
+      const allPendingExpenses = [
+        ...pendingRecurringExpenses.map(e => ({
+          id: e.id,
+          description: e.description,
+          amount: e.amount,
+          type: e.type,
+          truck: e.truck,
+          truckId: e.truckId,
+          isRecurring: true,
+          totalInstallments: e.totalInstallments,
+          paidInstallments: e.paidInstallments,
+        })),
+        ...normalExpenses.map(e => ({
+          id: e.id,
+          description: e.description,
+          amount: e.amount,
+          type: e.type,
+          truck: e.truck,
+          truckId: e.truckId,
+          isRecurring: false,
+          totalInstallments: null,
+          paidInstallments: 0,
+        })),
+      ];
+
+      if (allPendingExpenses.length === 0) {
         console.log('[RecurringExpenses Job] All expenses for today are already paid');
         return;
       }
 
-      // Calcular total de despesas pendentes
-      const totalAmount = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
+      // Calcular total de TODAS as despesas pendentes (recorrentes + normais)
+      const totalAmount = allPendingExpenses.reduce((sum, e) => sum + e.amount, 0);
 
       // Agrupar por caminhão e outras despesas
-      const expensesByTruck: { [key: string]: typeof pendingExpenses } = {};
-      const otherExpenses: typeof pendingExpenses = [];
+      const expensesByTruck: { [key: string]: typeof allPendingExpenses } = {};
+      const otherExpenses: typeof allPendingExpenses = [];
 
-      pendingExpenses.forEach(expense => {
+      allPendingExpenses.forEach(expense => {
         if (expense.truckId) {
           if (!expensesByTruck[expense.truckId]) {
             expensesByTruck[expense.truckId] = [];
@@ -93,11 +136,12 @@ export const startRecurringExpensesNotificationJob = () => {
       });
 
       // Preparar lista de despesas para o webhook
-      const expensesList = pendingExpenses.map(e => ({
+      const expensesList = allPendingExpenses.map(e => ({
         id: e.id,
         description: e.description,
         amount: e.amount,
         type: e.type,
+        isRecurring: e.isRecurring,
         truck: e.truck ? {
           plate: e.truck.plate,
           model: e.truck.model,
@@ -110,10 +154,10 @@ export const startRecurringExpensesNotificationJob = () => {
       const dateStr = `${currentDay.toString().padStart(2, '0')}/${(currentMonth + 1).toString().padStart(2, '0')}/${currentYear}`;
 
       // Criar mensagem formatada pronta para envio
-      let formattedMessage = `🔔 *DESPESAS RECORRENTES VENCENDO HOJE (${dateStr})*\n\n`;
-      formattedMessage += `📋 *${pendingExpenses.length} despesa(s) pendente(s):*\n\n`;
+      let formattedMessage = `🔔 *DESPESAS PENDENTES PARA HOJE (${dateStr})*\n\n`;
+      formattedMessage += `📋 *${allPendingExpenses.length} despesa(s) pendente(s):*\n\n`;
 
-      pendingExpenses.forEach(expense => {
+      allPendingExpenses.forEach(expense => {
         let line = `• ${expense.description}`;
         
         if (expense.truck) {
@@ -125,14 +169,33 @@ export const startRecurringExpensesNotificationJob = () => {
         if (expense.totalInstallments) {
           line += ` (${expense.paidInstallments + 1}/${expense.totalInstallments})`;
         }
+
+        // Indicar se é recorrente
+        if (expense.isRecurring) {
+          line += ` 🔄`;
+        }
         
         formattedMessage += line + '\n';
       });
 
       formattedMessage += `\n💰 *Total: R$ ${totalAmount.toFixed(2).replace('.', ',')}*`;
 
+      // Separar por tipo
+      const recurringCount = allPendingExpenses.filter(e => e.isRecurring).length;
+      const normalCount = allPendingExpenses.filter(e => !e.isRecurring).length;
+
+      if (recurringCount > 0 || normalCount > 0) {
+        formattedMessage += `\n\n`;
+        if (recurringCount > 0) {
+          formattedMessage += `🔄 Recorrentes: ${recurringCount}\n`;
+        }
+        if (normalCount > 0) {
+          formattedMessage += `📝 Avulsas: ${normalCount}\n`;
+        }
+      }
+
       if (Object.keys(expensesByTruck).length > 0) {
-        formattedMessage += `\n\n🚛 Despesas de caminhões: ${Object.keys(expensesByTruck).length}`;
+        formattedMessage += `\n🚛 Despesas de caminhões: ${Object.keys(expensesByTruck).length}`;
       }
       if (otherExpenses.length > 0) {
         formattedMessage += `\n📦 Outras despesas: ${otherExpenses.length}`;
@@ -143,7 +206,9 @@ export const startRecurringExpensesNotificationJob = () => {
         date: today.toISOString(),
         dueDay: currentDay,
         dateFormatted: dateStr,
-        totalExpenses: pendingExpenses.length,
+        totalExpenses: allPendingExpenses.length,
+        recurringExpenses: pendingRecurringExpenses.length,
+        normalExpenses: normalExpenses.length,
         totalAmount,
         totalAmountFormatted: `R$ ${totalAmount.toFixed(2).replace('.', ',')}`,
         expenses: expensesList,
@@ -154,7 +219,7 @@ export const startRecurringExpensesNotificationJob = () => {
         formattedMessage,
       });
 
-      console.log(`[RecurringExpenses Job] Sent notification for ${pendingExpenses.length} due expenses (Total: R$ ${totalAmount.toFixed(2)})`);
+      console.log(`[RecurringExpenses Job] Sent notification for ${allPendingExpenses.length} due expenses (${pendingRecurringExpenses.length} recurring + ${normalExpenses.length} normal) - Total: R$ ${totalAmount.toFixed(2)}`);
 
     } catch (error) {
       console.error('[RecurringExpenses Job] Error checking due expenses:', error);
