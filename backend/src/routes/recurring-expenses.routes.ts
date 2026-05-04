@@ -515,16 +515,59 @@ router.post('/test-notifications', async (req, res) => {
     });
 
     const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
-    const pendingExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
+    const pendingRecurringExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
 
-    // Calcular total de despesas pendentes
-    const totalAmount = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
+    // Buscar também despesas normais (não recorrentes) pendentes para o mesmo dia
+    const normalExpenses = await prisma.expense.findMany({
+      where: {
+        date: {
+          gte: testDate,
+          lte: endOfTestDay,
+        },
+        isPaid: false,
+      },
+      include: {
+        truck: {
+          select: { id: true, plate: true, model: true, brand: true },
+        },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    // Combinar despesas recorrentes e normais
+    const allPendingExpenses = [
+      ...pendingRecurringExpenses.map(e => ({
+        id: e.id,
+        description: e.description,
+        amount: e.amount,
+        type: e.type,
+        truck: e.truck,
+        truckId: e.truckId,
+        isRecurring: true,
+        totalInstallments: e.totalInstallments,
+        paidInstallments: e.paidInstallments,
+      })),
+      ...normalExpenses.map(e => ({
+        id: e.id,
+        description: e.description,
+        amount: e.amount,
+        type: e.type,
+        truck: e.truck,
+        truckId: e.truckId,
+        isRecurring: false,
+        totalInstallments: null,
+        paidInstallments: 0,
+      })),
+    ];
+
+    // Calcular total de TODAS as despesas pendentes (recorrentes + normais)
+    const totalAmount = allPendingExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     // Agrupar por caminhão e outras despesas
-    const expensesByTruck: { [key: string]: typeof pendingExpenses } = {};
-    const otherExpenses: typeof pendingExpenses = [];
+    const expensesByTruck: { [key: string]: typeof allPendingExpenses } = {};
+    const otherExpenses: typeof allPendingExpenses = [];
 
-    pendingExpenses.forEach(expense => {
+    allPendingExpenses.forEach(expense => {
       if (expense.truckId) {
         if (!expensesByTruck[expense.truckId]) {
           expensesByTruck[expense.truckId] = [];
@@ -536,11 +579,12 @@ router.post('/test-notifications', async (req, res) => {
     });
 
     // Preparar lista de despesas para o webhook
-    const expensesList = pendingExpenses.map(e => ({
+    const expensesList = allPendingExpenses.map(e => ({
       id: e.id,
       description: e.description,
       amount: e.amount,
       type: e.type,
+      isRecurring: e.isRecurring,
       truck: e.truck ? {
         plate: e.truck.plate,
         model: e.truck.model,
@@ -554,11 +598,11 @@ router.post('/test-notifications', async (req, res) => {
 
     // Criar mensagem formatada pronta para envio
     let formattedMessage = '';
-    if (pendingExpenses.length > 0) {
-      formattedMessage = `🔔 *DESPESAS RECORRENTES VENCENDO HOJE (${dateStr})*\n\n`;
-      formattedMessage += `📋 *${pendingExpenses.length} despesa(s) pendente(s):*\n\n`;
+    if (allPendingExpenses.length > 0) {
+      formattedMessage = `🔔 *DESPESAS PENDENTES PARA HOJE (${dateStr})*\n\n`;
+      formattedMessage += `📋 *${allPendingExpenses.length} despesa(s) pendente(s):*\n\n`;
 
-      pendingExpenses.forEach(expense => {
+      allPendingExpenses.forEach(expense => {
         let line = `• ${expense.description}`;
         
         if (expense.truck) {
@@ -570,14 +614,33 @@ router.post('/test-notifications', async (req, res) => {
         if (expense.totalInstallments) {
           line += ` (${expense.paidInstallments + 1}/${expense.totalInstallments})`;
         }
+
+        // Indicar se é recorrente
+        if (expense.isRecurring) {
+          line += ` 🔄`;
+        }
         
         formattedMessage += line + '\n';
       });
 
       formattedMessage += `\n💰 *Total: R$ ${totalAmount.toFixed(2).replace('.', ',')}*`;
 
+      // Separar por tipo
+      const recurringCount = allPendingExpenses.filter(e => e.isRecurring).length;
+      const normalCount = allPendingExpenses.filter(e => !e.isRecurring).length;
+
+      if (recurringCount > 0 || normalCount > 0) {
+        formattedMessage += `\n\n`;
+        if (recurringCount > 0) {
+          formattedMessage += `🔄 Recorrentes: ${recurringCount}\n`;
+        }
+        if (normalCount > 0) {
+          formattedMessage += `📝 Avulsas: ${normalCount}\n`;
+        }
+      }
+
       if (Object.keys(expensesByTruck).length > 0) {
-        formattedMessage += `\n\n🚛 Despesas de caminhões: ${Object.keys(expensesByTruck).length}`;
+        formattedMessage += `\n🚛 Despesas de caminhões: ${Object.keys(expensesByTruck).length}`;
       }
       if (otherExpenses.length > 0) {
         formattedMessage += `\n📦 Outras despesas: ${otherExpenses.length}`;
@@ -585,12 +648,14 @@ router.post('/test-notifications', async (req, res) => {
     }
 
     // Se não for dry run, enviar webhook
-    if (!dryRun && pendingExpenses.length > 0) {
+    if (!dryRun && allPendingExpenses.length > 0) {
       await sendWebhook('recurring_expenses.due', {
         date: testDate.toISOString(),
         dueDay: currentDay,
         dateFormatted: dateStr,
-        totalExpenses: pendingExpenses.length,
+        totalExpenses: allPendingExpenses.length,
+        recurringExpenses: pendingRecurringExpenses.length,
+        normalExpenses: normalExpenses.length,
         totalAmount,
         totalAmountFormatted: `R$ ${totalAmount.toFixed(2).replace('.', ',')}`,
         expenses: expensesList,
@@ -606,13 +671,15 @@ router.post('/test-notifications', async (req, res) => {
       success: true,
       targetDate,
       dryRun,
-      message: pendingExpenses.length === 0 
+      message: allPendingExpenses.length === 0 
         ? 'All expenses for this date are already paid' 
-        : `Found ${pendingExpenses.length} pending expense(s)`,
+        : `Found ${allPendingExpenses.length} pending expense(s) (${pendingRecurringExpenses.length} recurring + ${normalExpenses.length} normal)`,
       stats: {
         totalFound: dueExpenses.length,
-        pending: pendingExpenses.length,
-        alreadyPaid: dueExpenses.length - pendingExpenses.length,
+        pending: allPendingExpenses.length,
+        recurringPending: pendingRecurringExpenses.length,
+        normalPending: normalExpenses.length,
+        alreadyPaid: dueExpenses.length - pendingRecurringExpenses.length,
         totalAmount: totalAmount,
         totalAmountFormatted: `R$ ${totalAmount.toFixed(2).replace('.', ',')}`,
       },
