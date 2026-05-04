@@ -470,52 +470,32 @@ router.post('/test-notifications', async (req, res) => {
       },
     });
 
-    if (dueExpenses.length === 0) {
-      return res.json({
-        success: true,
-        targetDate,
-        dryRun,
-        message: 'No due expenses for this date',
-        stats: {
-          totalFound: 0,
-          pending: 0,
-          alreadyPaid: 0,
-        },
-        expenses: [],
-        debug: {
-          searchCriteria: {
-            status: 'ACTIVE',
-            dueDay: currentDay,
-            startDate_lte: testDate.toISOString(),
-            endDate_gte_or_null: testDate.toISOString(),
+    // Verificar quais despesas recorrentes ainda não foram pagas no mês especificado
+    let pendingRecurringExpenses: any[] = [];
+    
+    if (dueExpenses.length > 0) {
+      const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+      const alreadyPaid = await prisma.expense.findMany({
+        where: {
+          recurringExpenseId: {
+            in: dueExpenses.map(e => e.id),
           },
-          allRecurringExpenses: debugInfo,
+          date: {
+            gte: firstDayOfMonth,
+            lte: lastDayOfMonth,
+          },
+          isPaid: true,
+        },
+        select: {
+          recurringExpenseId: true,
         },
       });
+
+      const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
+      pendingRecurringExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
     }
-
-    // Verificar quais ainda não foram pagas no mês especificado
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
-    const alreadyPaid = await prisma.expense.findMany({
-      where: {
-        recurringExpenseId: {
-          in: dueExpenses.map(e => e.id),
-        },
-        date: {
-          gte: firstDayOfMonth,
-          lte: lastDayOfMonth,
-        },
-        isPaid: true,
-      },
-      select: {
-        recurringExpenseId: true,
-      },
-    });
-
-    const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
-    const pendingRecurringExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
 
     // Buscar também despesas normais (não recorrentes) pendentes para o mesmo dia
     const normalExpenses = await prisma.expense.findMany({
@@ -533,6 +513,44 @@ router.post('/test-notifications', async (req, res) => {
       },
       orderBy: { date: 'asc' },
     });
+
+    // Se não há nenhuma despesa (recorrente ou normal), retornar early
+    if (pendingRecurringExpenses.length === 0 && normalExpenses.length === 0) {
+      return res.json({
+        success: true,
+        targetDate,
+        dryRun,
+        message: 'No due expenses for this date',
+        stats: {
+          totalFound: 0,
+          pending: 0,
+          recurringPending: 0,
+          normalPending: 0,
+          alreadyPaid: dueExpenses.length,
+          totalAmount: 0,
+          totalAmountFormatted: 'R$ 0,00',
+        },
+        expenses: [],
+        summary: {
+          byTruck: 0,
+          other: 0,
+        },
+        dateFormatted: `${currentDay.toString().padStart(2, '0')}/${(currentMonth + 1).toString().padStart(2, '0')}/${currentYear}`,
+        formattedMessage: '',
+        debug: {
+          searchCriteria: {
+            status: 'ACTIVE',
+            dueDay: currentDay,
+            startDate_lte: testDate.toISOString(),
+            endDate_gte_or_null: testDate.toISOString(),
+          },
+          allRecurringExpenses: debugInfo,
+          foundRecurring: dueExpenses.length,
+          pendingRecurring: pendingRecurringExpenses.length,
+          foundNormal: normalExpenses.length,
+        },
+      });
+    }
 
     // Combinar despesas recorrentes e normais
     const allPendingExpenses = [
