@@ -41,33 +41,32 @@ export const startRecurringExpensesNotificationJob = () => {
         },
       });
 
-      if (dueExpenses.length === 0) {
-        console.log('[RecurringExpenses Job] No due expenses for today');
-        return;
+      // Verificar quais despesas recorrentes ainda não foram pagas este mês
+      let pendingRecurringExpenses: any[] = [];
+      
+      if (dueExpenses.length > 0) {
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+        const alreadyPaid = await prisma.expense.findMany({
+          where: {
+            recurringExpenseId: {
+              in: dueExpenses.map(e => e.id),
+            },
+            date: {
+              gte: firstDayOfMonth,
+              lte: lastDayOfMonth,
+            },
+            isPaid: true,
+          },
+          select: {
+            recurringExpenseId: true,
+          },
+        });
+
+        const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
+        pendingRecurringExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
       }
-
-      // Verificar quais ainda não foram pagas este mês
-      const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
-      const alreadyPaid = await prisma.expense.findMany({
-        where: {
-          recurringExpenseId: {
-            in: dueExpenses.map(e => e.id),
-          },
-          date: {
-            gte: firstDayOfMonth,
-            lte: lastDayOfMonth,
-          },
-          isPaid: true,
-        },
-        select: {
-          recurringExpenseId: true,
-        },
-      });
-
-      const paidIds = new Set(alreadyPaid.map(e => e.recurringExpenseId));
-      const pendingRecurringExpenses = dueExpenses.filter(e => !paidIds.has(e.id));
 
       // Buscar também despesas normais (não recorrentes) pendentes para hoje
       const normalExpenses = await prisma.expense.findMany({
@@ -112,8 +111,10 @@ export const startRecurringExpensesNotificationJob = () => {
         })),
       ];
 
+      console.log(`[RecurringExpenses Job] Found ${pendingRecurringExpenses.length} recurring + ${normalExpenses.length} normal = ${allPendingExpenses.length} total pending expenses`);
+
       if (allPendingExpenses.length === 0) {
-        console.log('[RecurringExpenses Job] All expenses for today are already paid');
+        console.log('[RecurringExpenses Job] No pending expenses for today (checked recurring and normal expenses)');
         return;
       }
 
