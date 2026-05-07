@@ -1759,6 +1759,14 @@ router.put('/:id/confirm', async (req, res) => {
       notes,
     } = req.body;
 
+    console.log(`[Confirm Trip] Dados recebidos para confirmação:`, {
+      tripId: id,
+      startDate,
+      endDate,
+      truckId,
+      driverId,
+    });
+
     // Buscar viagem
     const trip = await prisma.trip.findUnique({
       where: { id },
@@ -1817,19 +1825,26 @@ router.put('/:id/confirm', async (req, res) => {
     // Função para criar data no horário local evitando problemas de timezone
     // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
     const parseLocalDate = (dateString: string) => {
+      console.log(`[Confirm parseLocalDate] Input: "${dateString}"`);
+      
       // Remover 'T' se existir e substituir por espaço
       const normalized = dateString.replace('T', ' ');
+      console.log(`[Confirm parseLocalDate] Normalized: "${normalized}"`);
       
       // Verificar se tem hora
       if (normalized.includes(' ')) {
         const [datePart, timePart] = normalized.split(' ');
         const [year, month, day] = datePart.split('-').map(Number);
         const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
-        return new Date(year, month - 1, day, hours, minutes, seconds, 0);
+        const result = new Date(year, month - 1, day, hours, minutes, seconds, 0);
+        console.log(`[Confirm parseLocalDate] Com hora - Result: ${result.toISOString()} (Local: ${result.toString()})`);
+        return result;
       } else {
         // Se não tem hora, usar meio-dia (12:00:00)
         const [year, month, day] = normalized.split('-').map(Number);
-        return new Date(year, month - 1, day, 12, 0, 0, 0);
+        const result = new Date(year, month - 1, day, 12, 0, 0, 0);
+        console.log(`[Confirm parseLocalDate] Sem hora - Result: ${result.toISOString()} (Local: ${result.toString()})`);
+        return result;
       }
     };
 
@@ -1857,6 +1872,15 @@ router.put('/:id/confirm', async (req, res) => {
         trailer: true,
         driver: true,
       },
+    });
+
+    console.log(`[Confirm Trip] Viagem atualizada no banco:`, {
+      id: updatedTrip.id,
+      tripCode: updatedTrip.tripCode,
+      startDate: updatedTrip.startDate,
+      startDateISO: updatedTrip.startDate.toISOString(),
+      endDate: updatedTrip.endDate,
+      endDateISO: updatedTrip.endDate?.toISOString(),
     });
 
     // Enviar webhook para cliente externo notificando confirmação
