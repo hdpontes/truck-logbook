@@ -179,31 +179,30 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
-    // Criar data tratando como UTC para evitar conversões de timezone
-    // O horário enviado será preservado literalmente
+    // Criar string ISO preservando o horário literal sem qualquer conversão
     // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
-    const parseLocalDate = (dateString: string) => {
+    const parseLocalDate = (dateString: string): Date => {
       console.log(`[parseLocalDate] Input: "${dateString}"`);
       
       // Remover 'T' se existir e substituir por espaço
-      const normalized = dateString.replace('T', ' ');
+      const normalized = dateString.replace('T', ' ').trim();
       console.log(`[parseLocalDate] Normalized: "${normalized}"`);
       
       // Verificar se tem hora
       if (normalized.includes(' ')) {
         const [datePart, timePart] = normalized.split(' ');
-        const [year, month, day] = datePart.split('-').map(Number);
-        const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
-        // Criar como UTC para preservar literalmente o horário informado
-        const result = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, 0));
-        console.log(`[parseLocalDate] Com hora - Result: ${result.toISOString()}`);
-        return result;
+        const [year, month, day] = datePart.split('-');
+        const [hours = '12', minutes = '00', seconds = '00'] = timePart.split(':');
+        // Construir string ISO manualmente preservando o horário literal
+        const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}.000Z`;
+        console.log(`[parseLocalDate] Com hora - ISO String: ${isoString}`);
+        return new Date(isoString);
       } else {
         // Se não tem hora, usar meio-dia (12:00:00)
-        const [year, month, day] = normalized.split('-').map(Number);
-        const result = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
-        console.log(`[parseLocalDate] Sem hora - Result: ${result.toISOString()}`);
-        return result;
+        const [year, month, day] = normalized.split('-');
+        const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00.000Z`;
+        console.log(`[parseLocalDate] Sem hora - ISO String: ${isoString}`);
+        return new Date(isoString);
       }
     };
 
