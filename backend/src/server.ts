@@ -76,8 +76,8 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/receivables', receivablesRoutes);
 app.use('/api/recurring-expenses', recurringExpensesRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/external', externalTripsRoutes); // Recebimento de viagens externas (deve vir ANTES de /api/external genérico)
 app.use('/api/external', externalRoutes);
-app.use('/api/external', externalTripsRoutes); // Recebimento de viagens externas
 console.log('✅ All routes mounted successfully');
 
 // 404 Handler
