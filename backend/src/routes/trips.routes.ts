@@ -402,7 +402,7 @@ router.post('/:id/start', async (req, res) => {
     // Verificar se o caminhão já tem uma viagem ativa (trecho IN_PROGRESS)
     const otherInProgressLeg = await prisma.tripLeg.findFirst({
       where: {
-        truckId: trip.truckId || undefined,
+        truckId: trip.truckId!,
         status: 'IN_PROGRESS',
         tripId: { not: trip.id },
       },
@@ -419,7 +419,7 @@ router.post('/:id/start', async (req, res) => {
     // Verificar se existe uma viagem pausada aguardando descarregamento (UNLOADING)
     const otherPausedUnloadingLeg = await prisma.tripLeg.findFirst({
       where: {
-        truckId: trip.truckId || undefined,
+        truckId: trip.truckId!,
         status: 'PAUSED',
         waitingType: 'UNLOADING',
         tripId: { not: trip.id },
@@ -489,9 +489,9 @@ router.post('/:id/start', async (req, res) => {
               type: 'REPOSICIONAMENTO',
               origin: pausedLeg.destination || pausedLeg.origin,
               destination: trip.origin,
-              truckId: trip.truckId || undefined,
+              truckId: trip.truckId!,
               trailerId: null, // Sem carreto no reposicionamento
-              driverId: trip.driverId || undefined,
+              driverId: trip.driverId!,
               startMileage: pausedLeg.endMileage || startMileage,
               status: 'IN_PROGRESS',
               startTime: new Date(),
@@ -513,9 +513,9 @@ router.post('/:id/start', async (req, res) => {
           type: 'NORMAL',
           origin: trip.origin,
           destination: trip.destination,
-          truckId: trip.truckId || undefined,
-          trailerId: trip.trailerId || undefined,
-          driverId: trip.driverId || undefined,
+          truckId: trip.truckId!,
+          trailerId: trip.trailerId,
+          driverId: trip.driverId!,
           startMileage: actualStartMileage,
           status: needsRepositioning ? 'PAUSED' : 'IN_PROGRESS', // Se há reposicionamento, pausar até completar
           startTime: new Date(),
@@ -537,7 +537,7 @@ router.post('/:id/start', async (req, res) => {
 
     transactionOperations.push(
       prisma.truck.update({
-        where: { id: trip.truckId || undefined },
+        where: { id: trip.truckId! },
         data: { status: 'IN_TRANSIT' },
       })
     );
@@ -851,7 +851,7 @@ router.post('/:id/resume', async (req, res) => {
     // Verificar se o caminhão participou de outras viagens desde o início da pausa
     const otherTripsInPeriod = await prisma.tripLeg.findFirst({
       where: {
-        truckId: trip.truckId || undefined,
+        truckId: trip.truckId!,
         tripId: { not: trip.id },
         startTime: {
           gte: pausedLeg.startTime,
@@ -1111,7 +1111,7 @@ router.post('/:id/finish', async (req, res) => {
         },
       }),
       prisma.truck.update({
-        where: { id: trip.truckId || undefined },
+        where: { id: trip.truckId! },
         data: { 
           status: 'GARAGE',
           // Atualizar quilometragem atual do caminhão se foi informada
