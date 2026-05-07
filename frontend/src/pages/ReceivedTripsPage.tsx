@@ -168,23 +168,26 @@ export default function ReceivedTripsPage() {
   };
 
   // Converter ISO string para formato datetime-local (YYYY-MM-DDTHH:mm)
+  // Usa UTC para preservar o horário literal sem conversão de timezone
   const toDateTimeLocal = (isoString: string | null | undefined): string => {
     if (!isoString) return '';
     const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  // Formatar data preservando o horário literal (sem conversão de timezone)
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
+      timeZone: 'UTC',
     }).format(date);
   };
 
