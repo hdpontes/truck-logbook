@@ -107,20 +107,23 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       orderBy: { endDate: 'desc' },
     });
 
-    const billingItems: BillingItem[] = trips.map((trip) => {
+    // Filtrar viagens com caminhão e motorista (excluir RECEIVED incompletas)
+    const validTrips = trips.filter(trip => trip.truck && trip.driver);
+
+    const billingItems: BillingItem[] = validTrips.map((trip) => {
       // Extrair primeiro nome do motorista
-      const firstName = trip.driver.name.split(' ')[0];
+      const firstName = trip.driver!.name.split(' ')[0];
 
       return {
         id: trip.id,
         type: 'RECEITA',
         date: trip.endDate!.toISOString(),
         tripCode: trip.tripCode || '-',
-        truck: trip.truck,
+        truck: trip.truck!,
         trailer: trip.trailer || null,
         driver: {
-          id: trip.driver.id,
-          name: trip.driver.name,
+          id: trip.driver!.id,
+          name: trip.driver!.name,
           firstName,
         },
         amount: trip.revenue,
