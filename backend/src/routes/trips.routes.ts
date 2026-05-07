@@ -1857,6 +1857,7 @@ router.put('/:id/confirm', async (req, res) => {
       } : null,
       driver: {
         name: updatedTrip.driver?.name,
+        cpf: updatedTrip.driver?.cpf,
         phone: updatedTrip.driver?.phone,
       },
       origin: updatedTrip.origin,
