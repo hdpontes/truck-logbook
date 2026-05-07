@@ -114,6 +114,9 @@ export const tripsAPI = {
   checkUpcoming: () => api.post('/trips/check-upcoming').then(res => res.data),
   sendReminder: (id: string) => api.post(`/trips/${id}/send-reminder`).then(res => res.data),
   sendMessage: (id: string, message: string) => api.post(`/trips/${id}/send-message`, { message }).then(res => res.data),
+  // Viagens Recebidas via API Externa
+  confirmTrip: (id: string, data: any) => api.put(`/trips/${id}/confirm`, data).then(res => res.data),
+  rejectTrip: (id: string, data: { rejectionReason: string }) => api.put(`/trips/${id}/reject`, data).then(res => res.data),
   // Trip Legs (Trechos)
   getLegs: (id: string) => api.get(`/trips/${id}/legs`).then(res => res.data),
   finishLeg: (tripId: string, legId: string, data: any) => api.post(`/trips/${tripId}/legs/${legId}/finish`, data).then(res => res.data),
