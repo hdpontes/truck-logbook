@@ -49,7 +49,15 @@ const getMenuItems = (userRole: string): MenuItem[] => {
   if (userRole === 'ADMIN') {
     return [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-      { icon: RouteIcon, label: 'Viagens', path: '/trips' },
+      { 
+        icon: RouteIcon, 
+        label: 'Viagens', 
+        path: '/trips',
+        submenu: [
+          { icon: RouteIcon, label: 'Todas as Viagens', path: '/trips' },
+          { icon: Clock, label: 'Viagens Recebidas', path: '/trips/received' },
+        ]
+      },
       { icon: Truck, label: 'Caminhões', path: '/trucks' },
       { icon: Truck, label: 'Carretas', path: '/trailers' },
       { icon: Receipt, label: 'Despesas', path: '/expenses-calendar' },
@@ -76,7 +84,15 @@ const getMenuItems = (userRole: string): MenuItem[] => {
   if (userRole === 'MANAGER') {
     return [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-      { icon: RouteIcon, label: 'Viagens', path: '/trips' },
+      { 
+        icon: RouteIcon, 
+        label: 'Viagens', 
+        path: '/trips',
+        submenu: [
+          { icon: RouteIcon, label: 'Todas as Viagens', path: '/trips' },
+          { icon: Clock, label: 'Viagens Recebidas', path: '/trips/received' },
+        ]
+      },
       { icon: Truck, label: 'Caminhões', path: '/trucks' },
       { icon: Truck, label: 'Carretas', path: '/trailers' },
       { icon: Receipt, label: 'Despesas', path: '/expenses-calendar' },
