@@ -1814,10 +1814,23 @@ router.put('/:id/confirm', async (req, res) => {
       }
     }
 
-    // Função para criar data no horário local (meio-dia) evitando problemas de timezone
+    // Função para criar data no horário local evitando problemas de timezone
+    // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
     const parseLocalDate = (dateString: string) => {
-      const [year, month, day] = dateString.split('-').map(Number);
-      return new Date(year, month - 1, day, 12, 0, 0, 0);
+      // Remover 'T' se existir e substituir por espaço
+      const normalized = dateString.replace('T', ' ');
+      
+      // Verificar se tem hora
+      if (normalized.includes(' ')) {
+        const [datePart, timePart] = normalized.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hours, minutes, seconds, 0);
+      } else {
+        // Se não tem hora, usar meio-dia (12:00:00)
+        const [year, month, day] = normalized.split('-').map(Number);
+        return new Date(year, month - 1, day, 12, 0, 0, 0);
+      }
     };
 
     // Atualizar viagem com todos os dados
@@ -1831,8 +1844,8 @@ router.put('/:id/confirm', async (req, res) => {
         destination: destination || trip.destination,
         // Se não enviar startDate mas a viagem era RECEIVED, manter a data original
         // Caso envie nova data, usar parseLocalDate para evitar problemas de timezone
-        startDate: startDate ? parseLocalDate(startDate.split('T')[0]) : trip.startDate,
-        endDate: endDate ? parseLocalDate(endDate.split('T')[0]) : trip.endDate,
+        startDate: startDate ? parseLocalDate(startDate) : trip.startDate,
+        endDate: endDate ? parseLocalDate(endDate) : trip.endDate,
         distance: distance !== undefined ? distance : trip.distance,
         revenue: revenue !== undefined ? revenue : trip.revenue,
         notes: notes || trip.notes,
