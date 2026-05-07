@@ -18,6 +18,7 @@ interface Client {
   state: string;
   phone?: string;
   email?: string;
+  apiUsername?: string;
   active?: boolean;
   createdAt: string;
 }
@@ -38,6 +39,8 @@ export default function ClientsPage() {
     state: '',
     phone: '',
     email: '',
+    apiUsername: '',
+    apiPassword: '',
   });
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -132,7 +135,7 @@ export default function ClientsPage() {
     }
   };
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = (client: any) => {
     setEditingClient(client);
     setFormData({
       name: client.name,
@@ -142,6 +145,8 @@ export default function ClientsPage() {
       state: client.state,
       phone: client.phone || '',
       email: client.email || '',
+      apiUsername: client.apiUsername || '',
+      apiPassword: '', // Não preencher senha por segurança
     });
     setShowModal(true);
   };
@@ -206,6 +211,8 @@ export default function ClientsPage() {
       state: '',
       phone: '',
       email: '',
+      apiUsername: '',
+      apiPassword: '',
     });
   };
 
@@ -263,6 +270,13 @@ export default function ClientsPage() {
                     )}
                     {client.email && (
                       <p className="text-sm text-gray-500">Email: {client.email}</p>
+                    )}
+                    {client.apiUsername && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          🔐 API Configurada
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -374,6 +388,46 @@ export default function ClientsPage() {
                       maxLength={2}
                       className="w-full px-3 py-2 border rounded-md"
                     />
+                  </div>
+                </div>
+
+                {/* Seção de Credenciais API Externa */}
+                <div className="border-t pt-6 mt-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <span>🔐</span> Credenciais de API Externa (Opcional)
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Configure usuário e senha para que este cliente possa enviar viagens via API externa.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Usuário da API</label>
+                      <input
+                        type="text"
+                        value={formData.apiUsername}
+                        onChange={(e) => setFormData({ ...formData, apiUsername: e.target.value })}
+                        placeholder="usuario_api"
+                        className="w-full px-3 py-2 border rounded-md"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Username único para autenticação Basic
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        {editingClient ? 'Nova Senha da API' : 'Senha da API'}
+                      </label>
+                      <input
+                        type="password"
+                        value={formData.apiPassword}
+                        onChange={(e) => setFormData({ ...formData, apiPassword: e.target.value })}
+                        placeholder={editingClient ? 'Deixe em branco para manter' : 'senha123'}
+                        className="w-full px-3 py-2 border rounded-md"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {editingClient ? 'Deixe vazio para não alterar' : 'Senha para autenticação Basic'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
