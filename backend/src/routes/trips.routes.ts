@@ -1920,36 +1920,30 @@ router.put('/:id/reject', async (req, res) => {
       });
     }
 
-    // Atualizar viagem com status REJECTED e motivo
-    const updatedTrip = await prisma.trip.update({
-      where: { id },
-      data: {
-        status: 'REJECTED',
-        rejectionReason: rejectionReason.trim(),
-      },
-      include: {
-        client: true,
-      },
-    });
-
-    // Enviar webhook para cliente externo notificando recusa
+    // Enviar webhook para cliente externo notificando recusa (antes de excluir)
     await sendWebhook('trip.rejected', {
-      tripId: updatedTrip.id,
-      tripCode: updatedTrip.tripCode,
+      tripId: trip.id,
+      tripCode: trip.tripCode,
       status: 'REJECTED',
-      rejectionReason: updatedTrip.rejectionReason,
+      rejectionReason: rejectionReason.trim(),
       client: {
-        cnpj: updatedTrip.client?.cnpj,
-        name: updatedTrip.client?.name,
+        cnpj: trip.client?.cnpj,
+        name: trip.client?.name,
       },
       rejectedAt: new Date().toISOString(),
     });
 
-    console.log(`[Trip Rejected] ${updatedTrip.tripCode} - Motivo: ${rejectionReason}`);
+    console.log(`[Trip Rejected] ${trip.tripCode} - Motivo: ${rejectionReason}`);
+
+    // Excluir viagem do banco de dados (permite reenvio)
+    await prisma.trip.delete({
+      where: { id },
+    });
 
     res.json({
-      message: 'Viagem recusada com sucesso',
-      trip: updatedTrip,
+      message: 'Viagem recusada e removida do sistema com sucesso',
+      tripCode: trip.tripCode,
+      rejectionReason: rejectionReason.trim(),
     });
   } catch (error) {
     console.error('Error rejecting trip:', error);
