@@ -1714,4 +1714,229 @@ router.post('/check-upcoming', async (req, res) => {
   }
 });
 
+// PUT /api/trips/:id/confirm - Confirmar viagem recebida via API
+router.put('/:id/confirm', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+
+    // Apenas ADMIN e MANAGER podem confirmar viagens
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({
+        message: 'Apenas administradores e gerentes podem confirmar viagens',
+      });
+    }
+
+    const {
+      truckId,
+      trailerId,
+      driverId,
+      origin,
+      destination,
+      startDate,
+      endDate,
+      distance,
+      revenue,
+      notes,
+    } = req.body;
+
+    // Buscar viagem
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        client: true,
+      },
+    });
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Viagem não encontrada' });
+    }
+
+    if (trip.status !== 'RECEIVED') {
+      return res.status(400).json({
+        message: 'Apenas viagens com status RECEIVED podem ser confirmadas',
+        currentStatus: trip.status,
+      });
+    }
+
+    // Validar campos obrigatórios
+    if (!truckId || !driverId) {
+      return res.status(400).json({
+        message: 'Caminhão e motorista são obrigatórios para confirmar a viagem',
+      });
+    }
+
+    // Verificar se truck existe
+    const truck = await prisma.truck.findUnique({
+      where: { id: truckId },
+    });
+
+    if (!truck) {
+      return res.status(404).json({ message: 'Caminhão não encontrado' });
+    }
+
+    // Verificar se driver existe
+    const driver = await prisma.user.findUnique({
+      where: { id: driverId },
+    });
+
+    if (!driver) {
+      return res.status(404).json({ message: 'Motorista não encontrado' });
+    }
+
+    // Verificar trailer se fornecido
+    if (trailerId) {
+      const trailer = await prisma.trailer.findUnique({
+        where: { id: trailerId },
+      });
+
+      if (!trailer) {
+        return res.status(404).json({ message: 'Carreta não encontrada' });
+      }
+    }
+
+    // Atualizar viagem com todos os dados
+    const updatedTrip = await prisma.trip.update({
+      where: { id },
+      data: {
+        truckId,
+        trailerId: trailerId || null,
+        driverId,
+        origin: origin || trip.origin,
+        destination: destination || trip.destination,
+        startDate: startDate ? new Date(startDate) : trip.startDate,
+        endDate: endDate ? new Date(endDate) : trip.endDate,
+        distance: distance !== undefined ? distance : trip.distance,
+        revenue: revenue !== undefined ? revenue : trip.revenue,
+        notes: notes || trip.notes,
+        status: 'PLANNED', // Muda para PLANNED após confirmação
+      },
+      include: {
+        client: true,
+        truck: true,
+        trailer: true,
+        driver: true,
+      },
+    });
+
+    // Enviar webhook para cliente externo notificando confirmação
+    await sendWebhook('trip.confirmed', {
+      tripId: updatedTrip.id,
+      tripCode: updatedTrip.tripCode,
+      status: 'CONFIRMED',
+      client: {
+        cnpj: updatedTrip.client?.cnpj,
+        name: updatedTrip.client?.name,
+      },
+      truck: {
+        plate: updatedTrip.truck?.plate,
+        model: updatedTrip.truck?.model,
+      },
+      trailer: updatedTrip.trailer ? {
+        plate: updatedTrip.trailer.plate,
+        model: updatedTrip.trailer.model,
+      } : null,
+      driver: {
+        name: updatedTrip.driver?.name,
+        phone: updatedTrip.driver?.phone,
+      },
+      origin: updatedTrip.origin,
+      destination: updatedTrip.destination,
+      startDate: updatedTrip.startDate,
+      endDate: updatedTrip.endDate,
+      distance: updatedTrip.distance,
+      revenue: updatedTrip.revenue,
+      confirmedAt: new Date().toISOString(),
+    });
+
+    console.log(`[Trip Confirmed] ${updatedTrip.tripCode} - Cliente: ${updatedTrip.client?.name}`);
+
+    res.json({
+      message: 'Viagem confirmada com sucesso',
+      trip: updatedTrip,
+    });
+  } catch (error) {
+    console.error('Error confirming trip:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// PUT /api/trips/:id/reject - Recusar viagem recebida via API
+router.put('/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+
+    // Apenas ADMIN e MANAGER podem recusar viagens
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({
+        message: 'Apenas administradores e gerentes podem recusar viagens',
+      });
+    }
+
+    const { rejectionReason } = req.body;
+
+    if (!rejectionReason || rejectionReason.trim() === '') {
+      return res.status(400).json({
+        message: 'Motivo da recusa é obrigatório',
+      });
+    }
+
+    // Buscar viagem
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        client: true,
+      },
+    });
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Viagem não encontrada' });
+    }
+
+    if (trip.status !== 'RECEIVED') {
+      return res.status(400).json({
+        message: 'Apenas viagens com status RECEIVED podem ser recusadas',
+        currentStatus: trip.status,
+      });
+    }
+
+    // Atualizar viagem com status REJECTED e motivo
+    const updatedTrip = await prisma.trip.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        rejectionReason: rejectionReason.trim(),
+      },
+      include: {
+        client: true,
+      },
+    });
+
+    // Enviar webhook para cliente externo notificando recusa
+    await sendWebhook('trip.rejected', {
+      tripId: updatedTrip.id,
+      tripCode: updatedTrip.tripCode,
+      status: 'REJECTED',
+      rejectionReason: updatedTrip.rejectionReason,
+      client: {
+        cnpj: updatedTrip.client?.cnpj,
+        name: updatedTrip.client?.name,
+      },
+      rejectedAt: new Date().toISOString(),
+    });
+
+    console.log(`[Trip Rejected] ${updatedTrip.tripCode} - Motivo: ${rejectionReason}`);
+
+    res.json({
+      message: 'Viagem recusada com sucesso',
+      trip: updatedTrip,
+    });
+  } catch (error) {
+    console.error('Error rejecting trip:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
+
