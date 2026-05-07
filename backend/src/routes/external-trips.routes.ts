@@ -106,6 +106,13 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       value,
     } = req.body;
 
+    console.log(`[External API] Dados recebidos:`, {
+      tripCode,
+      tripDate,
+      startDate,
+      endDate,
+    });
+
     // Validar campos obrigatórios
     if (!clientCnpj || !clientName || !tripCode || !tripDate) {
       return res.status(400).json({
@@ -175,19 +182,26 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
     // Criar data no horário local para evitar problemas de timezone
     // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
     const parseLocalDate = (dateString: string) => {
+      console.log(`[parseLocalDate] Input: "${dateString}"`);
+      
       // Remover 'T' se existir e substituir por espaço
       const normalized = dateString.replace('T', ' ');
+      console.log(`[parseLocalDate] Normalized: "${normalized}"`);
       
       // Verificar se tem hora
       if (normalized.includes(' ')) {
         const [datePart, timePart] = normalized.split(' ');
         const [year, month, day] = datePart.split('-').map(Number);
         const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
-        return new Date(year, month - 1, day, hours, minutes, seconds, 0);
+        const result = new Date(year, month - 1, day, hours, minutes, seconds, 0);
+        console.log(`[parseLocalDate] Com hora - Result: ${result.toISOString()} (Local: ${result.toString()})`);
+        return result;
       } else {
         // Se não tem hora, usar meio-dia (12:00:00)
         const [year, month, day] = normalized.split('-').map(Number);
-        return new Date(year, month - 1, day, 12, 0, 0, 0);
+        const result = new Date(year, month - 1, day, 12, 0, 0, 0);
+        console.log(`[parseLocalDate] Sem hora - Result: ${result.toISOString()} (Local: ${result.toString()})`);
+        return result;
       }
     };
 
@@ -211,6 +225,14 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         trailerId: null,
         driverId: null,
       },
+    });
+
+    console.log(`[External API] Viagem criada no banco:`, {
+      id: trip.id,
+      tripCode: trip.tripCode,
+      startDate: trip.startDate,
+      startDateISO: trip.startDate.toISOString(),
+      endDate: trip.endDate,
     });
 
     console.log(`[External API] Viagem recebida: ${tripCode} - Cliente: ${client.name}`);
