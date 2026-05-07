@@ -179,7 +179,8 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
-    // Criar data no horário local para evitar problemas de timezone
+    // Criar data tratando como UTC para evitar conversões de timezone
+    // O horário enviado será preservado literalmente
     // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
     const parseLocalDate = (dateString: string) => {
       console.log(`[parseLocalDate] Input: "${dateString}"`);
@@ -193,14 +194,15 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         const [datePart, timePart] = normalized.split(' ');
         const [year, month, day] = datePart.split('-').map(Number);
         const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
-        const result = new Date(year, month - 1, day, hours, minutes, seconds, 0);
-        console.log(`[parseLocalDate] Com hora - Result: ${result.toISOString()} (Local: ${result.toString()})`);
+        // Criar como UTC para preservar literalmente o horário informado
+        const result = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, 0));
+        console.log(`[parseLocalDate] Com hora - Result: ${result.toISOString()}`);
         return result;
       } else {
         // Se não tem hora, usar meio-dia (12:00:00)
         const [year, month, day] = normalized.split('-').map(Number);
-        const result = new Date(year, month - 1, day, 12, 0, 0, 0);
-        console.log(`[parseLocalDate] Sem hora - Result: ${result.toISOString()} (Local: ${result.toString()})`);
+        const result = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+        console.log(`[parseLocalDate] Sem hora - Result: ${result.toISOString()}`);
         return result;
       }
     };
