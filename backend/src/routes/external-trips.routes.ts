@@ -130,11 +130,17 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
-    // Verificar se é o mesmo cliente autenticado
-    if (authenticatedClient.cnpj !== cleanCnpj) {
+    // Verificar se é o mesmo cliente autenticado (limpar CNPJ do banco também)
+    const authenticatedClientCnpj = authenticatedClient.cnpj?.replace(/[^0-9]/g, '') || '';
+    
+    if (authenticatedClientCnpj !== cleanCnpj) {
       return res.status(403).json({
         success: false,
         message: 'CNPJ informado não corresponde às credenciais de autenticação',
+        debug: {
+          authenticated: authenticatedClientCnpj,
+          provided: cleanCnpj,
+        },
       });
     }
 
