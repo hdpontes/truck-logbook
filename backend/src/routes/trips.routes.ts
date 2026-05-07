@@ -1814,6 +1814,12 @@ router.put('/:id/confirm', async (req, res) => {
       }
     }
 
+    // Função para criar data no horário local (meio-dia) evitando problemas de timezone
+    const parseLocalDate = (dateString: string) => {
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day, 12, 0, 0, 0);
+    };
+
     // Atualizar viagem com todos os dados
     const updatedTrip = await prisma.trip.update({
       where: { id },
@@ -1824,9 +1830,9 @@ router.put('/:id/confirm', async (req, res) => {
         origin: origin || trip.origin,
         destination: destination || trip.destination,
         // Se não enviar startDate mas a viagem era RECEIVED, manter a data original
-        // Caso envie nova data, usar ela
-        startDate: startDate ? new Date(startDate) : trip.startDate,
-        endDate: endDate ? new Date(endDate) : trip.endDate,
+        // Caso envie nova data, usar parseLocalDate para evitar problemas de timezone
+        startDate: startDate ? parseLocalDate(startDate.split('T')[0]) : trip.startDate,
+        endDate: endDate ? parseLocalDate(endDate.split('T')[0]) : trip.endDate,
         distance: distance !== undefined ? distance : trip.distance,
         revenue: revenue !== undefined ? revenue : trip.revenue,
         notes: notes || trip.notes,
