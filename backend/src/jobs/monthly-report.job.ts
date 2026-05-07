@@ -163,15 +163,17 @@ export async function sendMonthlyReportManually(year: number, month: number) {
         tripsCount: trips.length,
         expensesCount: expenses.length,
       },
-      trips: trips.map(trip => ({
-        tripCode: trip.tripCode,
-        origin: trip.origin,
-        destination: trip.destination,
-        revenue: trip.revenue,
-        truck: trip.truck.plate,
-        driver: trip.driver.name,
-        endDate: trip.endDate,
-      })),
+      trips: trips
+        .filter(trip => trip.truck && trip.driver) // Filtrar viagens com caminhão e motorista
+        .map(trip => ({
+          tripCode: trip.tripCode,
+          origin: trip.origin,
+          destination: trip.destination,
+          revenue: trip.revenue,
+          truck: trip.truck!.plate,
+          driver: trip.driver!.name,
+          endDate: trip.endDate,
+        })),
       timestamp: new Date().toISOString(),
     };
 
