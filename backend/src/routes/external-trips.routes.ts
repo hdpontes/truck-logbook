@@ -144,18 +144,8 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
-    // Buscar cliente pelo CNPJ
-    const client = await prisma.client.findUnique({
-      where: { cnpj: cleanCnpj },
-    });
-
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cliente não cadastrado na base de dados. Por favor, contate o suporte.',
-        cnpj: cleanCnpj,
-      });
-    }
+    // Usar o cliente já autenticado (não precisa buscar novamente)
+    const client = authenticatedClient;
 
     if (!client.active) {
       return res.status(403).json({
