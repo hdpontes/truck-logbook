@@ -172,10 +172,23 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
-    // Criar data no horário local (meio-dia) para evitar problemas de timezone
+    // Criar data no horário local para evitar problemas de timezone
+    // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
     const parseLocalDate = (dateString: string) => {
-      const [year, month, day] = dateString.split('-').map(Number);
-      return new Date(year, month - 1, day, 12, 0, 0, 0);
+      // Remover 'T' se existir e substituir por espaço
+      const normalized = dateString.replace('T', ' ');
+      
+      // Verificar se tem hora
+      if (normalized.includes(' ')) {
+        const [datePart, timePart] = normalized.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
+        return new Date(year, month - 1, day, hours, minutes, seconds, 0);
+      } else {
+        // Se não tem hora, usar meio-dia (12:00:00)
+        const [year, month, day] = normalized.split('-').map(Number);
+        return new Date(year, month - 1, day, 12, 0, 0, 0);
+      }
     };
 
     // Criar viagem temporária (dados mínimos)
@@ -186,8 +199,8 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         tripCode,
         origin: origin || 'A definir',
         destination: destination || 'A definir',
-        startDate: startDate ? parseLocalDate(startDate.split('T')[0]) : parseLocalDate(tripDate),
-        endDate: endDate ? parseLocalDate(endDate.split('T')[0]) : null,
+        startDate: startDate ? parseLocalDate(startDate) : parseLocalDate(tripDate),
+        endDate: endDate ? parseLocalDate(endDate) : null,
         distance: distance || 0,
         revenue: revenue || 0,
         notes: notes || null,
