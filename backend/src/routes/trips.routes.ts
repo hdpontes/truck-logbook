@@ -1822,7 +1822,9 @@ router.put('/:id/confirm', async (req, res) => {
       }
     }
 
-    // Função para criar string ISO preservando o horário literal sem qualquer conversão
+    // Função para criar data ajustando para o fuso horário do Brasil (UTC-3)
+    // Quando o usuário envia "20:00", queremos "20:00 horário do Brasil"
+    // Que equivale a "23:00 UTC" (20:00 + 3h)
     // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
     const parseLocalDate = (dateString: string): Date => {
       console.log(`[Confirm parseLocalDate] Input: "${dateString}"`);
@@ -1831,21 +1833,24 @@ router.put('/:id/confirm', async (req, res) => {
       const normalized = dateString.replace('T', ' ').trim();
       console.log(`[Confirm parseLocalDate] Normalized: "${normalized}"`);
       
+      const BRAZIL_OFFSET_HOURS = 3; // UTC-3
+      
       // Verificar se tem hora
       if (normalized.includes(' ')) {
         const [datePart, timePart] = normalized.split(' ');
-        const [year, month, day] = datePart.split('-');
-        const [hours = '12', minutes = '00', seconds = '00'] = timePart.split(':');
-        // Construir string ISO manualmente preservando o horário literal
-        const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}.000Z`;
-        console.log(`[Confirm parseLocalDate] Com hora - ISO String: ${isoString}`);
-        return new Date(isoString);
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
+        // Adicionar offset do Brasil para converter hora local para UTC
+        const utcHours = hours + BRAZIL_OFFSET_HOURS;
+        const result = new Date(Date.UTC(year, month - 1, day, utcHours, minutes, seconds, 0));
+        console.log(`[Confirm parseLocalDate] Com hora - Hora local: ${hours}:${minutes}, UTC: ${result.toISOString()}`);
+        return result;
       } else {
-        // Se não tem hora, usar meio-dia (12:00:00)
-        const [year, month, day] = normalized.split('-');
-        const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00.000Z`;
-        console.log(`[Confirm parseLocalDate] Sem hora - ISO String: ${isoString}`);
-        return new Date(isoString);
+        // Se não tem hora, usar meio-dia (12:00:00) horário do Brasil = 15:00 UTC
+        const [year, month, day] = normalized.split('-').map(Number);
+        const result = new Date(Date.UTC(year, month - 1, day, 12 + BRAZIL_OFFSET_HOURS, 0, 0, 0));
+        console.log(`[Confirm parseLocalDate] Sem hora - UTC: ${result.toISOString()}`);
+        return result;
       }
     };
 
