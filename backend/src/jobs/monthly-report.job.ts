@@ -73,15 +73,17 @@ export function startMonthlyCronJob() {
           tripsCount: trips.length,
           expensesCount: expenses.length,
         },
-        trips: trips.map(trip => ({
-          tripCode: trip.tripCode,
-          origin: trip.origin,
-          destination: trip.destination,
-          revenue: trip.revenue,
-          truck: trip.truck.plate,
-          driver: trip.driver.name,
-          endDate: trip.endDate,
-        })),
+        trips: trips
+          .filter(trip => trip.truck && trip.driver) // Filtrar viagens com caminhão e motorista
+          .map(trip => ({
+            tripCode: trip.tripCode,
+            origin: trip.origin,
+            destination: trip.destination,
+            revenue: trip.revenue,
+            truck: trip.truck!.plate,
+            driver: trip.driver!.name,
+            endDate: trip.endDate,
+          })),
         topExpenses: expenses
           .sort((a, b) => b.amount - a.amount)
           .slice(0, 10)
