@@ -4,11 +4,8 @@ import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-// Todas as rotas requerem autenticação
-router.use(authenticate);
-
 // GET /api/external/cnpj/:cnpj - Consultar CNPJ na Receita Federal
-router.get('/cnpj/:cnpj', async (req, res) => {
+router.get('/cnpj/:cnpj', authenticate, async (req, res) => {
   try {
     const { cnpj } = req.params;
     
@@ -58,7 +55,7 @@ router.get('/cnpj/:cnpj', async (req, res) => {
 });
 
 // GET /api/external/cep/:cep - Consultar CEP
-router.get('/cep/:cep', async (req, res) => {
+router.get('/cep/:cep', authenticate, async (req, res) => {
   try {
     const { cep } = req.params;
     
