@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { tripsAPI, trucksAPI, trailersAPI, driversAPI } from '@/lib/api';
 import { Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth';
 import { useToast } from '@/contexts/ToastContext';
 
 interface ReceivedTrip {
@@ -43,7 +42,6 @@ interface Driver {
 }
 
 export default function ReceivedTripsPage() {
-  const { user } = useAuthStore();
   const toast = useToast();
   
   const [trips, setTrips] = useState<ReceivedTrip[]>([]);
@@ -400,8 +398,7 @@ export default function ReceivedTripsPage() {
               </Button>
               <Button
                 onClick={handleOpenReject}
-                variant="destructive"
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Recusar Viagem
@@ -454,8 +451,7 @@ export default function ReceivedTripsPage() {
               </Button>
               <Button
                 onClick={handleRejectTrip}
-                variant="destructive"
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Confirmar Recusa
