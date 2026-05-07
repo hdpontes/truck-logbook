@@ -1823,6 +1823,8 @@ router.put('/:id/confirm', async (req, res) => {
         driverId,
         origin: origin || trip.origin,
         destination: destination || trip.destination,
+        // Se não enviar startDate mas a viagem era RECEIVED, manter a data original
+        // Caso envie nova data, usar ela
         startDate: startDate ? new Date(startDate) : trip.startDate,
         endDate: endDate ? new Date(endDate) : trip.endDate,
         distance: distance !== undefined ? distance : trip.distance,
