@@ -114,8 +114,8 @@ export default function ReceivedTripsPage() {
       driverId: '',
       origin: trip.origin,
       destination: trip.destination,
-      startDate: trip.startDate?.split('T')[0] || '',
-      endDate: trip.endDate?.split('T')[0] || '',
+      startDate: toDateTimeLocal(trip.startDate),
+      endDate: toDateTimeLocal(trip.endDate),
       distance: trip.distance || 0,
       revenue: trip.revenue || 0,
       notes: trip.notes || '',
@@ -167,12 +167,24 @@ export default function ReceivedTripsPage() {
     }
   };
 
+  // Converter ISO string para formato datetime-local (YYYY-MM-DDTHH:mm)
+  const toDateTimeLocal = (isoString: string | null | undefined): string => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
       dateStyle: 'short',
-      timeZone: 'UTC',
+      timeStyle: 'short',
     }).format(date);
   };
 
@@ -334,9 +346,9 @@ export default function ReceivedTripsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data e Hora de Início</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={confirmData.startDate}
                     onChange={(e) => setConfirmData({ ...confirmData, startDate: e.target.value })}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -344,9 +356,9 @@ export default function ReceivedTripsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data e Hora de Término</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={confirmData.endDate}
                     onChange={(e) => setConfirmData({ ...confirmData, endDate: e.target.value })}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
