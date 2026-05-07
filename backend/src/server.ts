@@ -16,6 +16,7 @@ import settingsRoutes from './routes/settings.routes';
 import reportsRoutes from './routes/reports.routes';
 import billingRoutes from './routes/billing.routes';
 import externalRoutes from './routes/external.routes';
+import externalTripsRoutes from './routes/external-trips.routes';
 import receivablesRoutes from './routes/receivables.routes';
 import recurringExpensesRoutes from './routes/recurring-expenses.routes';
 import logsRoutes from './routes/logs.routes';
@@ -76,6 +77,7 @@ app.use('/api/receivables', receivablesRoutes);
 app.use('/api/recurring-expenses', recurringExpensesRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/external', externalRoutes);
+app.use('/api/external', externalTripsRoutes); // Recebimento de viagens externas
 console.log('✅ All routes mounted successfully');
 
 // 404 Handler
