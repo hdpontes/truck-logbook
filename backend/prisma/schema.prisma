@@ -87,12 +87,12 @@ model Trailer {
 
 model Trip {
   id           String    @id @default(uuid())
-  truckId      String
-  truck        Truck     @relation(fields: [truckId], references: [id])
+  truckId      String?   // Opcional para viagens RECEIVED
+  truck        Truck?    @relation(fields: [truckId], references: [id])
   trailerId    String?
   trailer      Trailer?  @relation(fields: [trailerId], references: [id])
-  driverId     String
-  driver       User      @relation(fields: [driverId], references: [id])
+  driverId     String?   // Opcional para viagens RECEIVED
+  driver       User?     @relation(fields: [driverId], references: [id])
   clientId     String?
   client       Client?   @relation(fields: [clientId], references: [id])
   
@@ -119,6 +119,9 @@ model Trip {
   
   // Observações
   notes        String?
+  
+  // Motivo de recusa (para viagens recebidas via API)
+  rejectionReason String?
   
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -209,10 +212,12 @@ enum TripLegStatus {
 
 enum TripStatus {
   PLANNED
+  RECEIVED    // Nova viagem recebida via API externa aguardando confirmação
   IN_PROGRESS
   COMPLETED
   CANCELLED
-  DELAYED // Em atraso
+  DELAYED     // Em atraso
+  REJECTED    // Viagem recebida mas recusada
 }
 
 model Expense {
@@ -437,6 +442,11 @@ model Client {
   phone     String?
   email     String?
   active    Boolean  @default(true)
+  
+  // Credenciais para API externa enviar viagens
+  apiUsername String?  @unique
+  apiPassword String?  // Hash da senha
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
