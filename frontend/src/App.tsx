@@ -14,6 +14,7 @@ import TripsPage from './pages/TripsPage';
 import TripFormPage from './pages/TripFormPage';
 import TripEditPage from './pages/TripEditPage';
 import TripDetailPage from './pages/TripDetailPage';
+import ReceivedTripsPage from './pages/ReceivedTripsPage';
 import ExpensesPage from './pages/ExpensesPage';
 import ExpenseFormPage from './pages/ExpenseFormPage';
 import ExpensesCalendarPage from './pages/ExpensesCalendarPage';
@@ -90,6 +91,7 @@ function App() {
             <Route path="trailers/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TrailerFormPage /></RoleRoute>} />
             <Route path="trailers/:id/edit" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TrailerFormPage /></RoleRoute>} />
             <Route path="trips" element={<TripsPage />} />
+            <Route path="trips/received" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><ReceivedTripsPage /></RoleRoute>} />
             <Route path="trips/new" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TripFormPage /></RoleRoute>} />
             <Route path="trips/:id" element={<TripDetailPage />} />
             <Route path="trips/:id/edit" element={<RoleRoute allowedRoles={['ADMIN', 'MANAGER']}><TripEditPage /></RoleRoute>} />
