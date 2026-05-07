@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { convertToCSV, parseCSV } from '../utils/csv';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
@@ -43,14 +44,28 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/clients - Criar novo cliente
+// POST /api/clients - Criar novo cliente
 router.post('/', async (req, res) => {
   try {
-    const { name, cnpj, address, city, state, phone, email } = req.body;
+    const { name, cnpj, address, city, state, phone, email, apiUsername, apiPassword } = req.body;
 
     if (!name || !cnpj || !address || !city || !state) {
       return res.status(400).json({ 
         message: 'Name, CNPJ, address, city and state are required' 
       });
+    }
+
+    // Se forneceu apiUsername, senha também é obrigatória
+    if (apiUsername && !apiPassword) {
+      return res.status(400).json({
+        message: 'API Password é obrigatório quando API Username é fornecido',
+      });
+    }
+
+    // Hash da senha se fornecida
+    let hashedPassword = null;
+    if (apiPassword) {
+      hashedPassword = await bcrypt.hash(apiPassword, 10);
     }
 
     const client = await prisma.client.create({
@@ -62,10 +77,15 @@ router.post('/', async (req, res) => {
         state,
         phone,
         email,
+        apiUsername: apiUsername || null,
+        apiPassword: hashedPassword,
       },
     });
 
-    res.status(201).json(client);
+    // Remover senha do retorno
+    const { apiPassword: _, ...clientWithoutPassword } = client;
+
+    res.status(201).json(clientWithoutPassword);
   } catch (error) {
     console.error('Error creating client:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -76,22 +96,38 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, cnpj, address, city, state, phone, email } = req.body;
+    const { name, cnpj, address, city, state, phone, email, apiUsername, apiPassword } = req.body;
+
+    // Preparar dados para atualização
+    const updateData: any = {
+      name,
+      cnpj,
+      address,
+      city,
+      state,
+      phone,
+      email,
+    };
+
+    // Atualizar apiUsername se fornecido
+    if (apiUsername !== undefined) {
+      updateData.apiUsername = apiUsername || null;
+    }
+
+    // Se forneceu nova senha, fazer hash
+    if (apiPassword) {
+      updateData.apiPassword = await bcrypt.hash(apiPassword, 10);
+    }
 
     const client = await prisma.client.update({
       where: { id },
-      data: {
-        name,
-        cnpj,
-        address,
-        city,
-        state,
-        phone,
-        email,
-      },
+      data: updateData,
     });
 
-    res.json(client);
+    // Remover senha do retorno
+    const { apiPassword: _, ...clientWithoutPassword } = client;
+
+    res.json(clientWithoutPassword);
   } catch (error) {
     console.error('Error updating client:', error);
     res.status(500).json({ message: 'Internal server error' });
