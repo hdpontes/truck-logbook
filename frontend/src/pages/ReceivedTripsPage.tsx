@@ -82,7 +82,7 @@ export default function ReceivedTripsPage() {
     try {
       setLoading(true);
       const response = await tripsAPI.getAll({ status: 'RECEIVED' });
-      setTrips(response.data);
+      setTrips(response);
     } catch (error) {
       toast.error('Erro ao carregar viagens recebidas');
       console.error(error);
@@ -98,9 +98,9 @@ export default function ReceivedTripsPage() {
         trailersAPI.getAll(),
         driversAPI.getAll(),
       ]);
-      setTrucks(trucksRes.data);
-      setTrailers(trailersRes.data);
-      setDrivers(driversRes.data);
+      setTrucks(trucksRes);
+      setTrailers(trailersRes);
+      setDrivers(driversRes);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
