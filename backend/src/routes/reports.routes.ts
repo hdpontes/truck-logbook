@@ -124,8 +124,8 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           cost: trip.totalCost,
           profit: trip.profit,
           isTrip: true,
-          truck: trip.truck,
-          driver: trip.driver,
+          truck: trip.truck || undefined,
+          driver: trip.driver || undefined,
           client: trip.client || undefined,
         });
       });
@@ -291,8 +291,8 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
           amount: expense.amount,
           isTrip: false,
           expenseType: expense.type,
-          truck: expense.truck || expense.trip?.truck,
-          driver: expense.trip?.driver,
+          truck: (expense.truck || expense.trip?.truck) || undefined,
+          driver: expense.trip?.driver || undefined,
           client: expense.client || undefined,
         });
       });
