@@ -172,6 +172,12 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
+    // Criar data no horário local (meio-dia) para evitar problemas de timezone
+    const parseLocalDate = (dateString: string) => {
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day, 12, 0, 0, 0);
+    };
+
     // Criar viagem temporária (dados mínimos)
     // Truck, driver e trailer serão preenchidos na confirmação
     const trip = await prisma.trip.create({
@@ -180,7 +186,7 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         tripCode,
         origin: origin || 'A definir',
         destination: destination || 'A definir',
-        startDate: startDate ? new Date(startDate) : new Date(tripDate),
+        startDate: startDate ? new Date(startDate) : parseLocalDate(tripDate),
         endDate: endDate ? new Date(endDate) : null,
         distance: distance || 0,
         revenue: revenue || 0,
