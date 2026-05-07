@@ -392,10 +392,17 @@ router.post('/:id/start', async (req, res) => {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
+    // Verificar se a viagem tem caminhão e motorista atribuídos
+    if (!trip.truck || !trip.driver) {
+      return res.status(400).json({ 
+        message: 'A viagem deve ter caminhão e motorista atribuídos antes de iniciar' 
+      });
+    }
+
     // Verificar se o caminhão já tem uma viagem ativa (trecho IN_PROGRESS)
     const otherInProgressLeg = await prisma.tripLeg.findFirst({
       where: {
-        truckId: trip.truckId,
+        truckId: trip.truckId || undefined,
         status: 'IN_PROGRESS',
         tripId: { not: trip.id },
       },
@@ -412,7 +419,7 @@ router.post('/:id/start', async (req, res) => {
     // Verificar se existe uma viagem pausada aguardando descarregamento (UNLOADING)
     const otherPausedUnloadingLeg = await prisma.tripLeg.findFirst({
       where: {
-        truckId: trip.truckId,
+        truckId: trip.truckId || undefined,
         status: 'PAUSED',
         waitingType: 'UNLOADING',
         tripId: { not: trip.id },
@@ -482,9 +489,9 @@ router.post('/:id/start', async (req, res) => {
               type: 'REPOSICIONAMENTO',
               origin: pausedLeg.destination || pausedLeg.origin,
               destination: trip.origin,
-              truckId: trip.truckId,
+              truckId: trip.truckId || undefined,
               trailerId: null, // Sem carreto no reposicionamento
-              driverId: trip.driverId,
+              driverId: trip.driverId || undefined,
               startMileage: pausedLeg.endMileage || startMileage,
               status: 'IN_PROGRESS',
               startTime: new Date(),
@@ -506,9 +513,9 @@ router.post('/:id/start', async (req, res) => {
           type: 'NORMAL',
           origin: trip.origin,
           destination: trip.destination,
-          truckId: trip.truckId,
-          trailerId: trip.trailerId,
-          driverId: trip.driverId,
+          truckId: trip.truckId || undefined,
+          trailerId: trip.trailerId || undefined,
+          driverId: trip.driverId || undefined,
           startMileage: actualStartMileage,
           status: needsRepositioning ? 'PAUSED' : 'IN_PROGRESS', // Se há reposicionamento, pausar até completar
           startTime: new Date(),
@@ -530,7 +537,7 @@ router.post('/:id/start', async (req, res) => {
 
     transactionOperations.push(
       prisma.truck.update({
-        where: { id: trip.truckId },
+        where: { id: trip.truckId || undefined },
         data: { status: 'IN_TRANSIT' },
       })
     );
@@ -844,7 +851,7 @@ router.post('/:id/resume', async (req, res) => {
     // Verificar se o caminhão participou de outras viagens desde o início da pausa
     const otherTripsInPeriod = await prisma.tripLeg.findFirst({
       where: {
-        truckId: trip.truckId,
+        truckId: trip.truckId || undefined,
         tripId: { not: trip.id },
         startTime: {
           gte: pausedLeg.startTime,
@@ -916,7 +923,7 @@ router.post('/:id/resume', async (req, res) => {
     ];
 
     // Atualizar quilometragem do caminhão se mudou
-    if (finalMileage !== trip.truck.currentMileage) {
+    if (trip.truck && finalMileage !== trip.truck.currentMileage) {
       transactionOperations.push(
         prisma.truck.update({
           where: { id: pausedLeg.truckId },
@@ -1056,7 +1063,7 @@ router.post('/:id/finish', async (req, res) => {
     let estimatedFuelCost = 0;
     let litersConsumed = 0;
     
-    if (finalDistance > 0 && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
+    if (trip.truck && finalDistance > 0 && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
       // Buscar preço do diesel nas configurações
       const settings = await prisma.settings.findFirst();
       const dieselPrice = settings?.dieselPrice || 0;
@@ -1104,7 +1111,7 @@ router.post('/:id/finish', async (req, res) => {
         },
       }),
       prisma.truck.update({
-        where: { id: trip.truckId },
+        where: { id: trip.truckId || undefined },
         data: { 
           status: 'GARAGE',
           // Atualizar quilometragem atual do caminhão se foi informada
@@ -1360,45 +1367,48 @@ router.put('/:id', async (req, res) => {
     }
 
     // Enviar webhook de viagem atualizada (como se fosse nova viagem agendada)
-    await sendWebhook('trip.scheduled', {
-      trip: {
-        id: trip.id,
-        tripCode: trip.tripCode,
-        origin: trip.origin,
-        destination: trip.destination,
-        startDate: trip.startDate,
-        revenue: trip.revenue,
-        updated: true, // Flag indicando que é uma atualização
-      },
-      truck: {
-        id: truck.id,
-        plate: truck.plate,
-        model: truck.model,
-        brand: truck.brand,
-      },
-      trailer: trailer ? {
-        id: trailer.id,
-        plate: trailer.plate,
-        model: trailer.model,
-        brand: trailer.brand,
-      } : null,
-      driver: {
-        id: driver.id,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-      },
-      client: trip.client ? {
-        clientId: trip.client.id,
-        name: trip.client.name,
-        cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
-      } : null,
-      updatedBy: {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-      },
-    });
+    // Apenas enviar se tiver caminhão e motorista atribuídos
+    if (truck && driver) {
+      await sendWebhook('trip.scheduled', {
+        trip: {
+          id: trip.id,
+          tripCode: trip.tripCode,
+          origin: trip.origin,
+          destination: trip.destination,
+          startDate: trip.startDate,
+          revenue: trip.revenue,
+          updated: true, // Flag indicando que é uma atualização
+        },
+        truck: {
+          id: truck.id,
+          plate: truck.plate,
+          model: truck.model,
+          brand: truck.brand,
+        },
+        trailer: trailer ? {
+          id: trailer.id,
+          plate: trailer.plate,
+          model: trailer.model,
+          brand: trailer.brand,
+        } : null,
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          email: driver.email,
+          phone: driver.phone,
+        },
+        client: trip.client ? {
+          clientId: trip.client.id,
+          name: trip.client.name,
+          cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
+        } : null,
+        updatedBy: {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+        },
+      });
+    }
 
     res.json(trip);
   } catch (error: any) {
@@ -1486,7 +1496,7 @@ router.post('/:id/send-reminder', async (req, res) => {
     });
 
     if (!trip) {
-      return res.status(404).json({ message: 'Trip not found' });
+      return res.status(404).json({ message: 'Viagem não encontrada' });
     }
 
     // Enviar webhook de lembrete
@@ -1500,16 +1510,16 @@ router.post('/:id/send-reminder', async (req, res) => {
         revenue: trip.revenue,
       },
       truck: {
-        id: trip.truck.id,
-        plate: trip.truck.plate,
-        model: trip.truck.model,
-        brand: trip.truck.brand,
+        id: trip.truck!.id,
+        plate: trip.truck!.plate,
+        model: trip.truck!.model,
+        brand: trip.truck!.brand,
       },
       driver: {
-        id: trip.driver.id,
-        name: trip.driver.name,
-        email: trip.driver.email,
-        phone: trip.driver.phone,
+        id: trip.driver!.id,
+        name: trip.driver!.name,
+        email: trip.driver!.email,
+        phone: trip.driver!.phone,
       },
       sentBy: {
         id: user.id,
@@ -1522,7 +1532,7 @@ router.post('/:id/send-reminder', async (req, res) => {
       message: 'Lembrete enviado com sucesso',
       trip: {
         id: trip.id,
-        driver: trip.driver.name,
+        driver: trip.driver!.name,
       },
     });
   } catch (error) {
@@ -1555,7 +1565,14 @@ router.post('/:id/send-message', async (req, res) => {
       },
     });
 
-    if (!trip) return res.status(404).json({ message: 'Trip not found' });
+    if (!trip) return res.status(404).json({ message: 'Viagem não encontrada' });
+
+    // Verificar se a viagem tem caminhão e motorista
+    if (!trip.truck || !trip.driver) {
+      return res.status(400).json({ 
+        message: 'A viagem deve ter caminhão e motorista atribuídos' 
+      });
+    }
 
     // Enviar webhook com o evento trip.message
     await sendWebhook('trip.message', {
@@ -1568,16 +1585,16 @@ router.post('/:id/send-message', async (req, res) => {
         revenue: trip.revenue,
       },
       truck: {
-        id: trip.truck.id,
-        plate: trip.truck.plate,
-        model: trip.truck.model,
-        brand: trip.truck.brand,
+        id: trip.truck!.id,
+        plate: trip.truck!.plate,
+        model: trip.truck!.model,
+        brand: trip.truck!.brand,
       },
       driver: {
-        id: trip.driver.id,
-        name: trip.driver.name,
-        email: trip.driver.email,
-        phone: trip.driver.phone,
+        id: trip.driver!.id,
+        name: trip.driver!.name,
+        email: trip.driver!.email,
+        phone: trip.driver!.phone,
       },
       message: message.trim(),
       sentBy: {
@@ -1632,7 +1649,7 @@ router.post('/check-delayed', async (req, res) => {
           },
         });
 
-        if (tripWithDetails) {
+        if (tripWithDetails && tripWithDetails.truck && tripWithDetails.driver) {
           await sendWebhook('trip.delayed', {
             trip: {
               id: tripWithDetails.id,
@@ -1685,23 +1702,25 @@ router.post('/check-upcoming', async (req, res) => {
 
     // Enviar webhook para cada viagem próxima
     for (const trip of upcomingTrips) {
-      await sendWebhook('trip.upcoming', {
-        trip: {
-          id: trip.id,
-          origin: trip.origin,
-          destination: trip.destination,
-          startDate: trip.startDate,
-        },
-        truck: {
-          plate: trip.truck.plate,
-          model: trip.truck.model,
-        },
-        driver: {
-          name: trip.driver.name,
-          phone: trip.driver.phone,
-          email: trip.driver.email,
-        },
-      });
+      if (trip.truck && trip.driver) {
+        await sendWebhook('trip.upcoming', {
+          trip: {
+            id: trip.id,
+            origin: trip.origin,
+            destination: trip.destination,
+            startDate: trip.startDate,
+          },
+          truck: {
+            plate: trip.truck.plate,
+            model: trip.truck.model,
+          },
+          driver: {
+            name: trip.driver.name,
+            phone: trip.driver.phone,
+            email: trip.driver.email,
+          },
+        });
+      }
     }
 
     res.json({ 
