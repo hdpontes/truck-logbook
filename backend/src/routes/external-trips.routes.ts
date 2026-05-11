@@ -258,18 +258,22 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       // Limpar CPF (remover caracteres especiais)
       const cleanCpf = driverCpf.replace(/[^0-9]/g, '');
       
+      // Tentar buscar com CPF limpo OU com CPF formatado
       const driver = await prisma.user.findFirst({
         where: {
-          cpf: cleanCpf,
+          OR: [
+            { cpf: cleanCpf },
+            { cpf: driverCpf },
+          ],
           role: 'DRIVER',
         },
       });
 
       if (driver) {
         driverId = driver.id;
-        console.log(`[External API] Motorista encontrado: ${driver.name} - CPF: ${cleanCpf} (${driver.id})`);
+        console.log(`[External API] Motorista encontrado: ${driver.name} - CPF: ${driver.cpf} (${driver.id})`);
       } else {
-        console.log(`[External API] Motorista não encontrado com CPF: ${cleanCpf}`);
+        console.log(`[External API] Motorista não encontrado com CPF: ${driverCpf} (limpo: ${cleanCpf})`);
       }
     }
 
