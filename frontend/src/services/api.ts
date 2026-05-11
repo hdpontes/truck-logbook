@@ -118,6 +118,7 @@ export const tripsAPI = {
   confirmTrip: (id: string, data: any) => api.put(`/trips/${id}/confirm`, data).then(res => res.data),
   rejectTrip: (id: string, data: { rejectionReason: string }) => api.put(`/trips/${id}/reject`, data).then(res => res.data),
   completeRetroactive: (id: string, data: any) => api.post(`/trips/${id}/complete-retroactive`, data).then(res => res.data),
+  requestSync: (data: any) => api.post('/trips/request-sync', data).then(res => res.data),
   // Trip Legs (Trechos)
   getLegs: (id: string) => api.get(`/trips/${id}/legs`).then(res => res.data),
   finishLeg: (tripId: string, legId: string, data: any) => api.post(`/trips/${tripId}/legs/${legId}/finish`, data).then(res => res.data),
