@@ -1980,6 +1980,71 @@ router.post('/check-upcoming', async (req, res) => {
   }
 });
 
+// POST /api/trips/request-sync - Solicitar sincronização de viagens do cliente
+router.post('/request-sync', async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const { clientId, clientName, clientCnpj, syncDate } = req.body;
+
+    // Apenas ADMIN e MANAGER podem solicitar sincronização
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({
+        message: 'Apenas administradores e gerentes podem solicitar sincronização',
+      });
+    }
+
+    if (!clientId || !syncDate) {
+      return res.status(400).json({
+        message: 'Cliente e data são obrigatórios',
+      });
+    }
+
+    // Buscar dados completos do cliente
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!client) {
+      return res.status(404).json({
+        message: 'Cliente não encontrado',
+      });
+    }
+
+    // Enviar webhook de sincronização
+    await sendWebhook('trip.synchronize', {
+      client: {
+        id: client.id,
+        name: client.name,
+        cnpj: client.cnpj,
+        email: client.email,
+      },
+      syncDate: syncDate,
+      requestedBy: {
+        id: user.userId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      requestedAt: new Date().toISOString(),
+    });
+
+    console.log(`[Sync Request] Sincronização solicitada para cliente ${client.name} a partir de ${syncDate}`);
+
+    res.json({
+      success: true,
+      message: 'Solicitação de sincronização enviada com sucesso',
+      client: {
+        name: client.name,
+        cnpj: client.cnpj,
+      },
+      syncDate,
+    });
+  } catch (error) {
+    console.error('Error requesting sync:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // PUT /api/trips/:id/confirm - Confirmar viagem recebida via API
 router.put('/:id/confirm', async (req, res) => {
   try {
