@@ -98,6 +98,18 @@ export default function TripsPage() {
   const [clientFilter, setClientFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
   const [tripCodeFilter, setTripCodeFilter] = useState('');
+
+  // Estados para modal de conclusão retroativa
+  const [showCompleteRetroactiveModal, setShowCompleteRetroactiveModal] = useState(false);
+  const [tripToCompleteRetroactive, setTripToCompleteRetroactive] = useState<Trip | null>(null);
+  const [completeRetroactiveData, setCompleteRetroactiveData] = useState({
+    endDate: new Date().toISOString().split('T')[0],
+    endMileage: '',
+    distance: '',
+    fuelExpenses: [] as Array<{ description: string; amount: string; date: string }>,
+    tollExpenses: [] as Array<{ description: string; amount: string; date: string }>,
+    otherExpenses: [] as Array<{ description: string; amount: string; date: string; type: string }>,
+  });
   
   // Estados para importação CSV
   const [showImportModal, setShowImportModal] = useState(false);
@@ -912,6 +924,63 @@ export default function TripsPage() {
     }
   };
 
+  // Função para concluir viagem agendada retroativamente
+  const handleCompleteRetroactive = async () => {
+    if (!tripToCompleteRetroactive) return;
+
+    // Validações básicas
+    if (!completeRetroactiveData.endDate) {
+      toast.error('Informe a data de conclusão');
+      return;
+    }
+
+    if (!completeRetroactiveData.distance || parseFloat(completeRetroactiveData.distance) <= 0) {
+      toast.error('Informe a distância percorrida');
+      return;
+    }
+
+    try {
+      const payload = {
+        endDate: completeRetroactiveData.endDate,
+        endMileage: completeRetroactiveData.endMileage ? parseFloat(completeRetroactiveData.endMileage) : undefined,
+        distance: parseFloat(completeRetroactiveData.distance),
+        fuelExpenses: completeRetroactiveData.fuelExpenses.filter(e => e.amount && parseFloat(e.amount) > 0).map(e => ({
+          description: e.description || 'Combustível',
+          amount: parseFloat(e.amount),
+          date: e.date || completeRetroactiveData.endDate,
+        })),
+        tollExpenses: completeRetroactiveData.tollExpenses.filter(e => e.amount && parseFloat(e.amount) > 0).map(e => ({
+          description: e.description || 'Pedágio',
+          amount: parseFloat(e.amount),
+          date: e.date || completeRetroactiveData.endDate,
+        })),
+        otherExpenses: completeRetroactiveData.otherExpenses.filter(e => e.amount && parseFloat(e.amount) > 0).map(e => ({
+          type: e.type || 'OTHER',
+          description: e.description || 'Outras despesas',
+          amount: parseFloat(e.amount),
+          date: e.date || completeRetroactiveData.endDate,
+        })),
+      };
+
+      await tripsAPI.completeRetroactive(tripToCompleteRetroactive.id, payload);
+      toast.success('Viagem concluída com sucesso!');
+      setShowCompleteRetroactiveModal(false);
+      setTripToCompleteRetroactive(null);
+      setCompleteRetroactiveData({
+        endDate: new Date().toISOString().split('T')[0],
+        endMileage: '',
+        distance: '',
+        fuelExpenses: [],
+        tollExpenses: [],
+        otherExpenses: [],
+      });
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao concluir viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao concluir viagem');
+    }
+  };
+
   // Separate trips by status for Kanban columns
   const plannedTrips = trips.filter(trip => trip.status === 'PLANNED' || trip.status === 'DELAYED');
   const inProgressTrips = trips.filter(trip => trip.status === 'IN_PROGRESS');
@@ -1245,6 +1314,25 @@ export default function TripsPage() {
                             >
                               <Edit className="w-3 h-3 mr-1" />
                               Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setTripToCompleteRetroactive(trip);
+                                setCompleteRetroactiveData({
+                                  endDate: new Date().toISOString().split('T')[0],
+                                  endMileage: '',
+                                  distance: trip.distance ? trip.distance.toString() : '',
+                                  fuelExpenses: [],
+                                  tollExpenses: [],
+                                  otherExpenses: [],
+                                });
+                                setShowCompleteRetroactiveModal(true);
+                              }}
+                              className="flex-1 min-w-[90px] text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Concluir
                             </Button>
                             <Button
                               size="sm"
@@ -2072,6 +2160,318 @@ export default function TripsPage() {
                 <Play className="w-4 h-4 mr-2" />
                 Continuar Viagem
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* Modal de Conclusão Retroativa */}
+    {showCompleteRetroactiveModal && tripToCompleteRetroactive && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <Card className="w-full max-w-4xl my-8">
+          <CardHeader>
+            <CardTitle className="text-purple-600">Concluir Viagem</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Informações da Viagem */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="font-medium mb-2">{tripToCompleteRetroactive.origin} → {tripToCompleteRetroactive.destination}</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-600">
+                  <p>Código: <span className="font-medium">{tripToCompleteRetroactive.tripCode || '-'}</span></p>
+                  <p>Caminhão: <span className="font-medium uppercase">{tripToCompleteRetroactive.truck.plate}</span></p>
+                  <p>Motorista: <span className="font-medium">{tripToCompleteRetroactive.driver.name}</span></p>
+                </div>
+              </div>
+
+              {/* Dados de Conclusão */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data de Conclusão *</label>
+                  <input
+                    type="date"
+                    value={completeRetroactiveData.endDate}
+                    onChange={(e) => setCompleteRetroactiveData({ ...completeRetroactiveData, endDate: e.target.value })}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quilometragem Final</label>
+                  <input
+                    type="number"
+                    value={completeRetroactiveData.endMileage}
+                    onChange={(e) => setCompleteRetroactiveData({ ...completeRetroactiveData, endMileage: e.target.value })}
+                    placeholder="Ex: 125000"
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Distância (KM) *</label>
+                  <input
+                    type="number"
+                    value={completeRetroactiveData.distance}
+                    onChange={(e) => setCompleteRetroactiveData({ ...completeRetroactiveData, distance: e.target.value })}
+                    placeholder="Ex: 430"
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Despesas de Combustível */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Despesas de Combustível</label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCompleteRetroactiveData({
+                      ...completeRetroactiveData,
+                      fuelExpenses: [...completeRetroactiveData.fuelExpenses, { description: '', amount: '', date: completeRetroactiveData.endDate }]
+                    })}
+                    className="text-xs"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+                {completeRetroactiveData.fuelExpenses.map((expense, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="Descrição"
+                      value={expense.description}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.fuelExpenses];
+                        newExpenses[index].description = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, fuelExpenses: newExpenses });
+                      }}
+                      className="col-span-5 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Valor (R$)"
+                      value={expense.amount}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.fuelExpenses];
+                        newExpenses[index].amount = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, fuelExpenses: newExpenses });
+                      }}
+                      className="col-span-3 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={expense.date}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.fuelExpenses];
+                        newExpenses[index].date = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, fuelExpenses: newExpenses });
+                      }}
+                      className="col-span-3 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCompleteRetroactiveData({
+                        ...completeRetroactiveData,
+                        fuelExpenses: completeRetroactiveData.fuelExpenses.filter((_, i) => i !== index)
+                      })}
+                      className="col-span-1 text-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Despesas de Pedágio */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Despesas de Pedágio</label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCompleteRetroactiveData({
+                      ...completeRetroactiveData,
+                      tollExpenses: [...completeRetroactiveData.tollExpenses, { description: '', amount: '', date: completeRetroactiveData.endDate }]
+                    })}
+                    className="text-xs"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+                {completeRetroactiveData.tollExpenses.map((expense, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="Descrição"
+                      value={expense.description}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.tollExpenses];
+                        newExpenses[index].description = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, tollExpenses: newExpenses });
+                      }}
+                      className="col-span-5 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Valor (R$)"
+                      value={expense.amount}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.tollExpenses];
+                        newExpenses[index].amount = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, tollExpenses: newExpenses });
+                      }}
+                      className="col-span-3 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={expense.date}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.tollExpenses];
+                        newExpenses[index].date = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, tollExpenses: newExpenses });
+                      }}
+                      className="col-span-3 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCompleteRetroactiveData({
+                        ...completeRetroactiveData,
+                        tollExpenses: completeRetroactiveData.tollExpenses.filter((_, i) => i !== index)
+                      })}
+                      className="col-span-1 text-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Outras Despesas */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Outras Despesas</label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCompleteRetroactiveData({
+                      ...completeRetroactiveData,
+                      otherExpenses: [...completeRetroactiveData.otherExpenses, { description: '', amount: '', date: completeRetroactiveData.endDate, type: 'OTHER' }]
+                    })}
+                    className="text-xs"
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+                {completeRetroactiveData.otherExpenses.map((expense, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                    <select
+                      value={expense.type}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.otherExpenses];
+                        newExpenses[index].type = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, otherExpenses: newExpenses });
+                      }}
+                      className="col-span-2 p-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      <option value="OTHER">Outro</option>
+                      <option value="MAINTENANCE">Manutenção</option>
+                      <option value="TIRE">Pneu</option>
+                      <option value="FOOD">Alimentação</option>
+                      <option value="PARKING">Estacionamento</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Descrição"
+                      value={expense.description}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.otherExpenses];
+                        newExpenses[index].description = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, otherExpenses: newExpenses });
+                      }}
+                      className="col-span-4 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Valor (R$)"
+                      value={expense.amount}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.otherExpenses];
+                        newExpenses[index].amount = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, otherExpenses: newExpenses });
+                      }}
+                      className="col-span-2 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={expense.date}
+                      onChange={(e) => {
+                        const newExpenses = [...completeRetroactiveData.otherExpenses];
+                        newExpenses[index].date = e.target.value;
+                        setCompleteRetroactiveData({ ...completeRetroactiveData, otherExpenses: newExpenses });
+                      }}
+                      className="col-span-3 p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCompleteRetroactiveData({
+                        ...completeRetroactiveData,
+                        otherExpenses: completeRetroactiveData.otherExpenses.filter((_, i) => i !== index)
+                      })}
+                      className="col-span-1 text-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Botões */}
+              <div className="flex justify-end gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCompleteRetroactiveModal(false);
+                    setTripToCompleteRetroactive(null);
+                    setCompleteRetroactiveData({
+                      endDate: new Date().toISOString().split('T')[0],
+                      endMileage: '',
+                      distance: '',
+                      fuelExpenses: [],
+                      tollExpenses: [],
+                      otherExpenses: [],
+                    });
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCompleteRetroactive}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Concluir Viagem
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
