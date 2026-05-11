@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { tripsAPI, driversAPI, clientsAPI, expensesAPI, trailersAPI, trucksAPI } from '@/lib/api';
-import { Plus, Eye, Edit, Trash2, MapPin, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package, Download, Upload, FileDown } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, MapPin, Filter, Search, Clock, Play, CheckCircle, DollarSign, Package, Download, Upload, FileDown, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
