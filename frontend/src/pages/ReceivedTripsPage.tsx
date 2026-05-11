@@ -284,6 +284,7 @@ export default function ReceivedTripsPage() {
     return new Intl.DateTimeFormat('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
+      timeZone: 'UTC', // Forçar UTC para exibir a hora correta (backend já aplica offset do Brasil)
     }).format(date);
   };
 
