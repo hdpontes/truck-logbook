@@ -127,6 +127,8 @@ export default function TripsPage() {
   // Estados para modal de viagem retroativa
   const [showRetroactiveModal, setShowRetroactiveModal] = useState(false);
   const [trucks, setTrucks] = useState<any[]>([]);
+  const [tripCodeExists, setTripCodeExists] = useState(false);
+  const [checkingTripCode, setCheckingTripCode] = useState(false);
   const [retroactiveData, setRetroactiveData] = useState({
     truckId: '',
     trailerId: '',
@@ -833,8 +835,50 @@ export default function TripsPage() {
     setRetroactiveData({ ...retroactiveData, expenses: newExpenses });
   };
 
+  // Verificar se o código da viagem já existe
+  const checkTripCode = async (tripCode: string) => {
+    if (!tripCode || tripCode.trim() === '') {
+      setTripCodeExists(false);
+      return;
+    }
+
+    try {
+      setCheckingTripCode(true);
+      const response = await tripsAPI.checkTripCode(tripCode.trim());
+      setTripCodeExists(response.exists);
+      
+      if (response.exists) {
+        toast.error(`Código "${tripCode}" já existe em outra viagem`);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar código da viagem:', error);
+    } finally {
+      setCheckingTripCode(false);
+    }
+  };
+
+  // Função para tratar mudança no código da viagem com debounce
+  const handleTripCodeChange = (tripCode: string) => {
+    setRetroactiveData({...retroactiveData, tripCode});
+    
+    // Debounce: aguardar 500ms antes de verificar
+    if ((window as any).tripCodeTimeout) {
+      clearTimeout((window as any).tripCodeTimeout);
+    }
+    
+    (window as any).tripCodeTimeout = setTimeout(() => {
+      checkTripCode(tripCode);
+    }, 500);
+  };
+
   const handleSubmitRetroactive = async () => {
     try {
+      // Verificar se o código da viagem já existe
+      if (tripCodeExists) {
+        toast.error('Não é possível criar viagem com código duplicado');
+        return;
+      }
+
       // Validações
       if (!retroactiveData.truckId || !retroactiveData.driverId || !retroactiveData.origin || 
           !retroactiveData.destination || !retroactiveData.startDate || !retroactiveData.startTime ||
@@ -901,6 +945,8 @@ export default function TripsPage() {
 
       toast.success('Viagem retroativa criada com sucesso!');
       setShowRetroactiveModal(false);
+      setTripCodeExists(false);
+      setCheckingTripCode(false);
       setRetroactiveData({
         truckId: '',
         trailerId: '',
@@ -2660,7 +2706,11 @@ export default function TripsPage() {
             <button
               type="button"
               className="text-gray-400 hover:text-gray-700 text-xl font-bold"
-              onClick={() => setShowRetroactiveModal(false)}
+              onClick={() => {
+                setShowRetroactiveModal(false);
+                setTripCodeExists(false);
+                setCheckingTripCode(false);
+              }}
             >
               ×
             </button>
@@ -2734,14 +2784,33 @@ export default function TripsPage() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Código da Viagem (Opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Código da Viagem (Opcional)
+                      {checkingTripCode && <span className="ml-2 text-xs text-gray-500">Verificando...</span>}
+                    </label>
                     <input
                       type="text"
                       value={retroactiveData.tripCode}
-                      onChange={e => setRetroactiveData({...retroactiveData, tripCode: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      onChange={e => handleTripCodeChange(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        tripCodeExists ? 'border-red-500 bg-red-50' : 
+                        retroactiveData.tripCode && !checkingTripCode && !tripCodeExists ? 'border-green-500 bg-green-50' :
+                        'border-gray-300'
+                      }`}
                       placeholder="Ex: VIAGEM-2024-001"
                     />
+                    {tripCodeExists && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center">
+                        <XCircle className="w-3 h-3 mr-1" />
+                        Este código já está em uso
+                      </p>
+                    )}
+                    {retroactiveData.tripCode && !checkingTripCode && !tripCodeExists && (
+                      <p className="text-xs text-green-600 mt-1 flex items-center">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Código disponível
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2959,6 +3028,8 @@ export default function TripsPage() {
                   variant="outline"
                   onClick={() => {
                     setShowRetroactiveModal(false);
+                    setTripCodeExists(false);
+                    setCheckingTripCode(false);
                     setRetroactiveData({
                       truckId: '',
                       trailerId: '',
