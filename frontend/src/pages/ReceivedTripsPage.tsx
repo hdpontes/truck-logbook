@@ -113,6 +113,47 @@ export default function ReceivedTripsPage() {
     }
   };
 
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      const response = await tripsAPI.getAll({ status: 'RECEIVED' });
+      setAllTrips(response);
+      
+      // Reaplicar filtros após atualizar os dados
+      let filtered = [...response];
+
+      if (tripCodeFilter) {
+        filtered = filtered.filter(trip => 
+          trip.tripCode?.toLowerCase().includes(tripCodeFilter.toLowerCase())
+        );
+      }
+
+      if (clientFilter) {
+        filtered = filtered.filter(trip => trip.client?.id === clientFilter);
+      }
+
+      if (startDateFilter) {
+        filtered = filtered.filter(trip => {
+          const tripDate = new Date(trip.startDate);
+          const tripDateOnly = new Date(Date.UTC(tripDate.getUTCFullYear(), tripDate.getUTCMonth(), tripDate.getUTCDate()));
+          
+          const filterDate = new Date(startDateFilter);
+          const filterDateOnly = new Date(Date.UTC(filterDate.getUTCFullYear(), filterDate.getUTCMonth(), filterDate.getUTCDate()));
+          
+          return tripDateOnly.getTime() === filterDateOnly.getTime();
+        });
+      }
+
+      setTrips(filtered);
+      toast.success('Lista atualizada com sucesso');
+    } catch (error) {
+      toast.error('Erro ao atualizar viagens');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchDropdownData = async () => {
     try {
       const [trucksRes, trailersRes, driversRes, clientsRes] = await Promise.all([
@@ -297,6 +338,15 @@ export default function ReceivedTripsPage() {
           <p className="text-gray-600 mt-1">Viagens enviadas por sistemas externos aguardando confirmação</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
           <Button
             onClick={() => setShowFilters(!showFilters)}
             variant="outline"
