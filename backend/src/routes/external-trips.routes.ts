@@ -104,6 +104,9 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       cargo,
       weight,
       value,
+      truckPlate,
+      trailerPlate,
+      driverCpf,
     } = req.body;
 
     console.log(`[External API] Dados recebidos:`, {
@@ -111,6 +114,9 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       tripDate,
       startDate,
       endDate,
+      truckPlate,
+      trailerPlate,
+      driverCpf,
     });
 
     // Validar campos obrigatórios
@@ -206,8 +212,69 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       }
     };
 
+    // Buscar caminhão pela placa (se fornecida)
+    let truckId = null;
+    if (truckPlate) {
+      const truck = await prisma.truck.findFirst({
+        where: {
+          plate: {
+            equals: truckPlate.toUpperCase().trim(),
+            mode: 'insensitive',
+          },
+        },
+      });
+
+      if (truck) {
+        truckId = truck.id;
+        console.log(`[External API] Caminhão encontrado: ${truck.plate} (${truck.id})`);
+      } else {
+        console.log(`[External API] Caminhão não encontrado com placa: ${truckPlate}`);
+      }
+    }
+
+    // Buscar carreta pela placa (se fornecida)
+    let trailerId = null;
+    if (trailerPlate) {
+      const trailer = await prisma.trailer.findFirst({
+        where: {
+          plate: {
+            equals: trailerPlate.toUpperCase().trim(),
+            mode: 'insensitive',
+          },
+        },
+      });
+
+      if (trailer) {
+        trailerId = trailer.id;
+        console.log(`[External API] Carreta encontrada: ${trailer.plate} (${trailer.id})`);
+      } else {
+        console.log(`[External API] Carreta não encontrada com placa: ${trailerPlate}`);
+      }
+    }
+
+    // Buscar motorista pelo CPF (se fornecido)
+    let driverId = null;
+    if (driverCpf) {
+      // Limpar CPF (remover caracteres especiais)
+      const cleanCpf = driverCpf.replace(/[^0-9]/g, '');
+      
+      const driver = await prisma.user.findFirst({
+        where: {
+          cpf: cleanCpf,
+          role: 'DRIVER',
+        },
+      });
+
+      if (driver) {
+        driverId = driver.id;
+        console.log(`[External API] Motorista encontrado: ${driver.name} - CPF: ${cleanCpf} (${driver.id})`);
+      } else {
+        console.log(`[External API] Motorista não encontrado com CPF: ${cleanCpf}`);
+      }
+    }
+
     // Criar viagem temporária (dados mínimos)
-    // Truck, driver e trailer serão preenchidos na confirmação
+    // Truck, driver e trailer podem ser preenchidos se fornecidos pela API
     const trip = await prisma.trip.create({
       data: {
         clientId: client.id,
@@ -221,10 +288,10 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         notes: notes || null,
         status: 'RECEIVED',
         
-        // Campos opcionais - serão preenchidos na confirmação
-        truckId: null,
-        trailerId: null,
-        driverId: null,
+        // Campos opcionais - podem ser preenchidos pela API ou na confirmação
+        truckId,
+        trailerId,
+        driverId,
       },
     });
 
@@ -247,6 +314,11 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         status: trip.status,
         clientName: client.name,
         receivedAt: trip.createdAt,
+        preFilledData: {
+          truck: truckId ? true : false,
+          trailer: trailerId ? true : false,
+          driver: driverId ? true : false,
+        },
       },
     });
 
