@@ -148,13 +148,13 @@ export default function ReceivedTripsPage() {
     // Filtro por data da viagem (comparar apenas data, ignorar horário)
     if (startDateFilter) {
       filtered = filtered.filter(trip => {
-        // Extrair apenas a data (sem horário) da viagem
+        // Extrair apenas a data (sem horário) da viagem usando UTC
         const tripDate = new Date(trip.startDate);
-        const tripDateOnly = new Date(tripDate.getFullYear(), tripDate.getMonth(), tripDate.getDate());
+        const tripDateOnly = new Date(Date.UTC(tripDate.getUTCFullYear(), tripDate.getUTCMonth(), tripDate.getUTCDate()));
         
-        // Data do filtro
+        // Data do filtro em UTC
         const filterDate = new Date(startDateFilter);
-        const filterDateOnly = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
+        const filterDateOnly = new Date(Date.UTC(filterDate.getUTCFullYear(), filterDate.getUTCMonth(), filterDate.getUTCDate()));
         
         return tripDateOnly.getTime() === filterDateOnly.getTime();
       });
