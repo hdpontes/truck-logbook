@@ -10,6 +10,41 @@ const router = Router();
 // Todas as rotas requerem autenticação
 router.use(authenticate);
 
+// GET /api/trips/check-code/:tripCode - Verificar se código de viagem existe
+router.get('/check-code/:tripCode', async (req, res) => {
+  try {
+    const { tripCode } = req.params;
+
+    const existingTrip = await prisma.trip.findFirst({
+      where: {
+        tripCode,
+      },
+      select: {
+        id: true,
+        tripCode: true,
+        status: true,
+        origin: true,
+        destination: true,
+        createdAt: true,
+      },
+    });
+
+    if (existingTrip) {
+      return res.json({
+        exists: true,
+        trip: existingTrip,
+      });
+    }
+
+    return res.json({
+      exists: false,
+    });
+  } catch (error) {
+    console.error('Error checking trip code:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // GET /api/trips - Listar todas as viagens
 router.get('/', async (req, res) => {
   try {
@@ -195,6 +230,24 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ 
         message: 'TruckId, driverId, origin, destination and startDate are required' 
       });
+    }
+
+    // Verificar se já existe viagem com o mesmo código (se tripCode foi fornecido)
+    if (tripCode) {
+      const existingTrip = await prisma.trip.findFirst({
+        where: {
+          tripCode,
+        },
+      });
+
+      if (existingTrip) {
+        return res.status(409).json({
+          message: 'Já existe uma viagem cadastrada com este código',
+          tripCode,
+          existingTripId: existingTrip.id,
+          existingTripStatus: existingTrip.status,
+        });
+      }
     }
 
     // Validação 1: Não permitir data retroativa (exceto se for viagem retroativa explícita)
