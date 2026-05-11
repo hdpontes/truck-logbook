@@ -57,7 +57,6 @@ export default function ReceivedTripsPage() {
   // Filtros
   const [showFilters, setShowFilters] = useState(false);
   const [startDateFilter, setStartDateFilter] = useState('');
-  const [endDateFilter, setEndDateFilter] = useState('');
   const [clientFilter, setClientFilter] = useState('');
   const [tripCodeFilter, setTripCodeFilter] = useState('');
   
@@ -99,10 +98,6 @@ export default function ReceivedTripsPage() {
     fetchReceivedTrips();
     fetchDropdownData();
   }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [startDateFilter, endDateFilter, clientFilter, tripCodeFilter, allTrips]);
 
   const fetchReceivedTrips = async () => {
     try {
@@ -150,21 +145,18 @@ export default function ReceivedTripsPage() {
       filtered = filtered.filter(trip => trip.client?.id === clientFilter);
     }
 
-    // Filtro por data inicial
+    // Filtro por data da viagem (comparar apenas data, ignorar horário)
     if (startDateFilter) {
       filtered = filtered.filter(trip => {
+        // Extrair apenas a data (sem horário) da viagem
         const tripDate = new Date(trip.startDate);
+        const tripDateOnly = new Date(tripDate.getFullYear(), tripDate.getMonth(), tripDate.getDate());
+        
+        // Data do filtro
         const filterDate = new Date(startDateFilter);
-        return tripDate >= filterDate;
-      });
-    }
-
-    // Filtro por data final
-    if (endDateFilter) {
-      filtered = filtered.filter(trip => {
-        const tripDate = new Date(trip.startDate);
-        const filterDate = new Date(endDateFilter);
-        return tripDate <= filterDate;
+        const filterDateOnly = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
+        
+        return tripDateOnly.getTime() === filterDateOnly.getTime();
       });
     }
 
@@ -173,9 +165,9 @@ export default function ReceivedTripsPage() {
 
   const clearFilters = () => {
     setStartDateFilter('');
-    setEndDateFilter('');
     setClientFilter('');
     setTripCodeFilter('');
+    setTrips(allTrips); // Restaurar todas as viagens
   };
 
   const handleOpenDetails = (trip: ReceivedTrip) => {
@@ -325,7 +317,7 @@ export default function ReceivedTripsPage() {
       {showFilters && (
         <Card>
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Código da Viagem</label>
                 <input
@@ -350,7 +342,7 @@ export default function ReceivedTripsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Data Início</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Data da Viagem</label>
                 <input
                   type="date"
                   value={startDateFilter}
@@ -358,23 +350,21 @@ export default function ReceivedTripsPage() {
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Data Fim</label>
-                <input
-                  type="date"
-                  value={endDateFilter}
-                  onChange={(e) => setEndDateFilter(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end gap-2 mt-4">
               <Button
                 onClick={clearFilters}
                 variant="outline"
                 size="sm"
               >
                 Limpar Filtros
+              </Button>
+              <Button
+                onClick={applyFilters}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="sm"
+              >
+                Aplicar Filtros
               </Button>
             </div>
           </CardContent>
