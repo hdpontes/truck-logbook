@@ -1180,6 +1180,253 @@ router.post('/:id/finish', async (req, res) => {
   }
 });
 
+// POST /api/trips/:id/complete-retroactive - Concluir viagem retroativamente (sem legs)
+router.post('/:id/complete-retroactive', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const { endDate, endMileage, distance, fuelExpenses, tollExpenses, otherExpenses } = req.body;
+
+    // Apenas ADMIN e MANAGER podem concluir viagens retroativamente
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({ 
+        message: 'Apenas administradores e gerentes podem concluir viagens retroativamente' 
+      });
+    }
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        driver: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+        client: true,
+      },
+    });
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Viagem não encontrada' });
+    }
+
+    if (trip.status !== 'PLANNED' && trip.status !== 'DELAYED') {
+      return res.status(400).json({ 
+        message: 'Apenas viagens planejadas ou atrasadas podem ser concluídas retroativamente' 
+      });
+    }
+
+    if (!trip.truckId || !trip.driverId) {
+      return res.status(400).json({ 
+        message: 'A viagem deve ter caminhão e motorista atribuídos' 
+      });
+    }
+
+    const finalEndMileage = endMileage ? parseFloat(endMileage) : null;
+    const finalDistance = distance ? parseFloat(distance) : trip.distance || 0;
+    const finalEndDate = endDate ? new Date(endDate) : new Date();
+
+    // Calcular custos das despesas fornecidas
+    const expenses = [];
+    let totalFuelCost = 0;
+    let totalTollCost = 0;
+    let totalOtherCosts = 0;
+
+    // Processar despesas de combustível
+    if (fuelExpenses && Array.isArray(fuelExpenses)) {
+      for (const expense of fuelExpenses) {
+        const amount = parseFloat(expense.amount);
+        totalFuelCost += amount;
+        expenses.push({
+          truckId: trip.truckId,
+          tripId: trip.id,
+          type: 'FUEL',
+          description: expense.description || 'Combustível',
+          amount,
+          date: expense.date ? new Date(expense.date) : finalEndDate,
+          isPaid: true,
+        });
+      }
+    }
+
+    // Processar despesas de pedágio
+    if (tollExpenses && Array.isArray(tollExpenses)) {
+      for (const expense of tollExpenses) {
+        const amount = parseFloat(expense.amount);
+        totalTollCost += amount;
+        expenses.push({
+          truckId: trip.truckId,
+          tripId: trip.id,
+          type: 'TOLL',
+          description: expense.description || 'Pedágio',
+          amount,
+          date: expense.date ? new Date(expense.date) : finalEndDate,
+          isPaid: true,
+        });
+      }
+    }
+
+    // Processar outras despesas
+    if (otherExpenses && Array.isArray(otherExpenses)) {
+      for (const expense of otherExpenses) {
+        const amount = parseFloat(expense.amount);
+        const type = expense.type || 'OTHER';
+        totalOtherCosts += amount;
+        expenses.push({
+          truckId: trip.truckId,
+          tripId: trip.id,
+          type,
+          description: expense.description || 'Outras despesas',
+          amount,
+          date: expense.date ? new Date(expense.date) : finalEndDate,
+          isPaid: true,
+        });
+      }
+    }
+
+    const totalCost = totalFuelCost + totalTollCost + totalOtherCosts;
+    const profit = trip.revenue - totalCost;
+    const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
+
+    // Criar transação para atualizar viagem, criar despesas e atualizar caminhão
+    const transactionOperations: any[] = [
+      prisma.trip.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          endDate: finalEndDate,
+          distance: finalDistance,
+          endMileage: finalEndMileage,
+          fuelCost: totalFuelCost,
+          tollCost: totalTollCost,
+          otherCosts: totalOtherCosts,
+          totalCost,
+          profit,
+          profitMargin,
+        },
+      }),
+    ];
+
+    // Adicionar criação de despesas
+    for (const expense of expenses) {
+      transactionOperations.push(
+        prisma.expense.create({ data: expense })
+      );
+    }
+
+    // Atualizar quilometragem e status do caminhão
+    transactionOperations.push(
+      prisma.truck.update({
+        where: { id: trip.truckId },
+        data: { 
+          status: 'GARAGE',
+          ...(finalEndMileage && { currentMileage: finalEndMileage }),
+        },
+      })
+    );
+
+    await prisma.$transaction(transactionOperations);
+
+    // Buscar viagem atualizada com todas as informações
+    const updatedTrip = await prisma.trip.findUnique({
+      where: { id },
+      include: {
+        truck: true,
+        trailer: true,
+        driver: {
+          select: { id: true, name: true, email: true, phone: true, cpf: true },
+        },
+        client: true,
+        expenses: true,
+      },
+    });
+
+    // Enviar webhook de viagem concluída
+    if (updatedTrip) {
+      await sendWebhook('trip.completed', {
+        trip: {
+          id: updatedTrip.id,
+          tripCode: updatedTrip.tripCode,
+          origin: updatedTrip.origin,
+          destination: updatedTrip.destination,
+          startDate: updatedTrip.startDate,
+          endDate: updatedTrip.endDate,
+          distance: updatedTrip.distance,
+          revenue: updatedTrip.revenue,
+          totalCost: updatedTrip.totalCost,
+          profit: updatedTrip.profit,
+          profitMargin: updatedTrip.profitMargin,
+        },
+        truck: {
+          id: updatedTrip.truck!.id,
+          plate: updatedTrip.truck!.plate,
+          model: updatedTrip.truck!.model,
+          brand: updatedTrip.truck!.brand,
+        },
+        trailer: updatedTrip.trailer ? {
+          id: updatedTrip.trailer.id,
+          plate: updatedTrip.trailer.plate,
+          model: updatedTrip.trailer.model,
+        } : null,
+        driver: {
+          id: updatedTrip.driver!.id,
+          name: updatedTrip.driver!.name,
+          cpf: updatedTrip.driver!.cpf,
+          email: updatedTrip.driver!.email,
+          phone: updatedTrip.driver!.phone,
+        },
+        client: updatedTrip.client ? {
+          id: updatedTrip.client.id,
+          name: updatedTrip.client.name,
+          cnpj: updatedTrip.client.cnpj,
+        } : null,
+        expenses: {
+          fuel: totalFuelCost,
+          toll: totalTollCost,
+          other: totalOtherCosts,
+          total: totalCost,
+          details: updatedTrip.expenses.map(e => ({
+            type: e.type,
+            description: e.description,
+            amount: e.amount,
+            date: e.date,
+          })),
+        },
+        completedBy: {
+          id: user.userId,
+          name: user.name,
+          role: user.role,
+        },
+        retroactive: true,
+      });
+
+      // Verificar se o lucro está abaixo do limite
+      if (profitMargin < config.PROFIT_LOW_THRESHOLD * 100) {
+        await sendWebhook('trip.low_profit', {
+          trip: {
+            id: updatedTrip.id,
+            tripCode: updatedTrip.tripCode,
+            origin: updatedTrip.origin,
+            destination: updatedTrip.destination,
+            profit: updatedTrip.profit,
+            profitMargin: updatedTrip.profitMargin,
+          },
+          threshold: config.PROFIT_LOW_THRESHOLD * 100,
+        });
+      }
+
+      console.log(`[Trip Completed Retroactively] ${updatedTrip.tripCode} - Profit: R$ ${updatedTrip.profit}`);
+    }
+
+    res.json({
+      message: 'Viagem concluída com sucesso',
+      trip: updatedTrip,
+    });
+  } catch (error) {
+    console.error('Error completing trip retroactively:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // PUT /api/trips/:id - Atualizar uma viagem
 router.put('/:id', async (req, res) => {
   try {
