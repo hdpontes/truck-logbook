@@ -21,6 +21,9 @@ interface ReceivedTrip {
     id: string;
     name: string;
   };
+  truckId?: string;
+  trailerId?: string;
+  driverId?: string;
   createdAt: string;
 }
 
@@ -214,9 +217,9 @@ export default function ReceivedTripsPage() {
   const handleOpenDetails = (trip: ReceivedTrip) => {
     setSelectedTrip(trip);
     setConfirmData({
-      truckId: '',
-      trailerId: '',
-      driverId: '',
+      truckId: trip.truckId || '',
+      trailerId: trip.trailerId || '',
+      driverId: trip.driverId || '',
       origin: trip.origin,
       destination: trip.destination,
       startDate: toDateTimeLocal(trip.startDate),
