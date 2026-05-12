@@ -1065,6 +1065,15 @@ export default function TripsPage() {
     setShowEditModal(true);
   };
 
+  // Converter data UTC para formato datetime-local considerando timezone do Brasil (UTC-3)
+  const formatDateTimeLocalBrazil = (isoString: string | null | undefined): string => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    // Subtrair 3 horas para converter UTC para horário do Brasil
+    date.setHours(date.getHours() - 3);
+    return date.toISOString().slice(0, 16);
+  };
+
   // Função para salvar alterações da viagem
   const handleSaveEdit = async () => {
     if (!tripToEdit) return;
@@ -2744,7 +2753,7 @@ export default function TripsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Data de Início</label>
                 <input
                   type="datetime-local"
-                  value={editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : ''}
+                  value={formatDateTimeLocalBrazil(editData.startDate)}
                   onChange={(e) => setEditData({ ...editData, startDate: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -2755,7 +2764,7 @@ export default function TripsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Data de Término</label>
                 <input
                   type="datetime-local"
-                  value={editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : ''}
+                  value={formatDateTimeLocalBrazil(editData.endDate)}
                   onChange={(e) => setEditData({ ...editData, endDate: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
