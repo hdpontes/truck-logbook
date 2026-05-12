@@ -444,23 +444,31 @@ export default function ReceivedTripsPage() {
             <Card key={trip.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Cliente</p>
-                      <p className="font-semibold">{trip.client?.name || 'Não informado'}</p>
+                  <div className="flex-1 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Cliente</p>
+                        <p className="font-semibold">{trip.client?.name || 'Não informado'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Código da Viagem</p>
+                        <p className="font-semibold">{trip.tripCode || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Data</p>
+                        <p className="font-semibold">{formatDate(trip.startDate)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Valor</p>
+                        <p className="font-semibold text-green-600">{formatCurrency(trip.revenue)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Código da Viagem</p>
-                      <p className="font-semibold">{trip.tripCode || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Data</p>
-                      <p className="font-semibold">{formatDate(trip.startDate)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Valor</p>
-                      <p className="font-semibold text-green-600">{formatCurrency(trip.revenue)}</p>
-                    </div>
+                    {trip.notes && (
+                      <div>
+                        <p className="text-sm text-gray-500">Observações</p>
+                        <p className="text-sm text-gray-700">{trip.notes}</p>
+                      </div>
+                    )}
                   </div>
                   <div className="ml-4 flex flex-col items-end gap-2">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
@@ -499,6 +507,14 @@ export default function ReceivedTripsPage() {
                 <h3 className="font-semibold mb-2">Cliente</h3>
                 <p>{selectedTrip.client?.name || 'Não informado'}</p>
               </div>
+
+              {/* Observações Recebidas */}
+              {selectedTrip.notes && (
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 text-blue-900">Observações Recebidas</h3>
+                  <p className="text-blue-800 whitespace-pre-wrap">{selectedTrip.notes}</p>
+                </div>
+              )}
 
               {/* Campos do formulário */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
