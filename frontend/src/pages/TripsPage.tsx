@@ -150,6 +150,24 @@ export default function TripsPage() {
     }>
   });
 
+  // Estados para modal de edição de viagem
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [tripToEdit, setTripToEdit] = useState<Trip | null>(null);
+  const [editData, setEditData] = useState({
+    truckId: '',
+    trailerId: '',
+    driverId: '',
+    clientId: '',
+    tripCode: '',
+    origin: '',
+    destination: '',
+    startDate: '',
+    endDate: '',
+    distance: '',
+    revenue: '',
+    notes: '',
+  });
+
   // Update current time every minute for elapsed time calculation
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1027,6 +1045,72 @@ export default function TripsPage() {
     }
   };
 
+  // Função para abrir modal de edição
+  const handleOpenEditModal = (trip: Trip) => {
+    setTripToEdit(trip);
+    setEditData({
+      truckId: trip.truck.id,
+      trailerId: trip.trailer?.id || '',
+      driverId: trip.driver.id,
+      clientId: trip.client?.id || '',
+      tripCode: trip.tripCode || '',
+      origin: trip.origin,
+      destination: trip.destination,
+      startDate: trip.startDate,
+      endDate: trip.endDate || '',
+      distance: trip.distance?.toString() || '',
+      revenue: trip.revenue?.toString() || '',
+      notes: trip.notes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  // Função para salvar alterações da viagem
+  const handleSaveEdit = async () => {
+    if (!tripToEdit) return;
+
+    // Validações básicas
+    if (!editData.truckId || !editData.driverId || !editData.clientId) {
+      toast.error('Caminhão, motorista e cliente são obrigatórios');
+      return;
+    }
+
+    if (!editData.origin || !editData.destination) {
+      toast.error('Origem e destino são obrigatórios');
+      return;
+    }
+
+    try {
+      await tripsAPI.update(tripToEdit.id, {
+        ...editData,
+        distance: parseFloat(editData.distance) || 0,
+        revenue: parseFloat(editData.revenue) || 0,
+      });
+
+      toast.success('Viagem atualizada com sucesso');
+      setShowEditModal(false);
+      setTripToEdit(null);
+      setEditData({
+        truckId: '',
+        trailerId: '',
+        driverId: '',
+        clientId: '',
+        tripCode: '',
+        origin: '',
+        destination: '',
+        startDate: '',
+        endDate: '',
+        distance: '',
+        revenue: '',
+        notes: '',
+      });
+      fetchTrips();
+    } catch (error: any) {
+      console.error('Erro ao atualizar viagem:', error);
+      toast.error(error.response?.data?.message || 'Erro ao atualizar viagem');
+    }
+  };
+
   // Separate trips by status for Kanban columns
   const plannedTrips = trips.filter(trip => trip.status === 'PLANNED' || trip.status === 'DELAYED');
   const inProgressTrips = trips.filter(trip => trip.status === 'IN_PROGRESS');
@@ -1355,7 +1439,7 @@ export default function TripsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => navigate(`/trips/${trip.id}/edit`)}
+                              onClick={() => handleOpenEditModal(trip)}
                               className="flex-1 min-w-[70px] text-xs h-8"
                             >
                               <Edit className="w-3 h-3 mr-1" />
@@ -1786,7 +1870,7 @@ export default function TripsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => navigate(`/trips/${trip.id}/edit`)}
+                              onClick={() => handleOpenEditModal(trip)}
                               className="flex-1 min-w-[70px] text-xs h-8"
                             >
                               <Edit className="w-3 h-3 mr-1" />
@@ -2439,6 +2523,14 @@ export default function TripsPage() {
                       <option value="TIRE">Pneu</option>
                       <option value="FOOD">Alimentação</option>
                       <option value="PARKING">Estacionamento</option>
+                      <option value="INSURANCE">Seguro</option>
+                      <option value="TAX">Impostos</option>
+                      {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                        <>
+                          <option value="SALARY">Salário</option>
+                          <option value="OVERTIME">Hora Extra</option>
+                        </>
+                      )}
                     </select>
                     <input
                       type="text"
@@ -2521,6 +2613,223 @@ export default function TripsPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    )}
+
+    {/* Modal de Edição de Viagem */}
+    {showEditModal && tripToEdit && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b">
+            <h2 className="text-2xl font-bold text-blue-600">Editar Viagem</h2>
+            <p className="text-gray-600">Código: {tripToEdit.tripCode}</p>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Código da Viagem */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Código da Viagem</label>
+                <input
+                  type="text"
+                  value={editData.tripCode}
+                  onChange={(e) => setEditData({ ...editData, tripCode: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Cliente */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cliente * <span className="text-red-500">obrigatório</span>
+                </label>
+                <select
+                  value={editData.clientId}
+                  onChange={(e) => setEditData({ ...editData, clientId: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Selecione um cliente</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>{client.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Caminhão */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Caminhão * <span className="text-red-500">obrigatório</span>
+                </label>
+                <select
+                  value={editData.truckId}
+                  onChange={(e) => setEditData({ ...editData, truckId: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Selecione um caminhão</option>
+                  {trucks.map(truck => (
+                    <option key={truck.id} value={truck.id}>
+                      {truck.plate} - {truck.model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Carreta */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Carreta</label>
+                <select
+                  value={editData.trailerId}
+                  onChange={(e) => setEditData({ ...editData, trailerId: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sem carreta</option>
+                  {trailers.map(trailer => (
+                    <option key={trailer.id} value={trailer.id}>
+                      {trailer.plate} - {trailer.model || 'N/A'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Motorista */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Motorista * <span className="text-red-500">obrigatório</span>
+                </label>
+                <select
+                  value={editData.driverId}
+                  onChange={(e) => setEditData({ ...editData, driverId: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Selecione um motorista</option>
+                  {drivers.map(driver => (
+                    <option key={driver.id} value={driver.id}>{driver.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Origem */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Origem * <span className="text-red-500">obrigatório</span>
+                </label>
+                <input
+                  type="text"
+                  value={editData.origin}
+                  onChange={(e) => setEditData({ ...editData, origin: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Destino */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Destino * <span className="text-red-500">obrigatório</span>
+                </label>
+                <input
+                  type="text"
+                  value={editData.destination}
+                  onChange={(e) => setEditData({ ...editData, destination: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Data de Início */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data de Início</label>
+                <input
+                  type="datetime-local"
+                  value={editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : ''}
+                  onChange={(e) => setEditData({ ...editData, startDate: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Data de Término */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data de Término</label>
+                <input
+                  type="datetime-local"
+                  value={editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : ''}
+                  onChange={(e) => setEditData({ ...editData, endDate: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Distância */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Distância (KM)</label>
+                <input
+                  type="number"
+                  value={editData.distance}
+                  onChange={(e) => setEditData({ ...editData, distance: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Valor */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editData.revenue}
+                  onChange={(e) => setEditData({ ...editData, revenue: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Observações */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  value={editData.notes}
+                  onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                  rows={3}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 border-t flex justify-end gap-3">
+            <Button
+              onClick={() => {
+                setShowEditModal(false);
+                setTripToEdit(null);
+                setEditData({
+                  truckId: '',
+                  trailerId: '',
+                  driverId: '',
+                  clientId: '',
+                  tripCode: '',
+                  origin: '',
+                  destination: '',
+                  startDate: '',
+                  endDate: '',
+                  distance: '',
+                  revenue: '',
+                  notes: '',
+                });
+              }}
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Salvar Alterações
+            </Button>
+          </div>
+        </div>
       </div>
     )}
 
