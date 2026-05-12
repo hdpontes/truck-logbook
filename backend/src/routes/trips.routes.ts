@@ -1276,7 +1276,15 @@ router.post('/:id/complete-retroactive', async (req, res) => {
 
     const finalEndMileage = endMileage ? parseFloat(endMileage) : null;
     const finalDistance = distance ? parseFloat(distance) : trip.distance || 0;
-    const finalEndDate = endDate ? new Date(endDate) : new Date();
+    
+    // Se não houver data de término, considerar início + 3 horas
+    let finalEndDate: Date;
+    if (endDate) {
+      finalEndDate = new Date(endDate);
+    } else {
+      finalEndDate = new Date(trip.startDate);
+      finalEndDate.setHours(finalEndDate.getHours() + 3); // Adiciona 3 horas
+    }
 
     // Calcular custos das despesas fornecidas
     const expenses = [];
