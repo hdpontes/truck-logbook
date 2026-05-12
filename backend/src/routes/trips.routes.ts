@@ -1579,6 +1579,15 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Função para converter data do formato datetime-local (Brasil) para UTC
+    const parseLocalDateBrazil = (dateString: string): Date => {
+      // O frontend envia no formato "2026-05-12T19:00" (horário do Brasil)
+      // Precisamos adicionar 3 horas para converter para UTC
+      const date = new Date(dateString);
+      date.setHours(date.getHours() + 3);
+      return date;
+    };
+
     // Preparar dados de atualização
     const updateData: any = {
       ...(tripCode !== undefined && { tripCode }),
@@ -1588,8 +1597,8 @@ router.put('/:id', async (req, res) => {
       ...(clientId && { clientId }),
       ...(origin && { origin }),
       ...(destination && { destination }),
-      ...(startDate && { startDate: new Date(startDate) }),
-      ...(endDate && { endDate: new Date(endDate) }),
+      ...(startDate && { startDate: parseLocalDateBrazil(startDate) }),
+      ...(endDate && { endDate: parseLocalDateBrazil(endDate) }),
       ...(revenue !== undefined && { revenue: parseFloat(revenue) }),
       ...(distance !== undefined && { distance: parseFloat(distance) }),
       ...(notes !== undefined && { notes }),
