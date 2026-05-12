@@ -1666,18 +1666,24 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    // Enviar webhook de viagem atualizada (como se fosse nova viagem agendada)
+    // Enviar webhook de viagem atualizada
     // Apenas enviar se tiver caminhão e motorista atribuídos
-    if (truck && driver) {
-      await sendWebhook('trip.scheduled', {
+    if (truck && driver && trip.client) {
+      await sendWebhook('trip.updated', {
         trip: {
           id: trip.id,
           tripCode: trip.tripCode,
           origin: trip.origin,
           destination: trip.destination,
           startDate: trip.startDate,
+          endDate: trip.endDate,
+          distance: trip.distance,
           revenue: trip.revenue,
-          updated: true, // Flag indicando que é uma atualização
+          status: trip.status,
+          notes: trip.notes,
+          totalCost: trip.totalCost,
+          profit: trip.profit,
+          profitMargin: trip.profitMargin,
         },
         truck: {
           id: truck.id,
@@ -1697,16 +1703,19 @@ router.put('/:id', async (req, res) => {
           email: driver.email,
           phone: driver.phone,
         },
-        client: trip.client ? {
-          clientId: trip.client.id,
+        client: {
+          id: trip.client.id,
           name: trip.client.name,
           cnpj: trip.client.cnpj?.replace(/\D/g, '') || null,
-        } : null,
+        },
         updatedBy: {
-          id: user.id,
+          id: user.userId,
           name: user.name,
+          email: user.email,
           role: user.role,
         },
+        updatedAt: new Date().toISOString(),
+        changedFields,
       });
     }
 
