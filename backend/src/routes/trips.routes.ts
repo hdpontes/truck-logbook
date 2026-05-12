@@ -1710,6 +1710,7 @@ router.put('/:id', async (req, res) => {
           name: driver.name,
           email: driver.email,
           phone: driver.phone,
+          cpf: driver.cpf,
         },
         client: {
           id: trip.client.id,
