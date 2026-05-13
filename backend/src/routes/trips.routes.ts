@@ -345,14 +345,8 @@ router.post('/', async (req, res) => {
         // Calcular custo estimado
         const estimatedFuelCost = litersConsumed * dieselPrice;
         
-        // Criar data às 12:00 (meio-dia) para evitar problemas de timezone
-        const startDate = new Date(trip.startDate);
-        const expenseDate = new Date(
-          startDate.getFullYear(),
-          startDate.getMonth(),
-          startDate.getDate(),
-          12, 0, 0, 0
-        );
+        // Usar data de início da viagem (horário literal)
+        const expenseDate = new Date(trip.startDate);
         
         // Criar despesa de combustível automaticamente
         await prisma.expense.create({
@@ -1277,13 +1271,14 @@ router.post('/:id/complete-retroactive', async (req, res) => {
     const finalEndMileage = endMileage ? parseFloat(endMileage) : null;
     const finalDistance = distance ? parseFloat(distance) : trip.distance || 0;
     
-    // Se não houver data de término, considerar início + 3 horas
+    // Se não houver data de término, considerar início + 3 horas (horário literal)
     let finalEndDate: Date;
     if (endDate) {
       finalEndDate = new Date(endDate);
     } else {
-      finalEndDate = new Date(trip.startDate);
-      finalEndDate.setHours(finalEndDate.getHours() + 3); // Adiciona 3 horas
+      // Criar data de término: mesma data de início, mas 3 horas depois
+      const startDate = new Date(trip.startDate);
+      finalEndDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 horas em ms
     }
 
     // Calcular custos das despesas fornecidas
@@ -1291,9 +1286,11 @@ router.post('/:id/complete-retroactive', async (req, res) => {
     let totalFuelCost = 0;
     let totalTollCost = 0;
     let totalOtherCosts = 0;
+    let hasProvidedFuelExpense = false;
 
     // Processar despesas de combustível
-    if (fuelExpenses && Array.isArray(fuelExpenses)) {
+    if (fuelExpenses && Array.isArray(fuelExpenses) && fuelExpenses.length > 0) {
+      hasProvidedFuelExpense = true;
       for (const expense of fuelExpenses) {
         const amount = parseFloat(expense.amount);
         totalFuelCost += amount;
@@ -1339,6 +1336,31 @@ router.post('/:id/complete-retroactive', async (req, res) => {
           description: expense.description || 'Outras despesas',
           amount,
           date: expense.date ? new Date(expense.date) : finalEndDate,
+          isPaid: true,
+        });
+      }
+    }
+
+    // Se não há despesas de combustível fornecidas, calcular automaticamente
+    if (!hasProvidedFuelExpense && finalDistance > 0 && trip.truck && trip.truck.avgConsumption && trip.truck.avgConsumption > 0) {
+      // Buscar preço do diesel nas configurações
+      const settings = await prisma.settings.findFirst();
+      const dieselPrice = settings?.dieselPrice || 0;
+      
+      if (dieselPrice > 0) {
+        // Calcular litros consumidos = distância / km por litro
+        const litersConsumed = finalDistance / trip.truck.avgConsumption;
+        // Calcular custo estimado
+        const estimatedFuelCost = litersConsumed * dieselPrice;
+        
+        totalFuelCost = estimatedFuelCost;
+        expenses.push({
+          truckId: trip.truckId,
+          tripId: trip.id,
+          type: 'FUEL',
+          description: `Combustível calculado automaticamente (${litersConsumed.toFixed(2)}L)`,
+          amount: estimatedFuelCost,
+          date: new Date(trip.startDate),
           isPaid: true,
         });
       }
@@ -1579,16 +1601,7 @@ router.put('/:id', async (req, res) => {
       }
     }
 
-    // Função para converter data do formato datetime-local (Brasil) para UTC
-    const parseLocalDateBrazil = (dateString: string): Date => {
-      // O frontend envia no formato "2026-05-12T19:00" (horário do Brasil)
-      // Precisamos adicionar 3 horas para converter para UTC
-      const date = new Date(dateString);
-      date.setHours(date.getHours() + 3);
-      return date;
-    };
-
-    // Preparar dados de atualização
+    // Preparar dados de atualização (horários literais, sem conversão)
     const updateData: any = {
       ...(tripCode !== undefined && { tripCode }),
       ...(truckId && { truckId }),
@@ -1597,8 +1610,8 @@ router.put('/:id', async (req, res) => {
       ...(clientId && { clientId }),
       ...(origin && { origin }),
       ...(destination && { destination }),
-      ...(startDate && { startDate: parseLocalDateBrazil(startDate) }),
-      ...(endDate && { endDate: parseLocalDateBrazil(endDate) }),
+      ...(startDate && { startDate: new Date(startDate) }),
+      ...(endDate && { endDate: new Date(endDate) }),
       ...(revenue !== undefined && { revenue: parseFloat(revenue) }),
       ...(distance !== undefined && { distance: parseFloat(distance) }),
       ...(notes !== undefined && { notes }),
@@ -2214,39 +2227,7 @@ router.put('/:id/confirm', async (req, res) => {
       }
     }
 
-    // Função para criar data ajustando para o fuso horário do Brasil (UTC-3)
-    // Quando o usuário envia "20:00", queremos "20:00 horário do Brasil"
-    // Que equivale a "23:00 UTC" (20:00 + 3h)
-    // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
-    const parseLocalDate = (dateString: string): Date => {
-      console.log(`[Confirm parseLocalDate] Input: "${dateString}"`);
-      
-      // Remover 'T' se existir e substituir por espaço
-      const normalized = dateString.replace('T', ' ').trim();
-      console.log(`[Confirm parseLocalDate] Normalized: "${normalized}"`);
-      
-      const BRAZIL_OFFSET_HOURS = 3; // UTC-3
-      
-      // Verificar se tem hora
-      if (normalized.includes(' ')) {
-        const [datePart, timePart] = normalized.split(' ');
-        const [year, month, day] = datePart.split('-').map(Number);
-        const [hours = 12, minutes = 0, seconds = 0] = timePart.split(':').map(Number);
-        // Adicionar offset do Brasil para converter hora local para UTC
-        const utcHours = hours + BRAZIL_OFFSET_HOURS;
-        const result = new Date(Date.UTC(year, month - 1, day, utcHours, minutes, seconds, 0));
-        console.log(`[Confirm parseLocalDate] Com hora - Hora local: ${hours}:${minutes}, UTC: ${result.toISOString()}`);
-        return result;
-      } else {
-        // Se não tem hora, usar meio-dia (12:00:00) horário do Brasil = 15:00 UTC
-        const [year, month, day] = normalized.split('-').map(Number);
-        const result = new Date(Date.UTC(year, month - 1, day, 12 + BRAZIL_OFFSET_HOURS, 0, 0, 0));
-        console.log(`[Confirm parseLocalDate] Sem hora - UTC: ${result.toISOString()}`);
-        return result;
-      }
-    };
-
-    // Atualizar viagem com todos os dados
+    // Atualizar viagem com todos os dados (horários literais, sem conversão)
     const updatedTrip = await prisma.trip.update({
       where: { id },
       data: {
@@ -2255,10 +2236,8 @@ router.put('/:id/confirm', async (req, res) => {
         driverId,
         origin: origin || trip.origin,
         destination: destination || trip.destination,
-        // Se não enviar startDate mas a viagem era RECEIVED, manter a data original
-        // Caso envie nova data, usar parseLocalDate para evitar problemas de timezone
-        startDate: startDate ? parseLocalDate(startDate) : trip.startDate,
-        endDate: endDate ? parseLocalDate(endDate) : trip.endDate,
+        startDate: startDate ? new Date(startDate) : trip.startDate,
+        endDate: endDate ? new Date(endDate) : trip.endDate,
         distance: distance !== undefined ? distance : trip.distance,
         revenue: revenue !== undefined ? revenue : trip.revenue,
         notes: notes || trip.notes,
