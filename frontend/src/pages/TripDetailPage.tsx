@@ -124,6 +124,28 @@ const TripDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [elapsedTime, setElapsedTime] = useState<string>('');
 
+  // Funções para formatação de datas sem conversão de timezone
+  const formatDateTime = (isoString: string | null | undefined): string => {
+    if (!isoString) return '-';
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
+  };
+
+  const formatDateOnly = (isoString: string | null | undefined): string => {
+    if (!isoString) return '-';
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   useEffect(() => {
     if (id) {
       console.debug('[TripDetailPage] mounted with id=', id, ' pathname=', location.pathname);
@@ -313,8 +335,8 @@ const TripDetailPage: React.FC = () => {
       csvRows.push(['Código', trip.tripCode || '']);
       csvRows.push(['Origem', trip.origin]);
       csvRows.push(['Destino', trip.destination]);
-      csvRows.push(['Data Início', new Date(trip.startDate).toLocaleString('pt-BR')]);
-      csvRows.push(['Data Fim', trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR') : '']);
+      csvRows.push(['Data Início', formatDateTime(trip.startDate)]);
+      csvRows.push(['Data Fim', formatDateTime(trip.endDate)]);
       csvRows.push(['Status', trip.status]);
       csvRows.push(['Distância (km)', trip.distance]);
       csvRows.push(['Receita (R$)', trip.revenue]);
@@ -336,7 +358,7 @@ const TripDetailPage: React.FC = () => {
       if (expenses && expenses.length > 0) {
         expenses.forEach((expense: Expense) => {
           csvRows.push([
-            new Date(expense.date).toLocaleDateString('pt-BR'),
+            formatDateOnly(expense.date),
             expense.type,
             (expense.description || '').replace(/;/g, ','),
             expense.amount.toFixed(2),
@@ -723,12 +745,12 @@ const TripDetailPage: React.FC = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-sm md:text-base text-gray-600">Data Início:</span>
-              <span className="font-medium text-sm md:text-base">{new Date(trip.startDate).toLocaleString('pt-BR')}</span>
+              <span className="font-medium text-sm md:text-base">{formatDateTime(trip.startDate)}</span>
             </div>
             {trip.endDate && (
               <div className="flex justify-between">
                 <span className="text-sm md:text-base text-gray-600">Data Fim:</span>
-                <span className="font-medium text-sm md:text-base">{new Date(trip.endDate).toLocaleString('pt-BR')}</span>
+                <span className="font-medium text-sm md:text-base">{formatDateTime(trip.endDate)}</span>
               </div>
             )}
             {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
@@ -970,7 +992,7 @@ const TripDetailPage: React.FC = () => {
                   <div>
                     <p className="font-medium text-sm md:text-base">{expenseTypeLabels[expense.type] || expense.type}</p>
                     <p className="text-xs md:text-sm text-gray-500">
-                      {expense.description} • {new Date(expense.date).toLocaleDateString('pt-BR')}
+                      {expense.description} • {formatDateOnly(expense.date)}
                     </p>
                   </div>
                   <span className="font-medium text-sm md:text-base">{formatCurrency(expense.amount)}</span>
