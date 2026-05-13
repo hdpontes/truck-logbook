@@ -228,7 +228,7 @@ export default function ExpenseFormPage() {
                   <option value="">Despesa não vinculada a viagem</option>
                   {trips.map((trip) => (
                     <option key={trip.id} value={trip.id}>
-                      {trip.origin} → {trip.destination} ({trip.truck.plate})
+                      {trip.origin} → {trip.destination} ({trip.truck?.plate || 'Sem placa'})
                     </option>
                   ))}
                 </select>
