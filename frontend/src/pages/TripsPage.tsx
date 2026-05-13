@@ -305,8 +305,8 @@ export default function TripsPage() {
           trip.tripCode || '',
           trip.origin,
           trip.destination,
-          new Date(trip.startDate).toLocaleString('pt-BR'),
-          trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR') : '',
+          formatDateTime(trip.startDate),
+          formatDateTime(trip.endDate),
           trip.status,
           trip.distance,
           trip.revenue,
@@ -421,8 +421,8 @@ export default function TripsPage() {
       csvRows.push(['Código', trip.tripCode || '']);
       csvRows.push(['Origem', trip.origin]);
       csvRows.push(['Destino', trip.destination]);
-      csvRows.push(['Data Início', new Date(trip.startDate).toLocaleString('pt-BR')]);
-      csvRows.push(['Data Fim', trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR') : '']);
+      csvRows.push(['Data Início', formatDateTime(trip.startDate)]);
+      csvRows.push(['Data Fim', formatDateTime(trip.endDate)]);
       csvRows.push(['Status', trip.status]);
       csvRows.push(['Distância (km)', trip.distance]);
       csvRows.push(['Receita (R$)', trip.revenue]);
@@ -444,7 +444,7 @@ export default function TripsPage() {
       if (expenses && expenses.length > 0) {
         expenses.forEach((expense: any) => {
           csvRows.push([
-            new Date(expense.date).toLocaleDateString('pt-BR'),
+            formatDateOnly(expense.date),
             expense.type,
             (expense.description || '').replace(/;/g, ','),
             expense.amount.toFixed(2)
@@ -1072,6 +1072,39 @@ export default function TripsPage() {
     return isoString.slice(0, 16);
   };
 
+  // Formatar data para exibição sem conversão de timezone
+  const formatDateTime = (isoString: string | null | undefined): string => {
+    if (!isoString) return '-';
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year}, ${hours}:${minutes}`;
+  };
+
+  // Formatar data curta (DD/MM, HH:mm) para o Kanban
+  const formatDateShort = (isoString: string | null | undefined): string => {
+    if (!isoString) return '-';
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}, ${hours}:${minutes}`;
+  };
+
+  // Formatar apenas data (DD/MM/YYYY)
+  const formatDateOnly = (isoString: string | null | undefined): string => {
+    if (!isoString) return '-';
+    const date = new Date(isoString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   // Função para salvar alterações da viagem
   const handleSaveEdit = async () => {
     if (!tripToEdit) return;
@@ -1380,12 +1413,7 @@ export default function TripsPage() {
                         <div>
                           <span className="text-gray-500">Início:</span>
                           <span className="font-medium ml-1">
-                            {new Date(trip.startDate).toLocaleString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {formatDateShort(trip.startDate)}
                           </span>
                         </div>
                         {trip.distance > 0 && (
@@ -1578,12 +1606,7 @@ export default function TripsPage() {
                         <div>
                           <span className="text-gray-500">Início:</span>
                           <p className="font-medium">
-                            {new Date(trip.startDate).toLocaleString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {formatDateTime(trip.startDate)}
                           </p>
                         </div>
                         {trip.distance > 0 && (
@@ -1813,12 +1836,7 @@ export default function TripsPage() {
                         <div>
                           <span className="text-gray-500">Concluída em:</span>
                           <p className="font-medium">
-                            {trip.endDate ? new Date(trip.endDate).toLocaleString('pt-BR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 'N/A'}
+                            {trip.endDate ? formatDateTime(trip.endDate) : 'N/A'}
                           </p>
                         </div>
                         {trip.distance > 0 && (
