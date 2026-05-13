@@ -137,7 +137,7 @@ export default function ReceivedTripsPage() {
 
       if (startDateFilter) {
         filtered = filtered.filter(trip => {
-          const tripDate = new Date(trip.startDate).toISOString().split('T')[0];
+          const tripDate = getDateOnly(trip.startDate);
           return tripDate === startDateFilter;
         });
       }
@@ -187,7 +187,7 @@ export default function ReceivedTripsPage() {
     // Filtro por data da viagem (comparar apenas data, ignorar horário)
     if (startDateFilter) {
       filtered = filtered.filter(trip => {
-        const tripDate = new Date(trip.startDate).toISOString().split('T')[0];
+        const tripDate = getDateOnly(trip.startDate);
         return tripDate === startDateFilter;
       });
     }
@@ -304,14 +304,26 @@ export default function ReceivedTripsPage() {
     return isoString.slice(0, 16);
   };
 
+  // Extrair data em formato YYYY-MM-DD sem conversão UTC
+  const getDateOnly = (isoString: string): string => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Formatar data para exibição (horário literal)
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(date);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
   return (
