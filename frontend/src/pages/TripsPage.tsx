@@ -1075,7 +1075,8 @@ export default function TripsPage() {
   // Formatar data para exibição sem conversão de timezone
   const formatDateTime = (isoString: string | null | undefined): string => {
     if (!isoString) return '-';
-    const date = new Date(isoString);
+    const dateWithoutZ = isoString.replace('Z', '');
+    const date = new Date(dateWithoutZ);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
@@ -1087,7 +1088,8 @@ export default function TripsPage() {
   // Formatar data curta (DD/MM, HH:mm) para o Kanban
   const formatDateShort = (isoString: string | null | undefined): string => {
     if (!isoString) return '-';
-    const date = new Date(isoString);
+    const dateWithoutZ = isoString.replace('Z', '');
+    const date = new Date(dateWithoutZ);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
@@ -1098,7 +1100,8 @@ export default function TripsPage() {
   // Formatar apenas data (DD/MM/YYYY)
   const formatDateOnly = (isoString: string | null | undefined): string => {
     if (!isoString) return '-';
-    const date = new Date(isoString);
+    const dateWithoutZ = isoString.replace('Z', '');
+    const date = new Date(dateWithoutZ);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
