@@ -165,6 +165,17 @@ export default function ExpensesCalendarPage() {
     pendingCount: 0,
   });
 
+  // Função helper para formatar data sem conversão de timezone
+  const formatDateOnly = (isoString: string): string => {
+    if (!isoString) return '-';
+    const dateWithoutZ = isoString.replace('Z', '');
+    const date = new Date(dateWithoutZ);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   useEffect(() => {
     fetchExpenses();
     fetchRecurringExpenses();
@@ -353,14 +364,14 @@ export default function ExpensesCalendarPage() {
 
     // Despesas reais do mês
     const monthExpenses = expenses.filter((e: Expense) => {
-      const expenseDate = new Date(e.date);
-      return expenseDate.getUTCMonth() === month && 
-             expenseDate.getUTCFullYear() === year;
+      const expenseDate = new Date(e.date.replace('Z', ''));
+      return expenseDate.getMonth() === month && 
+             expenseDate.getFullYear() === year;
     });
 
     // Separar despesas pagas e pendentes considerando viagens/caminhões em dias passados
     const paidExpenses = monthExpenses.filter((e: Expense) => {
-      const expenseDate = new Date(e.date);
+      const expenseDate = new Date(e.date.replace('Z', ''));
       expenseDate.setHours(0, 0, 0, 0);
       const isPastDay = expenseDate < today;
       
@@ -372,7 +383,7 @@ export default function ExpensesCalendarPage() {
     });
 
     const pendingRealExpenses = monthExpenses.filter((e: Expense) => {
-      const expenseDate = new Date(e.date);
+      const expenseDate = new Date(e.date.replace('Z', ''));
       expenseDate.setHours(0, 0, 0, 0);
       const isPastDay = expenseDate < today;
       
@@ -398,8 +409,8 @@ export default function ExpensesCalendarPage() {
       // Verificar se já foi paga neste mês
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getUTCMonth() === month &&
-        new Date(e.date).getUTCFullYear() === year
+        new Date(e.date.replace('Z', '')).getMonth() === month &&
+        new Date(e.date.replace('Z', '')).getFullYear() === year
       );
       
       // Verificar se o dia já passou no mês selecionado
@@ -436,8 +447,8 @@ export default function ExpensesCalendarPage() {
       
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getUTCMonth() === month &&
-        new Date(e.date).getUTCFullYear() === year
+        new Date(e.date.replace('Z', '')).getMonth() === month &&
+        new Date(e.date.replace('Z', '')).getFullYear() === year
       );
       
       const dueDate = new Date(year, month, re.dueDay);
@@ -497,7 +508,7 @@ export default function ExpensesCalendarPage() {
     
     // Despesas reais do dia (sem conversão de timezone)
     const realExpenses = expenses.filter((e: Expense) => {
-      const expenseDate = new Date(e.date);
+      const expenseDate = new Date(e.date.replace('Z', ''));
       return expenseDate.getDate() === day &&
              expenseDate.getMonth() === month &&
              expenseDate.getFullYear() === year;
@@ -537,8 +548,8 @@ export default function ExpensesCalendarPage() {
       // Verificar se já foi paga neste mês/ano (sem conversão de timezone)
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getMonth() === month &&
-        new Date(e.date).getFullYear() === year
+        new Date(e.date.replace('Z', '')).getMonth() === month &&
+        new Date(e.date.replace('Z', '')).getFullYear() === year
       );
       
       return !alreadyPaid;
@@ -681,7 +692,7 @@ export default function ExpensesCalendarPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600">
               <div>
                 <span className="font-medium">Data:</span>{' '}
-                {new Date(expense.date).toLocaleDateString('pt-BR')}
+                {formatDateOnly(expense.date)}
               </div>
               {expense.truck && (
                 <div>
@@ -1666,7 +1677,7 @@ export default function ExpensesCalendarPage() {
                         <div>
                           <span className="text-gray-500">Data:</span>{' '}
                           <span className="font-medium">
-                            {new Date(expense.date).toLocaleDateString('pt-BR')}
+                            {formatDateOnly(expense.date)}
                           </span>
                         </div>
                         {expense.truck && (
