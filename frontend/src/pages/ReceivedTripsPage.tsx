@@ -137,13 +137,8 @@ export default function ReceivedTripsPage() {
 
       if (startDateFilter) {
         filtered = filtered.filter(trip => {
-          const tripDate = new Date(trip.startDate);
-          const tripDateOnly = new Date(Date.UTC(tripDate.getUTCFullYear(), tripDate.getUTCMonth(), tripDate.getUTCDate()));
-          
-          const filterDate = new Date(startDateFilter);
-          const filterDateOnly = new Date(Date.UTC(filterDate.getUTCFullYear(), filterDate.getUTCMonth(), filterDate.getUTCDate()));
-          
-          return tripDateOnly.getTime() === filterDateOnly.getTime();
+          const tripDate = new Date(trip.startDate).toISOString().split('T')[0];
+          return tripDate === startDateFilter;
         });
       }
 
@@ -192,15 +187,8 @@ export default function ReceivedTripsPage() {
     // Filtro por data da viagem (comparar apenas data, ignorar horário)
     if (startDateFilter) {
       filtered = filtered.filter(trip => {
-        // Extrair apenas a data (sem horário) da viagem usando UTC
-        const tripDate = new Date(trip.startDate);
-        const tripDateOnly = new Date(Date.UTC(tripDate.getUTCFullYear(), tripDate.getUTCMonth(), tripDate.getUTCDate()));
-        
-        // Data do filtro em UTC
-        const filterDate = new Date(startDateFilter);
-        const filterDateOnly = new Date(Date.UTC(filterDate.getUTCFullYear(), filterDate.getUTCMonth(), filterDate.getUTCDate()));
-        
-        return tripDateOnly.getTime() === filterDateOnly.getTime();
+        const tripDate = new Date(trip.startDate).toISOString().split('T')[0];
+        return tripDate === startDateFilter;
       });
     }
 
@@ -309,27 +297,20 @@ export default function ReceivedTripsPage() {
     }
   };
 
-  // Converter ISO string para formato datetime-local (YYYY-MM-DDTHH:mm)
+  // Converter ISO string para formato datetime-local (sem conversão de timezone)
   const toDateTimeLocal = (isoString: string | null | undefined): string => {
     if (!isoString) return '';
-    const date = new Date(isoString);
-    // Usar métodos UTC para evitar conversão de timezone
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const hours = String(date.getUTCHours()).padStart(2, '0');
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    // Remover o 'Z' e pegar apenas YYYY-MM-DDTHH:mm
+    return isoString.slice(0, 16);
   };
 
-  // Formatar data para exibição
+  // Formatar data para exibição (horário literal)
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
       dateStyle: 'short',
       timeStyle: 'short',
-      timeZone: 'UTC', // Forçar UTC para exibir a hora correta (backend já aplica offset do Brasil)
     }).format(date);
   };
 
