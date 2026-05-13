@@ -73,7 +73,7 @@ router.get('/financial', authenticate, async (req: AuthRequest, res) => {
       };
 
       if (Object.keys(dateFilter).length > 0) {
-        tripsFilter.endDate = dateFilter;
+        tripsFilter.startDate = dateFilter;
       }
 
       if (tripCode) {
