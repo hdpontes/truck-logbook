@@ -1133,13 +1133,22 @@ router.post('/:id/finish', async (req, res) => {
     const profit = trip.revenue - totalCost;
     const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
 
+    // Calcular data de término: se não fornecido, usar início + 3 horas
+    let finalEndDate: Date;
+    if (endDate) {
+      finalEndDate = new Date(endDate);
+    } else {
+      const startDate = new Date(trip.startDate);
+      finalEndDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 horas
+    }
+
     // Atualizar trip, retornar caminhão para garagem, atualizar quilometragem e criar despesa de combustível se necessário
     const transactionOperations: any[] = [
       prisma.trip.update({
         where: { id },
         data: {
           status: 'COMPLETED',
-          endDate: endDate ? new Date(endDate) : new Date(),
+          endDate: finalEndDate,
           distance: finalDistance,
           endMileage: finalEndMileage,
           fuelCost: calculatedFuelCost,
@@ -1177,7 +1186,7 @@ router.post('/:id/finish', async (req, res) => {
             type: 'FUEL',
             description: `Combustível calculado automaticamente (${litersConsumed.toFixed(2)}L)`,
             amount: estimatedFuelCost,
-            date: endDate ? new Date(endDate) : new Date(),
+            date: finalEndDate,
           },
         })
       );
