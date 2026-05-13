@@ -495,12 +495,12 @@ export default function ExpensesCalendarPage() {
     today.setHours(0, 0, 0, 0);
     const isPastDay = dayDate < today;
     
-    // Despesas reais do dia
+    // Despesas reais do dia (sem conversão de timezone)
     const realExpenses = expenses.filter((e: Expense) => {
       const expenseDate = new Date(e.date);
-      return expenseDate.getUTCDate() === day &&
-             expenseDate.getUTCMonth() === month &&
-             expenseDate.getUTCFullYear() === year;
+      return expenseDate.getDate() === day &&
+             expenseDate.getMonth() === month &&
+             expenseDate.getFullYear() === year;
     });
 
     // Separar despesas em pagas e pendentes
@@ -534,11 +534,11 @@ export default function ExpensesCalendarPage() {
         return false;
       }
       
-      // Verificar se já foi paga neste mês/ano
+      // Verificar se já foi paga neste mês/ano (sem conversão de timezone)
       const alreadyPaid = expenses.some((e: Expense) => 
         e.recurringExpenseId === re.id && 
-        new Date(e.date).getUTCMonth() === month &&
-        new Date(e.date).getUTCFullYear() === year
+        new Date(e.date).getMonth() === month &&
+        new Date(e.date).getFullYear() === year
       );
       
       return !alreadyPaid;
