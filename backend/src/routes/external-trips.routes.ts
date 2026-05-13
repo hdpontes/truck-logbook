@@ -185,33 +185,6 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       });
     }
 
-    // Criar string ISO preservando o horário literal sem qualquer conversão
-    // Aceita formatos: "2026-05-07" ou "2026-05-07 20:00:00" ou "2026-05-07T20:00:00"
-    const parseLocalDate = (dateString: string): Date => {
-      console.log(`[parseLocalDate] Input: "${dateString}"`);
-      
-      // Remover 'T' se existir e substituir por espaço
-      const normalized = dateString.replace('T', ' ').trim();
-      console.log(`[parseLocalDate] Normalized: "${normalized}"`);
-      
-      // Verificar se tem hora
-      if (normalized.includes(' ')) {
-        const [datePart, timePart] = normalized.split(' ');
-        const [year, month, day] = datePart.split('-');
-        const [hours = '12', minutes = '00', seconds = '00'] = timePart.split(':');
-        // Construir string ISO manualmente preservando o horário literal
-        const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}.000Z`;
-        console.log(`[parseLocalDate] Com hora - ISO String: ${isoString}`);
-        return new Date(isoString);
-      } else {
-        // Se não tem hora, usar meio-dia (12:00:00)
-        const [year, month, day] = normalized.split('-');
-        const isoString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00.000Z`;
-        console.log(`[parseLocalDate] Sem hora - ISO String: ${isoString}`);
-        return new Date(isoString);
-      }
-    };
-
     // Buscar caminhão pela placa (se fornecida)
     let truckId = null;
     if (truckPlate) {
@@ -280,7 +253,7 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
       }
     }
 
-    // Criar viagem temporária (dados mínimos)
+    // Criar viagem temporária (dados mínimos) - horários literais, sem conversão
     // Truck, driver e trailer podem ser preenchidos se fornecidos pela API
     const trip = await prisma.trip.create({
       data: {
@@ -288,8 +261,8 @@ router.post('/trips', basicAuth, async (req: any, res: any) => {
         tripCode,
         origin: origin || 'A definir',
         destination: destination || 'A definir',
-        startDate: startDate ? parseLocalDate(startDate) : parseLocalDate(tripDate),
-        endDate: endDate ? parseLocalDate(endDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(tripDate),
+        endDate: endDate ? new Date(endDate) : null,
         distance: distance || 0,
         revenue: revenue || 0,
         notes: notes || null,
