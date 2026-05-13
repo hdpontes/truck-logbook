@@ -102,6 +102,17 @@ const ReportsPage: React.FC = () => {
     return fullName.length > 20 ? fullName.substring(0, 20) + '...' : fullName;
   };
 
+  // Função para formatar data sem conversão de timezone
+  const formatDateOnly = (isoString: string): string => {
+    if (!isoString) return '-';
+    const dateWithoutZ = isoString.replace('Z', '');
+    const date = new Date(dateWithoutZ);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   useEffect(() => {
     // Carregar dados iniciais (primeiro dia do mês atual até hoje)
     const today = new Date();
@@ -276,7 +287,7 @@ const ReportsPage: React.FC = () => {
     let csv = 'Data,Código da Viagem,Origem,Destino,Caminhão,Motorista,Cliente,Receita\n';
 
     tripItems.forEach(item => {
-      const date = new Date(item.date).toLocaleDateString('pt-BR');
+      const date = formatDateOnly(item.date);
       const tripCode = item.tripCode || 'N/A';
       const description = item.description.replace('Viagem: ', '');
       const [origin, destination] = description.split(' → ');
@@ -723,7 +734,7 @@ const ReportsPage: React.FC = () => {
                                 )}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
-                                {new Date(item.date).toLocaleDateString('pt-BR')}
+                                {formatDateOnly(item.date)}
                               </td>
                               <td className="px-2 md:px-4 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-500 hidden lg:table-cell">
                                 {item.tripCode || '-'}
@@ -809,11 +820,11 @@ const ReportsPage: React.FC = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Data Início:</span>
-                          <span className="font-medium">{new Date(selectedTrip.startDate).toLocaleDateString('pt-BR')}</span>
+                          <span className="font-medium">{formatDateOnly(selectedTrip.startDate)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Data Fim:</span>
-                          <span className="font-medium">{selectedTrip.endDate ? new Date(selectedTrip.endDate).toLocaleDateString('pt-BR') : 'Em andamento'}</span>
+                          <span className="font-medium">{selectedTrip.endDate ? formatDateOnly(selectedTrip.endDate) : 'Em andamento'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Distância:</span>
@@ -929,7 +940,7 @@ const ReportsPage: React.FC = () => {
                             {selectedTrip.expenses.map((expense: any) => (
                               <tr key={expense.id}>
                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                  {new Date(expense.date).toLocaleDateString('pt-BR')}
+                                  {formatDateOnly(expense.date)}
                                 </td>
                                 <td className="px-4 py-3 text-sm">
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
