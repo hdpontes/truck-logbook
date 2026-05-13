@@ -1133,13 +1133,18 @@ router.post('/:id/finish', async (req, res) => {
     const profit = trip.revenue - totalCost;
     const profitMargin = trip.revenue > 0 ? (profit / trip.revenue) * 100 : 0;
 
-    // Calcular data de término: se não fornecido, usar início + 3 horas
+    // Calcular data de término: se não fornecido ou inválido, usar início + 3 horas
     let finalEndDate: Date;
-    if (endDate) {
+    const hasValidEndDate = endDate && typeof endDate === 'string' && endDate.trim() !== '';
+    
+    if (hasValidEndDate) {
       finalEndDate = new Date(endDate);
+      console.log(`[Finish Trip] endDate fornecido: ${endDate} → ${finalEndDate.toISOString()}`);
     } else {
+      // Sem endDate válido: calcular como início + 3 horas
       const startDate = new Date(trip.startDate);
       finalEndDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 horas
+      console.log(`[Finish Trip] endDate NÃO fornecido. startDate: ${trip.startDate.toISOString()} → finalEndDate: ${finalEndDate.toISOString()}`);
     }
 
     // Atualizar trip, retornar caminhão para garagem, atualizar quilometragem e criar despesa de combustível se necessário
@@ -1280,14 +1285,18 @@ router.post('/:id/complete-retroactive', async (req, res) => {
     const finalEndMileage = endMileage ? parseFloat(endMileage) : null;
     const finalDistance = distance ? parseFloat(distance) : trip.distance || 0;
     
-    // Se não houver data de término, considerar início + 3 horas (horário literal)
+    // Calcular data de término: se não fornecido ou inválido, usar início + 3 horas (horário literal)
     let finalEndDate: Date;
-    if (endDate) {
+    const hasValidEndDate = endDate && typeof endDate === 'string' && endDate.trim() !== '';
+    
+    if (hasValidEndDate) {
       finalEndDate = new Date(endDate);
+      console.log(`[Complete Retroactive] endDate fornecido: ${endDate} → ${finalEndDate.toISOString()}`);
     } else {
-      // Criar data de término: mesma data de início, mas 3 horas depois
+      // Sem endDate válido: calcular como início + 3 horas
       const startDate = new Date(trip.startDate);
-      finalEndDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 horas em ms
+      finalEndDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 horas
+      console.log(`[Complete Retroactive] endDate NÃO fornecido. startDate: ${trip.startDate.toISOString()} → finalEndDate: ${finalEndDate.toISOString()}`);
     }
 
     // Calcular custos das despesas fornecidas
