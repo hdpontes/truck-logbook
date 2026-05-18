@@ -1488,8 +1488,10 @@ export default function TripsPage() {
                               size="sm"
                               onClick={() => {
                                 setTripToCompleteRetroactive(trip);
+                                const tripDate = trip.endDate || trip.startDate;
+                                const dateOnly = tripDate.split('T')[0];
                                 setCompleteRetroactiveData({
-                                  endDate: new Date().toISOString().split('T')[0],
+                                  endDate: dateOnly,
                                   endMileage: '',
                                   distance: trip.distance ? trip.distance.toString() : '',
                                   fuelExpenses: [],
